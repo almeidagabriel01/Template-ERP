@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { FileUpload } from "@/components/ui/file-upload"
 import { DynamicSelect } from "@/components/features/dynamic-select"
+import { MockDB } from "@/lib/mock-db"
+import { useTenant } from "@/providers/tenant-provider"
 import { Save, X } from "lucide-react"
 
 export function ProductForm() {
@@ -33,16 +35,41 @@ export function ProductForm() {
         setFormData(prev => ({ ...prev, image: file }))
     }
 
+    const { tenant } = useTenant() // Get current tenant
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        if (!tenant) {
+            alert("Erro: Nenhuma empresa selecionada!")
+            return
+        }
         setIsSubmitting(true)
 
-        // Simulate API call
+        // Simulate API call & Save to MockDB
         console.log("Submitting Product:", formData)
-        await new Promise(resolve => setTimeout(resolve, 1500))
+
+        // In real app, we would upload image first and get URL.
+        // For now we just ignore the file object in JSON stringify or mocked save.
+
+        MockDB.createProduct(tenant.id, {
+            ...formData,
+            image: null, // Can't store File object in localStorage
+            name: formData.name,
+            price: formData.price,
+            description: formData.description,
+            manufacturer: formData.manufacturer,
+            category: formData.category,
+            sku: formData.sku,
+            stock: formData.stock
+        })
+
+        await new Promise(resolve => setTimeout(resolve, 1000))
 
         setIsSubmitting(false)
-        alert("Produto cadastrado com sucesso!")
+        alert(`Produto cadastrado para ${tenant.name} com sucesso!`)
+        setFormData({
+            name: "", description: "", price: "", manufacturer: "", category: "", sku: "", stock: "", image: null
+        })
     }
 
     return (
