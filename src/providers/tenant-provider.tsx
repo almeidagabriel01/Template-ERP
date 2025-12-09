@@ -75,6 +75,25 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         document.documentElement.style.setProperty('--primary', tenant.primaryColor)
         document.documentElement.style.setProperty('--primary-foreground', '#000000') // Force black text on brand color
 
+        // Advanced Theming
+        // 1. Selection color
+        const styleId = 'tenant-styles'
+        let styleTag = document.getElementById(styleId)
+        if (!styleTag) {
+            styleTag = document.createElement('style')
+            styleTag.id = styleId
+            document.head.appendChild(styleTag)
+        }
+        styleTag.innerHTML = `
+            ::selection {
+                background-color: ${tenant.primaryColor} !important;
+                color: #ffffff !important;
+            }
+            .tenant-border {
+                border-color: ${tenant.primaryColor} !important;
+            }
+        `
+
     }, [tenant])
 
     return (

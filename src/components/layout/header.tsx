@@ -1,10 +1,23 @@
 "use client"
 
-import { Bell, Search, User } from "lucide-react"
+import { Search, Bell, User as UserIcon, LogOut } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/providers/auth-provider"
+import { useTenant } from "@/providers/tenant-provider"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export function Header() {
+    const { user, logout } = useAuth()
+    const { tenant } = useTenant()
+
     return (
         <header className="fixed top-0 right-0 left-64 h-16 bg-background/80 backdrop-blur-md border-b border-border z-40 px-6 flex items-center justify-between">
             <div className="flex items-center gap-4 w-96">
@@ -25,12 +38,36 @@ export function Header() {
                 <div className="h-8 w-[1px] bg-border mx-2" />
                 <div className="flex items-center gap-3 pl-2">
                     <div className="flex flex-col items-end hidden md:flex">
-                        <span className="text-sm font-medium">Sof T. Code</span>
-                        <span className="text-xs text-muted-foreground">Admin</span>
+                        <span className="text-sm font-medium">{user ? user.name : 'Visitante'}</span>
+                        <span className="text-xs text-muted-foreground capitalize">{user ? user.role : 'Guest'}</span>
                     </div>
-                    <div className="w-9 h-9 rounded-full bg-muted border border-border flex items-center justify-center overflow-hidden">
-                        <User className="w-5 h-5 text-muted-foreground" />
-                    </div>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0">
+                                <div className="h-9 w-9 rounded-full bg-muted border border-border flex items-center justify-center overflow-hidden">
+                                    {tenant?.logoUrl ? (
+                                        /* eslint-disable-next-line @next/next/no-img-element */
+                                        <img src={tenant.logoUrl} alt="Avatar" className="h-full w-full object-cover" />
+                                    ) : (
+                                        <UserIcon className="w-5 h-5 text-muted-foreground" />
+                                    )}
+                                </div>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-56" align="end" forceMount>
+                            <DropdownMenuLabel className="font-normal">
+                                <div className="flex flex-col space-y-1">
+                                    <p className="text-sm font-medium leading-none">{user ? user.name : 'Visitante'}</p>
+                                    <p className="text-xs leading-none text-muted-foreground">{user ? user.email : ''}</p>
+                                </div>
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={logout} className="text-red-600 focus:text-red-600 cursor-pointer">
+                                <LogOut className="mr-2 h-4 w-4" />
+                                <span>Sair</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </div>
         </header>
