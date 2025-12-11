@@ -1,7 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { ProposalSection, Proposal, MockDB, CustomFieldType, CustomFieldItem } from "@/lib/mock-db"
+import { ProposalSection, CustomFieldType, CustomFieldItem } from "@/types"
+import { Proposal } from "@/services/proposal-service"
+import { CustomFieldService } from "@/services/custom-field-service"
 import { useTenant } from "@/providers/tenant-provider"
 
 interface ProposalPreviewProps {
@@ -249,109 +251,139 @@ function PreviewSection({ section, primaryColor }: PreviewSectionProps) {
         case "separator":
             return <hr className="border-gray-300 my-4" />
 
-        case "custom-field": {
-            const fieldTypeId = content.fieldTypeId as string | undefined
-            const selectedItemIds = (content.selectedItems as string[]) || []
-            if (!fieldTypeId) return null
+        case "custom-field":
+            return <CustomFieldBlock section={section} />
 
-            const fieldType = MockDB.getCustomFieldTypeById(fieldTypeId)
-            if (!fieldType) return null
-
-            const selectedItems = fieldType.items.filter(i => selectedItemIds.includes(i.id))
-            if (selectedItems.length === 0) return null
-
-            return (
-                <div>
-                    {section.title && (
-                        <h3 className="font-semibold text-gray-800 mb-3">{section.title}</h3>
-                    )}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {selectedItems.map(item => (
-                            <div key={item.id} className="text-center">
-                                {item.image && (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img
-                                        src={item.image}
-                                        alt={item.label}
-                                        className="w-full h-20 object-cover rounded-lg mb-1"
-                                    />
-                                )}
-                                <span className="text-sm font-medium text-gray-700">{item.label}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )
-        }
-
-        case "hierarchical-field": {
-            const environmentTypeId = content.environmentTypeId as string | undefined
-            const systemTypeId = content.systemTypeId as string | undefined
-            const entries = (content.entries as { id: string; environmentItemId: string; systemItems: string[] }[]) || []
-
-            if (!environmentTypeId || !systemTypeId || entries.length === 0) return null
-
-            const envType = MockDB.getCustomFieldTypeById(environmentTypeId)
-            const sysType = MockDB.getCustomFieldTypeById(systemTypeId)
-            if (!envType || !sysType) return null
-
-            return (
-                <div className="space-y-4">
-                    {section.title && (
-                        <h3 className="font-semibold text-gray-800 mb-3">{section.title}</h3>
-                    )}
-                    {entries.map(entry => {
-                        const envItem = envType.items.find(i => i.id === entry.environmentItemId)
-                        if (!envItem) return null
-
-                        const systemItems = sysType.items.filter(i => entry.systemItems.includes(i.id))
-                        if (systemItems.length === 0) return null
-
-                        return (
-                            <div key={entry.id} className="border rounded-lg overflow-hidden" style={{ borderColor: color }}>
-                                {/* Environment Header */}
-                                <div
-                                    className="flex items-center gap-3 p-3 text-white"
-                                    style={{ backgroundColor: color }}
-                                >
-                                    {envItem.image && (
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        <img
-                                            src={envItem.image}
-                                            alt={envItem.label}
-                                            className="w-10 h-10 rounded object-cover"
-                                        />
-                                    )}
-                                    <span className="font-semibold">{envItem.label}</span>
-                                </div>
-                                {/* System Items */}
-                                <div className="p-3 bg-gray-50">
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                        {systemItems.map(item => (
-                                            <div key={item.id} className="flex items-center gap-2 p-2 bg-white rounded border">
-                                                {item.image && (
-                                                    // eslint-disable-next-line @next/next/no-img-element
-                                                    <img
-                                                        src={item.image}
-                                                        alt={item.label}
-                                                        className="w-8 h-8 rounded object-cover"
-                                                    />
-                                                )}
-                                                <span className="text-xs font-medium">{item.label}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        )
-                    })}
-                </div>
-            )
-        }
+        case "hierarchical-field":
+            return <HierarchicalFieldBlock section={section} primaryColor={color} />
 
         default:
             return null
     }
+}
+
+// Helper Components for Async Data
+const CustomFieldBlock = ({ section }: { section: ProposalSection }) => {
+    const [fieldType, setFieldType] = React.useState<CustomFieldType | null>(null)
+    const content = parseContent(section.content)
+
+    React.useEffect(() => {
+        const load = async () => {
+            if (typeof content.fieldTypeId === 'string') {
+                const type = await CustomFieldService.getCustomFieldTypeById(content.fieldTypeId)
+                setFieldType(type)
+            }
+        }
+        load()
+    }, [content.fieldTypeId])
+
+    if (!fieldType) return null
+
+    // items selected
+    const selectedItemIds = (content.selectedItems as string[]) || []
+    const selectedItems = fieldType.items.filter(i => selectedItemIds.includes(i.id))
+    if (selectedItems.length === 0) return null
+
+    return (
+        <div>
+            {section.title && (
+                <h3 className="font-semibold text-gray-800 mb-3">{section.title}</h3>
+            )}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {selectedItems.map(item => (
+                    <div key={item.id} className="text-center">
+                        {item.image && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                                src={item.image}
+                                alt={item.label}
+                                className="w-full h-20 object-cover rounded-lg mb-1"
+                            />
+                        )}
+                        <span className="text-sm font-medium text-gray-700">{item.label}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+}
+
+const HierarchicalFieldBlock = ({ section, primaryColor }: { section: ProposalSection, primaryColor?: string }) => {
+    const [envType, setEnvType] = React.useState<CustomFieldType | null>(null)
+    const [sysType, setSysType] = React.useState<CustomFieldType | null>(null)
+    const content = parseContent(section.content)
+
+    React.useEffect(() => {
+        const load = async () => {
+            if (typeof content.environmentTypeId === 'string') {
+                const e = await CustomFieldService.getCustomFieldTypeById(content.environmentTypeId)
+                setEnvType(e)
+            }
+            if (typeof content.systemTypeId === 'string') {
+                const s = await CustomFieldService.getCustomFieldTypeById(content.systemTypeId)
+                setSysType(s)
+            }
+        }
+        load()
+    }, [content.environmentTypeId, content.systemTypeId])
+
+    if (!envType || !sysType) return null
+
+    const entries = (content.entries as { id: string; environmentItemId: string; systemItems: string[] }[]) || []
+    if (entries.length === 0) return null
+
+    return (
+        <div className="space-y-4">
+            {section.title && (
+                <h3 className="font-semibold text-gray-800 mb-3">{section.title}</h3>
+            )}
+            {entries.map(entry => {
+                const envItem = envType.items.find(i => i.id === entry.environmentItemId)
+                if (!envItem) return null
+
+                const systemItems = sysType.items.filter(i => entry.systemItems.includes(i.id))
+                if (systemItems.length === 0) return null
+
+                return (
+                    <div key={entry.id} className="border rounded-lg overflow-hidden" style={{ borderColor: primaryColor || "#333" }}>
+                        {/* Environment Header */}
+                        <div
+                            className="flex items-center gap-3 p-3 text-white"
+                            style={{ backgroundColor: primaryColor || "#333" }}
+                        >
+                            {envItem.image && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                    src={envItem.image}
+                                    alt={envItem.label}
+                                    className="w-10 h-10 rounded object-cover"
+                                />
+                            )}
+                            <span className="font-semibold">{envItem.label}</span>
+                        </div>
+                        {/* System Items */}
+                        <div className="p-3 bg-gray-50">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {systemItems.map(item => (
+                                    <div key={item.id} className="flex items-center gap-2 p-2 bg-white rounded border">
+                                        {item.image && (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img
+                                                src={item.image}
+                                                alt={item.label}
+                                                className="w-8 h-8 rounded object-cover"
+                                            />
+                                        )}
+                                        <span className="text-xs font-medium">{item.label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )
+            })}
+        </div>
+    )
 }
 
 interface TableItem {

@@ -4,11 +4,12 @@ import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ProposalTemplate } from "@/lib/mock-db"; // Types only
+import { Proposal } from "@/services/proposal-service"; // Types only
+import { ProposalStatus, ProposalTemplate } from "@/types";
 import { useTenant } from "@/providers/tenant-provider";
 import { ProposalPdfViewer } from "@/components/pdf/proposal-pdf-viewer";
 import { ArrowLeft, FileDown, Edit, Loader2, Palette } from "lucide-react";
-import { ProposalService, Proposal } from "@/services/proposal-service";
+import { ProposalService } from "@/services/proposal-service";
 import { ProposalDefaults } from "@/lib/proposal-defaults";
 
 export default function ViewProposalPage() {

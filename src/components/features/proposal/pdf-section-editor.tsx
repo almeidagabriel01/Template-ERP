@@ -255,6 +255,11 @@ export function PdfSectionEditor({ sections, onChange, primaryColor }: PdfSectio
     const handleImageUpload = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
+            if (file.size > 500 * 1024) {
+                alert("A imagem da seção deve ter no máximo 500KB.")
+                e.target.value = ""
+                return
+            }
             const reader = new FileReader()
             reader.onload = (event) => {
                 updateSection(id, { imageUrl: event.target?.result as string })

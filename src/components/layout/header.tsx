@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/providers/auth-provider";
 import { useTenant } from "@/providers/tenant-provider";
-import { MockDB } from "@/lib/mock-db";
+
 import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
@@ -40,7 +40,10 @@ export function Header() {
 
   const handleBackToAdmin = () => {
     clearViewingTenant();
-    MockDB.clearViewingAsTenant(); // Optionally keep if still needed for mock fallbacks
+    // Use localStorage directly if needed, or rely on clearViewingTenant
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("viewingAsTenant");
+    }
     router.push("/admin");
   };
 

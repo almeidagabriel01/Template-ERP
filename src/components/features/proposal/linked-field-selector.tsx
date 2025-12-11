@@ -4,7 +4,8 @@ import * as React from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { MockDB, CustomFieldType, CustomFieldItem } from "@/lib/mock-db"
+import { CustomFieldType, CustomFieldItem } from "@/types"
+import { CustomFieldService } from "@/services/custom-field-service"
 import { useTenant } from "@/providers/tenant-provider"
 import { ChevronDown, ChevronUp, Plus, X, Settings2 } from "lucide-react"
 import Link from "next/link"
@@ -19,6 +20,7 @@ interface LinkedFieldSelectorProps {
     parentTypeId: string
     childTypeId: string
     entries: LinkedFieldEntry[]
+    fieldTypes: CustomFieldType[]
     onUpdate: (entries: LinkedFieldEntry[]) => void
 }
 
@@ -26,6 +28,7 @@ export function LinkedFieldSelector({
     parentTypeId,
     childTypeId,
     entries,
+    fieldTypes,
     onUpdate
 }: LinkedFieldSelectorProps) {
     const { tenant } = useTenant()
@@ -35,12 +38,12 @@ export function LinkedFieldSelector({
 
     React.useEffect(() => {
         if (parentTypeId) {
-            setParentType(MockDB.getCustomFieldTypeById(parentTypeId) || null)
+            setParentType(fieldTypes.find(t => t.id === parentTypeId) || null)
         }
         if (childTypeId) {
-            setChildType(MockDB.getCustomFieldTypeById(childTypeId) || null)
+            setChildType(fieldTypes.find(t => t.id === childTypeId) || null)
         }
-    }, [parentTypeId, childTypeId])
+    }, [parentTypeId, childTypeId, fieldTypes])
 
     if (!parentType || !childType) {
         return (
@@ -267,7 +270,7 @@ export function LinkedFieldsConfig({ value, onChange }: LinkedFieldsConfigProps)
 
     React.useEffect(() => {
         if (tenant) {
-            setFieldTypes(MockDB.getCustomFieldTypes(tenant.id))
+            CustomFieldService.getCustomFieldTypes(tenant.id).then(setFieldTypes)
         }
     }, [tenant])
 
@@ -321,6 +324,7 @@ export function LinkedFieldsConfig({ value, onChange }: LinkedFieldsConfigProps)
                     parentTypeId={value.parentTypeId}
                     childTypeId={value.childTypeId}
                     entries={value.entries}
+                    fieldTypes={fieldTypes}
                     onUpdate={(entries) => onChange({ ...value, entries })}
                 />
             )}

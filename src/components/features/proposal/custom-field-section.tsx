@@ -4,7 +4,8 @@ import * as React from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
-import { MockDB, CustomFieldType, CustomFieldItem } from "@/lib/mock-db"
+import { CustomFieldType, CustomFieldItem } from "@/types"
+import { CustomFieldService } from "@/services/custom-field-service"
 import { useTenant } from "@/providers/tenant-provider"
 import { Plus, Settings } from "lucide-react"
 import { CustomFieldManager } from "./custom-field-manager"
@@ -24,12 +25,13 @@ export function CustomFieldSection({ content, onUpdate }: CustomFieldSectionProp
 
     React.useEffect(() => {
         if (tenant) {
-            const types = MockDB.getCustomFieldTypes(tenant.id)
-            setFieldTypes(types)
-            if (content.fieldTypeId) {
-                const type = types.find(t => t.id === content.fieldTypeId)
-                setSelectedType(type || null)
-            }
+            CustomFieldService.getCustomFieldTypes(tenant.id).then(types => {
+                setFieldTypes(types)
+                if (content.fieldTypeId) {
+                    const type = types.find(t => t.id === content.fieldTypeId)
+                    setSelectedType(type || null)
+                }
+            })
         }
     }, [tenant, content.fieldTypeId])
 
@@ -82,8 +84,8 @@ export function CustomFieldSection({ content, onUpdate }: CustomFieldSectionProp
                                     type="button"
                                     onClick={() => handleToggleItem(item.id)}
                                     className={`flex items-center gap-2 p-2 rounded-lg border-2 transition-all ${isSelected
-                                            ? 'border-primary bg-primary/10'
-                                            : 'border-border hover:border-muted-foreground'
+                                        ? 'border-primary bg-primary/10'
+                                        : 'border-border hover:border-muted-foreground'
                                         }`}
                                 >
                                     {item.image && (
@@ -132,12 +134,13 @@ export function CustomFieldPreview({ content }: CustomFieldPreviewProps) {
 
     React.useEffect(() => {
         if (content.fieldTypeId) {
-            const type = MockDB.getCustomFieldTypeById(content.fieldTypeId)
-            setSelectedType(type || null)
-            if (type && content.selectedItems) {
-                const selectedItems = type.items.filter(i => content.selectedItems?.includes(i.id))
-                setItems(selectedItems)
-            }
+            CustomFieldService.getCustomFieldTypeById(content.fieldTypeId).then(type => {
+                setSelectedType(type || null)
+                if (type && content.selectedItems) {
+                    const selectedItems = type.items.filter(i => content.selectedItems?.includes(i.id))
+                    setItems(selectedItems)
+                }
+            })
         }
     }, [content])
 

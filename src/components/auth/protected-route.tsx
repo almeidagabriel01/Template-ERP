@@ -4,7 +4,7 @@ import * as React from "react";
 import { useAuth } from "@/providers/auth-provider";
 import { useRouter, usePathname } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { MockDB } from "@/lib/mock-db";
+
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();

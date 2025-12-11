@@ -1,4 +1,4 @@
-import { ProposalTemplate } from "@/lib/mock-db"; // We will duplicate type eventually or keep borrowing it
+import { ProposalTemplate } from "@/types"; // We will duplicate type eventually or keep borrowing it
 
 export const ProposalDefaults = {
     createDefaultTemplate: (tenantId: string, tenantName: string, primaryColor: string): ProposalTemplate => {

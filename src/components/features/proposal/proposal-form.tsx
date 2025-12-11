@@ -10,7 +10,8 @@ import { Select } from "@/components/ui/select"
 import { SectionBuilder } from "@/components/features/proposal/section-builder"
 import { ProposalPreview } from "@/components/features/proposal/proposal-preview"
 import { PdfGenerator } from "@/components/features/proposal/pdf-generator"
-import { MockDB, Proposal, ProposalSection, ProposalStatus } from "@/lib/mock-db"
+import { ProposalSection, ProposalStatus } from "@/types" // Keep types that are only in MockDB
+import { ProposalService, Proposal } from "@/services/proposal-service" // Use Service for logic
 import { useTenant } from "@/providers/tenant-provider"
 import { Save, ArrowLeft, Eye, Edit, Loader2 } from "lucide-react"
 
@@ -39,19 +40,22 @@ export function ProposalForm({ proposalId }: ProposalFormProps) {
     // Load existing proposal if editing
     React.useEffect(() => {
         if (proposalId) {
-            const proposal = MockDB.getProposalById(proposalId)
-            if (proposal) {
-                setFormData({
-                    title: proposal.title,
-                    clientName: proposal.clientName,
-                    clientEmail: proposal.clientEmail,
-                    clientPhone: proposal.clientPhone,
-                    validUntil: proposal.validUntil,
-                    status: proposal.status
-                })
-                setSections(proposal.sections || [])
+            const fetchProposal = async () => {
+                const proposal = await ProposalService.getProposalById(proposalId)
+                if (proposal) {
+                    setFormData({
+                        title: proposal.title,
+                        clientName: proposal.clientName,
+                        clientEmail: proposal.clientEmail,
+                        clientPhone: proposal.clientPhone,
+                        validUntil: proposal.validUntil,
+                        status: proposal.status
+                    })
+                    setSections(proposal.sections || [])
+                }
+                setIsLoading(false)
             }
-            setIsLoading(false)
+            fetchProposal()
         }
     }, [proposalId])
 
@@ -77,26 +81,30 @@ export function ProposalForm({ proposalId }: ProposalFormProps) {
         try {
             if (proposalId) {
                 // Update existing
-                MockDB.updateProposal(proposalId, {
+                await ProposalService.updateProposal(proposalId, {
                     ...formData,
                     sections,
                     status: formData.status as ProposalStatus
                 })
             } else {
                 // Create new
-                MockDB.createProposal(tenant.id, {
+                await ProposalService.createProposal({
+                    tenantId: tenant.id,
                     title: formData.title!,
                     clientName: formData.clientName!,
                     clientEmail: formData.clientEmail,
                     clientPhone: formData.clientPhone,
+                    clientAddress: formData.clientAddress, // Added to match type
                     validUntil: formData.validUntil || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
                     status: formData.status as ProposalStatus || "draft",
                     sections,
-                    products: []
+                    products: [],
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
                 })
             }
 
-            await new Promise(resolve => setTimeout(resolve, 500))
+            // await new Promise(resolve => setTimeout(resolve, 500)) // No longer needed
             router.push("/proposals")
         } catch (error) {
             console.error("Erro ao salvar proposta:", error)

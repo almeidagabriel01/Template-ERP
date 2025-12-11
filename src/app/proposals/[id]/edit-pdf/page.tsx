@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MockDB, ProposalTemplate } from "@/lib/mock-db"; // Types only
+import { ProposalTemplate } from "@/types";
 import { ProposalService, Proposal } from "@/services/proposal-service";
 import { ProposalDefaults } from "@/lib/proposal-defaults";
 import { useTenant } from "@/providers/tenant-provider";
@@ -113,7 +113,7 @@ export default function EditPdfPage() {
   const [theme, setTheme] = React.useState<ThemeType>("modern");
 
   // Style settings
-  const [primaryColor, setPrimaryColor] = React.useState("#2563eb");
+  const [primaryColor, setPrimaryColor] = React.useState(tenant?.primaryColor || "#2563eb");
   const [fontFamily, setFontFamily] = React.useState("'Inter', sans-serif");
 
   // Editable sections
@@ -158,7 +158,11 @@ export default function EditPdfPage() {
 
               // Load saved settings
               setCoverTitle(p.title || ""); // Title is always from proposal
-              if (s.primaryColor) setPrimaryColor(s.primaryColor);
+              if (s.primaryColor) {
+                setPrimaryColor(s.primaryColor);
+              } else {
+                setPrimaryColor(tenant.primaryColor || "#2563eb");
+              }
               if (s.fontFamily) setFontFamily(s.fontFamily);
               if (s.theme) setTheme(s.theme as ThemeType);
 
@@ -229,6 +233,12 @@ export default function EditPdfPage() {
   const handleCoverImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 750 * 1024) {
+        alert("A imagem de capa deve ter no máximo 750KB.");
+        // Reset input
+        e.target.value = "";
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (event) => {
         setCoverImage(event.target?.result as string);
@@ -240,6 +250,11 @@ export default function EditPdfPage() {
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 300 * 1024) {
+        alert("O logo deve ter no máximo 300KB.");
+        e.target.value = "";
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (event) => {
         setCoverLogo(event.target?.result as string);
@@ -257,21 +272,72 @@ export default function EditPdfPage() {
       // We only save the Proposal changes (title, etc).
       // If we want to persist PDF settings, we need to add a 'pdfSettings' field to the Proposal schema in Firestore.
 
+      // Helper to strictly clean data for Firestore
+      const cleanForFirestore = (obj: any): any => {
+        if (obj === undefined) return null;
+        if (obj === null) return null;
+
+        // Handle unexpected types that might crash Firestore or be invalid
+        if (obj instanceof Blob || obj instanceof File) return null;
+        // Check for React Synthetic Events or DOM nodes (heuristic)
+        if (obj.nativeEvent || obj instanceof Element) return null;
+
+        if (typeof obj !== 'object') {
+          return obj;
+        }
+
+        if (Array.isArray(obj)) {
+          // Map undefined to null to preserve index, and clean recursively
+          return obj.map(v => cleanForFirestore(v));
+        }
+
+        if (obj instanceof Date) {
+          return obj.toISOString();
+        }
+
+        const newObj: any = {};
+        for (const key in obj) {
+          if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            const val = obj[key];
+            if (typeof val === 'function' || typeof val === 'symbol') {
+              continue;
+            }
+            const cleaned = cleanForFirestore(val);
+            // Optionally we could skip keys with null values to save space, 
+            // but explicit null is safer for overwriting existing data.
+            newObj[key] = cleaned;
+          }
+        }
+        return newObj;
+      };
+
+      const settings = {
+        theme,
+        primaryColor,
+        fontFamily,
+        coverTitle, // Redundant but useful for PDF context
+        coverImage,
+        coverLogo,
+        coverImageOpacity,
+        coverImageFit,
+        coverImagePosition,
+        repeatHeader,
+        sections, // Saving the edited sections structure
+      };
+
+      const sanitizedSettings = cleanForFirestore(settings);
+
+      // Validate total size (approximate)
+      const payloadSize = JSON.stringify(sanitizedSettings).length;
+      if (payloadSize > 950000) { // 950KB safety margin
+        alert(`O documento está muito grande (${Math.round(payloadSize / 1024)}KB). O limite do banco de dados é 1MB. Por favor, reduza o tamanho das imagens ou remova algumas.`);
+        setIsSaving(false);
+        return;
+      }
+
       await ProposalService.updateProposal(proposal.id, {
         title: coverTitle,
-        pdfSettings: {
-          theme,
-          primaryColor,
-          fontFamily,
-          coverTitle, // Redundant but useful for PDF context
-          coverImage,
-          coverLogo,
-          coverImageOpacity,
-          coverImageFit,
-          coverImagePosition,
-          repeatHeader,
-          sections, // Saving the edited sections structure
-        },
+        pdfSettings: sanitizedSettings,
       });
 
       await new Promise((r) => setTimeout(r, 300));
@@ -875,18 +941,17 @@ export default function EditPdfPage() {
                                   color: undefined, // Reset text color to inherit theme
                                   backgroundColor:
                                     s.styles.backgroundColor === "#ffffff" ||
-                                    s.styles.backgroundColor === "#f9fafb"
+                                      s.styles.backgroundColor === "#f9fafb"
                                       ? undefined
                                       : s.styles.backgroundColor, // Reset bg only if it was default white/gray
                                 },
                               }))
                             );
                           }}
-                          className={`p-3 rounded-lg border-2 text-left transition-all ${
-                            theme === t.value
-                              ? "border-primary ring-2 ring-primary/20"
-                              : "border-border hover:border-primary/50"
-                          }`}
+                          className={`p-3 rounded-lg border-2 text-left transition-all ${theme === t.value
+                            ? "border-primary ring-2 ring-primary/20"
+                            : "border-border hover:border-primary/50"
+                            }`}
                         >
                           <div
                             className={`w-full h-8 rounded mb-2 ${t.preview}`}
