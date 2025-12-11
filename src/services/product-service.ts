@@ -11,7 +11,9 @@ export type Product = {
     category: string;
     sku: string;
     stock: string;
-    image?: string | null;
+    images: string[]; // Changed from single image to array
+    image?: string | null; // Kept for backward compatibility (optional)
+    status?: 'active' | 'inactive';
 }
 
 const COLLECTION_NAME = "products";
@@ -24,7 +26,7 @@ export const ProductService = {
                 collection(db, COLLECTION_NAME),
                 where("tenantId", "==", tenantId)
             );
-            
+
             const querySnapshot = await getDocs(q);
             return querySnapshot.docs.map(doc => ({
                 id: doc.id,
@@ -41,7 +43,7 @@ export const ProductService = {
         try {
             const docRef = doc(db, COLLECTION_NAME, id);
             const docSnap = await getDoc(docRef);
-            
+
             if (docSnap.exists()) {
                 return { id: docSnap.id, ...docSnap.data() } as Product;
             } else {

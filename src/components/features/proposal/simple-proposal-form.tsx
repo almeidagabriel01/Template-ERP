@@ -13,14 +13,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { MockDB, ProposalTemplate } from "@/lib/mock-db";
+import { ProposalTemplate } from "@/types";
 import { ProposalDefaults } from "@/lib/proposal-defaults";
-import {
-  ProposalService,
-  Proposal,
-  ProposalProduct,
-} from "@/services/proposal-service";
+import { ProposalService, Proposal, ProposalProduct } from "@/services/proposal-service";
+import { ProposalStatus } from "@/types";
 import { ProductService, Product } from "@/services/product-service";
+import { ProposalTemplateService } from "@/services/proposal-template-service";
 import { useTenant } from "@/providers/tenant-provider";
 import {
   Save,
@@ -65,15 +63,25 @@ export function SimpleProposalForm({ proposalId }: SimpleProposalFormProps) {
       if (tenant) {
         try {
           const loadedProducts = await ProductService.getProducts(tenant.id);
-          setProducts(loadedProducts);
+          // Filter out inactive products
+          const activeProducts = loadedProducts.filter(
+            (p) => p.status !== "inactive"
+          );
+          setProducts(activeProducts);
 
           // Use new helper instead of MockDB
-          const defaultTemplate = ProposalDefaults.createDefaultTemplate(
-            tenant.id,
-            tenant.name,
-            tenant.primaryColor
-          );
-          setTemplate(defaultTemplate);
+          const load = async () => {
+            if (!tenant) return
+            try {
+              const templates = await ProposalTemplateService.getTemplates(tenant.id)
+              const defaultTemplate = templates.find(t => t.isDefault) || templates[0]
+              setTemplate(defaultTemplate || null)
+            } catch (error) {
+              console.error("Failed to load template", error)
+            }
+          }
+          load();
+
         } catch (error) {
           console.error("Error loading products", error);
         }
@@ -124,7 +132,7 @@ export function SimpleProposalForm({ proposalId }: SimpleProposalFormProps) {
       const newProduct: ProposalProduct = {
         productId: product.id,
         productName: product.name,
-        productImage: product.image || "",
+        productImage: product.images?.[0] || product.image || "",
         productDescription: product.description || "",
         quantity: 1,
         unitPrice: price,
@@ -383,16 +391,17 @@ export function SimpleProposalForm({ proposalId }: SimpleProposalFormProps) {
                   return (
                     <div
                       key={product.id}
-                      className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                        selected
-                          ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                          : "border-border hover:border-primary/50"
-                      }`}
+                      className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${selected
+                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                        : "border-border hover:border-primary/50"
+                        }`}
                       onClick={() => toggleProduct(product)}
                     >
                       <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-medium">{product.name}</h4>
-                        <span className="text-sm font-bold text-primary">
+                        <div className="flex flex-col">
+                          <h4 className="font-medium mr-2">{product.name}</h4>
+                        </div>
+                        <span className="text-sm font-bold text-primary whitespace-nowrap">
                           R$ {parseFloat(product.price).toFixed(2)}
                         </span>
                       </div>

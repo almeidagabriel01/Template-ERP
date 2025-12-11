@@ -1,7 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { Proposal, ProposalTemplate, MockDB } from "@/lib/mock-db"
+import { ProposalTemplate } from "@/types"
+import { Proposal } from "@/services/proposal-service"
+import { ProposalTemplateService } from "@/services/proposal-template-service"
 import { useTenant } from "@/providers/tenant-provider"
 
 interface TemplatePreviewProps {

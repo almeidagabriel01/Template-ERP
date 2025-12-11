@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { TenantService } from "@/services/tenant-service";
-import { Tenant } from "@/lib/mock-db"; // Keep using Tenant type for now
+import { Tenant } from "@/types"; // Keep using Tenant type for now
 import {
   Card,
   CardContent,
@@ -72,40 +72,40 @@ export default function AdminPage() {
 
         // If email and password provided, create the Admin User for this Tenant
         if (data.email && data.password) {
+          // Dynamic import to avoid SSR issues with Firebase
+          const { initializeApp, getApp, getApps, deleteApp } =
+            await import("firebase/app");
+          const { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } =
+            await import("firebase/auth");
+          const { getFirestore, doc, setDoc } =
+            await import("firebase/firestore");
+
+          // Use a unique name for the secondary app to avoid conflicts
+          // We reuse the config from the main app
+          const config = {
+            apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+            authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+            projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+            storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+            messagingSenderId:
+              process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+            appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+          };
+
+          const secondaryAppName = "secondaryAppForUserCreation";
+          let secondaryApp;
+
+          // Check if already exists (cleanup might have failed previously)
+          if (getApps().some((app) => app.name === secondaryAppName)) {
+            secondaryApp = getApp(secondaryAppName);
+          } else {
+            secondaryApp = initializeApp(config, secondaryAppName);
+          }
+
+          const secondaryAuth = getAuth(secondaryApp);
+          const secondaryDb = getFirestore(secondaryApp);
+
           try {
-            // Dynamic import to avoid SSR issues with Firebase
-            const { initializeApp, getApp, getApps, deleteApp } =
-              await import("firebase/app");
-            const { getAuth, createUserWithEmailAndPassword, signOut } =
-              await import("firebase/auth");
-            const { getFirestore, doc, setDoc } =
-              await import("firebase/firestore");
-
-            // Use a unique name for the secondary app to avoid conflicts
-            // We reuse the config from the main app
-            const config = {
-              apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-              authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-              projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-              storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-              messagingSenderId:
-                process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-              appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-            };
-
-            const secondaryAppName = "secondaryAppForUserCreation";
-            let secondaryApp;
-
-            // Check if already exists (cleanup might have failed previously)
-            if (getApps().some((app) => app.name === secondaryAppName)) {
-              secondaryApp = getApp(secondaryAppName);
-            } else {
-              secondaryApp = initializeApp(config, secondaryAppName);
-            }
-
-            const secondaryAuth = getAuth(secondaryApp);
-            const secondaryDb = getFirestore(secondaryApp);
-
             // Create the user
             const userCredential = await createUserWithEmailAndPassword(
               secondaryAuth,
@@ -123,19 +123,60 @@ export default function AdminPage() {
               createdAt: new Date().toISOString(),
             });
 
-            // Sign out immediately from the secondary app just in case
+            // Start Cleanup
             await signOut(secondaryAuth);
-
-            // Clean up - important!
-            await deleteApp(secondaryApp);
+            if (!getApps().every(app => app.name !== secondaryAppName)) {
+              await deleteApp(secondaryApp);
+            }
 
             alert(`Empresa ${data.name} e usuário admin criada!`);
           } catch (authError: any) {
             console.error("Error creating tenant user:", authError);
-            // Don't fail the whole operation if just the user creation failed, but warn
-            alert(
-              `Empresa criada, mas erro ao criar usuário: ${authError.message}`
-            );
+
+            if (authError.code === "auth/email-already-in-use") {
+              try {
+                // If user exists, try to reuse/reclaim the account
+                const userCredential = await signInWithEmailAndPassword(
+                  secondaryAuth,
+                  data.email,
+                  data.password
+                );
+                const user = userCredential.user;
+
+                // Update/Overwrite User Profile
+                await setDoc(doc(secondaryDb, "users", user.uid), {
+                  name: `Admin ${data.name}`,
+                  email: data.email,
+                  role: "admin",
+                  tenantId: newTenant.id,
+                  createdAt: new Date().toISOString(),
+                });
+
+                // Sign out immediately
+                await signOut(secondaryAuth);
+                if (!getApps().every(app => app.name !== secondaryAppName)) {
+                  await deleteApp(secondaryApp);
+                }
+
+                alert(`Empresa ${data.name} criada! Usuário existente foi revinculado.`);
+                return; // Exit successful recovery
+              } catch (signInError: any) {
+                console.error("Failed to reclaim user:", signInError);
+                alert(`Erro: O e-mail já existe e devíamos vincular, mas houve erro (senha incorreta?): ${signInError.message}`);
+                // Try to cleanup even if failed
+                await signOut(secondaryAuth);
+                if (!getApps().every(app => app.name !== secondaryAppName)) {
+                  await deleteApp(secondaryApp);
+                }
+              }
+            } else {
+              alert(`Empresa criada, mas erro ao criar usuário: ${authError.message}`);
+              // Cleanup
+              await signOut(secondaryAuth);
+              if (!getApps().every(app => app.name !== secondaryAppName)) {
+                await deleteApp(secondaryApp);
+              }
+            }
           }
         } else {
           alert(`Empresa ${data.name} criada (sem usuário vinculado)!`);

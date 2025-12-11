@@ -33,6 +33,7 @@ export type Proposal = {
     updatedAt: string;
     // Add other fields as needed from the original MockDB type
     // PDF Customization Settings
+    // PDF Customization Settings
     pdfSettings?: {
         theme?: string;
         primaryColor?: string;
@@ -44,8 +45,9 @@ export type Proposal = {
         coverImageFit?: "cover" | "contain";
         coverImagePosition?: string;
         repeatHeader?: boolean;
-        sections?: any[]; // Storing section data structure
+        sections?: any[]; // Storing section data structure for PDF Editor
     };
+    sections?: any[]; // Legacy support or Section Builder support
 }
 
 const COLLECTION_NAME = "proposals";
@@ -57,7 +59,7 @@ export const ProposalService = {
                 collection(db, COLLECTION_NAME),
                 where("tenantId", "==", tenantId)
             );
-            
+
             const querySnapshot = await getDocs(q);
             return querySnapshot.docs.map(doc => ({
                 id: doc.id,
@@ -73,7 +75,7 @@ export const ProposalService = {
         try {
             const docRef = doc(db, COLLECTION_NAME, id);
             const docSnap = await getDoc(docRef);
-            
+
             if (docSnap.exists()) {
                 return { id: docSnap.id, ...docSnap.data() } as Proposal;
             } else {
@@ -113,6 +115,29 @@ export const ProposalService = {
         } catch (error) {
             console.error("Error deleting proposal:", error);
             throw error;
+        }
+    },
+
+    // Check if a product is used in any proposal
+    isProductUsedInProposal: async (tenantId: string, productId: string): Promise<boolean> => {
+        try {
+            const q = query(
+                collection(db, COLLECTION_NAME),
+                where("tenantId", "==", tenantId)
+            );
+            const querySnapshot = await getDocs(q);
+
+            // Client-side filtering because querying array of objects is complex in Firestore
+            // without knowing the exact object structure including quantity/price
+            return querySnapshot.docs.some(doc => {
+                const proposal = doc.data() as Proposal;
+                return proposal.products?.some(p => p.productId === productId);
+            });
+        } catch (error) {
+            console.error("Error checking product usage:", error);
+            return false; // Fail safe? Or throw? Better false to not block if error, or warn user. 
+            // In this context, if error, we might assume safely used? No, safe deletion -> false ?? 
+            // If error, let's assume false but log it.
         }
     }
 };

@@ -5,8 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Tenant } from "@/lib/mock-db"
-
+import { Tenant } from "@/types"; // Use global types
 export interface TenantFormData {
     name: string
     color: string

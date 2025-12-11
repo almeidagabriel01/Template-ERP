@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { TextStyle, ImageStyle } from "@/lib/mock-db"
+import { TextStyle, ImageStyle } from "@/types"
 import {
     Bold,
     Italic,

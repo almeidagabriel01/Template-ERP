@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Tenant } from "@/lib/mock-db"; // Keep Type
+import { Tenant } from "@/types"; // Keep Type
 import { TenantService } from "@/services/tenant-service";
 import { useAuth } from "@/providers/auth-provider";
-import { MockDB } from "@/lib/mock-db"; // Keep for fallback if absolutely needed during transition, but goal is removal
+
 
 interface TenantContextType {
   tenant: Tenant | null;
@@ -17,9 +17,9 @@ interface TenantContextType {
 const TenantContext = React.createContext<TenantContextType>({
   tenant: null,
   isLoading: true,
-  refreshTenant: () => {},
-  clearViewingTenant: () => {},
-  setViewingTenant: () => {},
+  refreshTenant: () => { },
+  clearViewingTenant: () => { },
+  setViewingTenant: () => { },
 });
 
 export function TenantProvider({ children }: { children: React.ReactNode }) {
@@ -62,13 +62,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
           setTenant(fetchedTenant);
         } else {
           console.warn(`Tenant ${tenantIdToLoad} not found in Firestore`);
-          // Fallback attempt to MockDB just in case (e.g. legacy local usage)
-          const mockFound = MockDB.getTenantById(tenantIdToLoad);
-          if (mockFound) {
-            setTenant(mockFound);
-          } else {
-            setTenant(null);
-          }
+          setTenant(null);
         }
       } catch (error) {
         console.error("Error loading tenant", error);

@@ -1,6 +1,6 @@
 import { db } from "@/lib/firebase";
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, query, where } from "firebase/firestore";
-import { Tenant } from "@/lib/mock-db"; // We can reuse the type or define a new one
+import { Tenant } from "@/types"; // We can reuse the type or define a new one
 
 const COLLECTION_NAME = "tenants";
 
@@ -57,7 +57,30 @@ export const TenantService = {
       const optionDeletions = optionsSnap.docs.map(doc => deleteDoc(doc.ref));
       await Promise.all(optionDeletions);
 
-      // 4. Finally, delete the Tenant itself
+      // 4. Delete all Users related to this tenant
+      const usersQ = query(collection(db, "users"), where("tenantId", "==", id));
+      const usersSnap = await getDocs(usersQ);
+      // We need to delete the Auth user (server-side) AND the Firestore doc (client/server-side)
+      // Since this file is likely used on the client, we import the server action.
+      // Next.js handles the bridge.
+      const { deleteAuthUser, checkAdminConfig } = await import("@/app/actions/auth");
+
+      // Debug config
+      await checkAdminConfig();
+
+      const userDeletions = usersSnap.docs.map(async (doc) => {
+        // Try to delete Auth User first (or parallel)
+        const result = await deleteAuthUser(doc.id); // Assuming doc.id is the UID
+        if (!result.success) {
+          console.error(`Failed to delete Auth User ${doc.id}:`, result.error);
+        } else {
+          console.log(`Auth User ${doc.id} deleted successfully.`);
+        }
+        return deleteDoc(doc.ref);
+      });
+      await Promise.all(userDeletions);
+
+      // 5. Finally, delete the Tenant itself
       await deleteDoc(doc(db, COLLECTION_NAME, id));
     } catch (error) {
       console.error("Error performing cascading delete for tenant:", error);

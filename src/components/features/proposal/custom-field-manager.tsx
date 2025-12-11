@@ -13,7 +13,8 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
-import { MockDB, CustomFieldType, CustomFieldItem } from "@/lib/mock-db"
+import { CustomFieldType, CustomFieldItem } from "@/types"
+import { CustomFieldService } from "@/services/custom-field-service"
 import { useTenant } from "@/providers/tenant-provider"
 import { Plus, Trash2, Edit2, Image, Settings, X, Check } from "lucide-react"
 
@@ -27,49 +28,59 @@ export function CustomFieldManager() {
 
     React.useEffect(() => {
         if (tenant) {
-            setFieldTypes(MockDB.getCustomFieldTypes(tenant.id))
+            CustomFieldService.getCustomFieldTypes(tenant.id).then(setFieldTypes)
         }
     }, [tenant])
 
-    const handleCreateType = () => {
+    const handleCreateType = async () => {
         if (!tenant || !newTypeName.trim()) return
-        const newType = MockDB.createCustomFieldType(tenant.id, newTypeName.trim())
+        const newType = await CustomFieldService.createCustomFieldType({
+            tenantId: tenant.id,
+            name: newTypeName.trim(),
+            items: [],
+            createdAt: new Date().toISOString()
+        })
         setFieldTypes(prev => [...prev, newType])
         setNewTypeName("")
     }
 
-    const handleDeleteType = (id: string) => {
+    const handleDeleteType = async (id: string) => {
         if (confirm("Tem certeza que deseja excluir este tipo de campo e todos os seus itens?")) {
-            MockDB.deleteCustomFieldType(id)
+            await CustomFieldService.deleteCustomFieldType(id)
             setFieldTypes(prev => prev.filter(t => t.id !== id))
             if (selectedType?.id === id) setSelectedType(null)
         }
     }
 
-    const handleAddItem = () => {
+    const handleAddItem = async () => {
         if (!selectedType || !newItemLabel.trim()) return
-        const newItem = MockDB.addCustomFieldItem(selectedType.id, newItemLabel.trim())
-        if (newItem) {
-            setSelectedType(prev => prev ? {
-                ...prev,
-                items: [...prev.items, newItem]
-            } : null)
-            setFieldTypes(prev => prev.map(t =>
-                t.id === selectedType.id ? { ...t, items: [...t.items, newItem] } : t
-            ))
-            setNewItemLabel("")
+
+        // We need to update the whole type because Firestore is document-based
+        // Ideally we would have a subcollection or array union, but let's update the array
+        const newItem: CustomFieldItem = {
+            id: Math.random().toString(36).substr(2, 9),
+            label: newItemLabel.trim()
         }
+
+        const updatedItems = [...selectedType.items, newItem]
+        await CustomFieldService.updateCustomFieldType(selectedType.id, { items: updatedItems })
+
+        setSelectedType(prev => prev ? { ...prev, items: updatedItems } : null)
+        setFieldTypes(prev => prev.map(t =>
+            t.id === selectedType.id ? { ...t, items: updatedItems } : t
+        ))
+        setNewItemLabel("")
     }
 
-    const handleDeleteItem = (itemId: string) => {
+    const handleDeleteItem = async (itemId: string) => {
         if (!selectedType) return
-        MockDB.deleteCustomFieldItem(selectedType.id, itemId)
-        setSelectedType(prev => prev ? {
-            ...prev,
-            items: prev.items.filter(i => i.id !== itemId)
-        } : null)
+
+        const updatedItems = selectedType.items.filter(i => i.id !== itemId)
+        await CustomFieldService.updateCustomFieldType(selectedType.id, { items: updatedItems })
+
+        setSelectedType(prev => prev ? { ...prev, items: updatedItems } : null)
         setFieldTypes(prev => prev.map(t =>
-            t.id === selectedType.id ? { ...t, items: t.items.filter(i => i.id !== itemId) } : t
+            t.id === selectedType.id ? { ...t, items: updatedItems } : t
         ))
     }
 
@@ -77,18 +88,17 @@ export function CustomFieldManager() {
         if (!selectedType) return
 
         const reader = new FileReader()
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             const base64 = e.target?.result as string
-            MockDB.updateCustomFieldItem(selectedType.id, itemId, { image: base64 })
 
-            setSelectedType(prev => prev ? {
-                ...prev,
-                items: prev.items.map(i => i.id === itemId ? { ...i, image: base64 } : i)
-            } : null)
+            const updatedItems = selectedType.items.map(i => i.id === itemId ? { ...i, image: base64 } : i)
+            await CustomFieldService.updateCustomFieldType(selectedType.id, { items: updatedItems })
+
+            setSelectedType(prev => prev ? { ...prev, items: updatedItems } : null)
             setFieldTypes(prev => prev.map(t =>
                 t.id === selectedType.id ? {
                     ...t,
-                    items: t.items.map(i => i.id === itemId ? { ...i, image: base64 } : i)
+                    items: updatedItems
                 } : t
             ))
         }
