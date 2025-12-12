@@ -8,6 +8,7 @@ export type ProposalProduct = {
     productId: string;
     productName: string;
     productImage?: string;
+    productImages?: string[];
     productDescription?: string;
     quantity: number;
     unitPrice: number;

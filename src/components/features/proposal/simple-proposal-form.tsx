@@ -133,6 +133,7 @@ export function SimpleProposalForm({ proposalId }: SimpleProposalFormProps) {
         productId: product.id,
         productName: product.name,
         productImage: product.images?.[0] || product.image || "",
+        productImages: product.images?.length ? product.images : (product.image ? [product.image] : []),
         productDescription: product.description || "",
         quantity: 1,
         unitPrice: price,
