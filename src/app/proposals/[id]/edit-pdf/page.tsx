@@ -136,6 +136,10 @@ export default function EditPdfPage() {
                 productImage:
                   prod.productImage ||
                   "https://placehold.co/200x200/e2e8f0/64748b?text=Produto",
+                productImages: 
+                  (prod.productImages && prod.productImages.length > 0) 
+                    ? prod.productImages 
+                    : [prod.productImage || "https://placehold.co/200x200/e2e8f0/64748b?text=Produto"]
               }));
             } else {
               p.products = [];
