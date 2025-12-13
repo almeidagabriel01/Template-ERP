@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Proposal } from "@/lib/mock-db"
+import { Proposal } from "@/services/proposal-service"
 import { useTenant } from "@/providers/tenant-provider"
 
 interface PdfCoverPageProps {

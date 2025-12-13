@@ -27,6 +27,12 @@ export function FileUpload({ className, value, onChange, accept = "image/*", ...
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0] || null
         if (onChange) onChange(file)
+
+        // Reset the input value so the same file can be selected again if needed
+        // This is crucial for "delete and re-add" workflows or multi-file uploads using the same input
+        if (inputRef.current) {
+            inputRef.current.value = ""
+        }
     }
 
     const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {

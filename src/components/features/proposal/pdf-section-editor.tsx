@@ -24,12 +24,15 @@ import {
     Upload,
     ArrowUpToLine,
     ArrowDownToLine,
-    GripHorizontal
+
+    GripHorizontal,
+    List
 } from "lucide-react"
 
 export interface PdfSection {
     id: string
-    type: 'title' | 'text' | 'image' | 'divider'
+
+    type: 'title' | 'text' | 'image' | 'divider' | 'product-table'
     content: string
     imageUrl?: string
     // Layout - allows sections to be placed in columns
@@ -77,10 +80,18 @@ export function PdfSectionEditor({ sections, onChange, primaryColor }: PdfSectio
     const [hoveredHandleId, setHoveredHandleId] = React.useState<string | null>(null)
 
     const addSection = (type: PdfSection['type']) => {
+        // Prevent adding multiple product tables if one already exists
+        if (type === 'product-table' && sections.some(s => s.type === 'product-table')) {
+            alert("Já existe uma lista de produtos na proposta.")
+            return
+        }
+
         const newSection: PdfSection = {
             id: crypto.randomUUID(),
             type,
-            content: type === 'title' ? 'Novo Título' : type === 'text' ? 'Novo parágrafo de texto...' : '',
+            content: type === 'title' ? 'Novo Título' : 
+                     type === 'text' ? 'Novo parágrafo de texto...' : 
+                     type === 'product-table' ? 'Lista de Produtos' : '',
             styles: {
                 fontSize: type === 'title' ? '24px' : '14px',
                 fontWeight: type === 'title' ? 'bold' : 'normal',
@@ -255,6 +266,11 @@ export function PdfSectionEditor({ sections, onChange, primaryColor }: PdfSectio
     const handleImageUpload = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
+            if (file.size > 500 * 1024) {
+                alert("A imagem da seção deve ter no máximo 500KB.")
+                e.target.value = ""
+                return
+            }
             const reader = new FileReader()
             reader.onload = (event) => {
                 updateSection(id, { imageUrl: event.target?.result as string })
@@ -268,6 +284,7 @@ export function PdfSectionEditor({ sections, onChange, primaryColor }: PdfSectio
             case 'title': return <Type className="w-4 h-4" />
             case 'text': return <FileText className="w-4 h-4" />
             case 'image': return <ImageIcon className="w-4 h-4" />
+            case 'product-table': return <List className="w-4 h-4" />
             case 'divider': return <div className="w-4 h-0.5 bg-current" />
         }
     }
@@ -277,6 +294,7 @@ export function PdfSectionEditor({ sections, onChange, primaryColor }: PdfSectio
             case 'title': return 'Título'
             case 'text': return 'Texto'
             case 'image': return 'Imagem'
+            case 'product-table': return 'Lista de Produtos'
             case 'divider': return 'Divisor'
         }
     }
@@ -473,6 +491,13 @@ export function PdfSectionEditor({ sections, onChange, primaryColor }: PdfSectio
                                                 placeholder="Digite o texto..."
                                                 rows={4}
                                             />
+                                        </div>
+                                    )}
+
+                                    {section.type === 'product-table' && (
+                                        <div className="p-4 bg-muted/40 rounded border border-dashed text-center text-sm text-muted-foreground">
+                                            A lista de produtos será renderizada aqui automaticamente.
+                                            Posicione esta seção onde desejar que os produtos apareçam.
                                         </div>
                                     )}
 
@@ -841,6 +866,10 @@ export function PdfSectionEditor({ sections, onChange, primaryColor }: PdfSectio
                 <Button variant="outline" size="sm" onClick={() => addSection('divider')} className="gap-2">
                     <div className="w-4 h-0.5 bg-current" />
                     Divisor
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => addSection('product-table')} className="gap-2">
+                    <List className="w-4 h-4" />
+                    Lista de Produtos
                 </Button>
             </div>
         </div >

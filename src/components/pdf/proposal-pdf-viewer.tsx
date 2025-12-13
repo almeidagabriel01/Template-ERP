@@ -1,5 +1,7 @@
+
 import * as React from "react";
-import { Proposal, ProposalTemplate } from "@/lib/mock-db";
+import { Proposal } from "@/services/proposal-service";
+import { ProposalSection, ProposalTemplate } from "@/types";
 import {
   PdfSection,
   createDefaultSections,
@@ -203,7 +205,7 @@ export function ProposalPdfViewer({
               className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-blue-100/50 to-transparent rounded-bl-full pointer-events-none"
               style={
                 {
-                  "--tw-gradient-from": `${primaryColor}20`,
+                  "--tw-gradient-from": `${primaryColor} 20`,
                 } as React.CSSProperties
               }
             />
@@ -211,7 +213,7 @@ export function ProposalPdfViewer({
               className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-blue-100/50 to-transparent rounded-tr-full pointer-events-none"
               style={
                 {
-                  "--tw-gradient-from": `${primaryColor}20`,
+                  "--tw-gradient-from": `${primaryColor} 20`,
                 } as React.CSSProperties
               }
             />
@@ -224,7 +226,7 @@ export function ProposalPdfViewer({
               className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent"
               style={
                 {
-                  "--tw-gradient-via": `${primaryColor}80`,
+                  "--tw-gradient-via": `${primaryColor} 80`,
                 } as React.CSSProperties
               }
             />
@@ -306,6 +308,7 @@ export function ProposalPdfViewer({
       fontFamily,
       position: "relative",
       overflow: "hidden",
+      backgroundColor: "#ffffff", // Ensure opaque base
     };
 
     switch (theme) {
@@ -316,7 +319,7 @@ export function ProposalPdfViewer({
             data-page-index="0"
             style={{
               ...coverStyle,
-              background: `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(primaryColor, -30)} 100%)`,
+              backgroundImage: `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(primaryColor, -30)} 100%)`,
             }}
           >
             <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-white opacity-20" />
@@ -370,13 +373,15 @@ export function ProposalPdfViewer({
             data-page-index="0"
             style={{
               ...coverStyle,
-              background: `linear-gradient(180deg, #0a0a0a 0%, ${primaryColor}20 100%)`,
+              ...coverStyle,
+              backgroundColor: "#0a0a0a", // Dark base for tech theme
+              backgroundImage: `linear-gradient(180deg, #0a0a0a 0%, ${primaryColor}20 100%)`,
             }}
           >
             <div
               className="absolute inset-0 opacity-20"
               style={{
-                backgroundImage: `linear-gradient(${primaryColor}20 1px, transparent 1px), linear-gradient(90deg, ${primaryColor}20 1px, transparent 1px)`,
+                backgroundImage: `linear - gradient(${primaryColor}20 1px, transparent 1px), linear - gradient(90deg, ${primaryColor}20 1px, transparent 1px)`,
                 backgroundSize: "40px 40px",
               }}
             />

@@ -9,10 +9,10 @@ import { useAuth } from "@/providers/auth-provider"
 
 const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/" },
+    { icon: ShoppingBag, label: "Estoque", href: "/products" },
     { icon: Package, label: "Produtos", href: "/products/new" },
     { icon: FileText, label: "Propostas", href: "/proposals" },
     { icon: Users, label: "Clientes", href: "/customers" },
-    { icon: ShoppingBag, label: "Estoque", href: "/inventory" },
     { icon: Settings, label: "Configurações", href: "/settings" },
 ]
 
@@ -50,7 +50,20 @@ export function Sidebar() {
 
             <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
                 {menuItems.map((item) => {
-                    const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
+                    // Best Match Logic:
+                    // 1. Must match the start of the path
+                    // 2. Must not have a specialized child that ALSO matches (and is longer)
+
+                    const isMatch = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+
+                    // Check if there's a more specific menu item that matches the current pathname
+                    const hasBetterMatch = menuItems.some(other =>
+                        other !== item &&
+                        other.href.length > item.href.length &&
+                        pathname.startsWith(other.href)
+                    );
+
+                    const isActive = isMatch && !hasBetterMatch;
                     return (
                         <Link
                             key={item.href}
