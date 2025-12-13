@@ -14,7 +14,8 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ProposalPdfSettings, Proposal, ProposalSection } from "@/lib/mock-db"
+import { ProposalPdfSettings, ProposalSection } from "@/types"
+import { Proposal } from "@/services/proposal-service"
 import { useTenant } from "@/providers/tenant-provider"
 import { Download, FileDown, Loader2, Palette, Layout, Type as TypeIcon } from "lucide-react"
 import { PdfCoverPage } from "./pdf-cover-page"
@@ -328,8 +329,8 @@ export function PdfGenerator({ proposal, sections }: PdfGeneratorProps) {
                                                 type="button"
                                                 onClick={() => setCoverTheme(theme.value as typeof coverTheme)}
                                                 className={`p-3 rounded-lg border-2 text-left transition-all ${coverTheme === theme.value
-                                                        ? 'border-primary bg-primary/5'
-                                                        : 'border-border hover:border-muted-foreground'
+                                                    ? 'border-primary bg-primary/5'
+                                                    : 'border-border hover:border-muted-foreground'
                                                     }`}
                                             >
                                                 <div className="font-medium text-sm">{theme.label}</div>

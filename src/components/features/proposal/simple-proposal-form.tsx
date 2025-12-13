@@ -13,13 +13,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  MockDB,
-  Proposal,
-  Product,
-  ProposalProduct,
-  ProposalTemplate,
-} from "@/lib/mock-db";
+import { ProposalTemplate } from "@/types";
+import { ProposalDefaults } from "@/lib/proposal-defaults";
+import { ProposalService, Proposal, ProposalProduct } from "@/services/proposal-service";
+import { ProposalStatus } from "@/types";
+import { ProductService, Product } from "@/services/product-service";
+import { ProposalTemplateService } from "@/services/proposal-template-service";
 import { useTenant } from "@/providers/tenant-provider";
 import {
   Save,
@@ -27,8 +26,7 @@ import {
   Loader2,
   Package,
   Plus,
-  Minus,
-  FileDown,
+  Minus, // ...
   User,
   Calendar,
   Percent,
@@ -61,37 +59,63 @@ export function SimpleProposalForm({ proposalId }: SimpleProposalFormProps) {
 
   // Load products and template
   React.useEffect(() => {
-    if (tenant) {
-      setProducts(MockDB.getProducts(tenant.id));
-      // Initialize or get default template
-      const defaultTemplate = MockDB.initializeDefaultTemplate(
-        tenant.id,
-        tenant.name,
-        tenant.primaryColor
-      );
-      setTemplate(defaultTemplate);
-    }
+    const fetchInitialData = async () => {
+      if (tenant) {
+        try {
+          const loadedProducts = await ProductService.getProducts(tenant.id);
+          // Filter out inactive products
+          const activeProducts = loadedProducts.filter(
+            (p) => p.status !== "inactive"
+          );
+          setProducts(activeProducts);
+
+          // Use new helper instead of MockDB
+          const load = async () => {
+            if (!tenant) return
+            try {
+              const templates = await ProposalTemplateService.getTemplates(tenant.id)
+              const defaultTemplate = templates.find(t => t.isDefault) || templates[0]
+              setTemplate(defaultTemplate || null)
+            } catch (error) {
+              console.error("Failed to load template", error)
+            }
+          }
+          load();
+
+        } catch (error) {
+          console.error("Error loading products", error);
+        }
+      }
+    };
+    fetchInitialData();
   }, [tenant]);
 
   // Load existing proposal if editing
   React.useEffect(() => {
-    if (proposalId) {
-      const proposal = MockDB.getProposalById(proposalId);
-      if (proposal) {
-        setFormData({
-          title: proposal.title,
-          clientName: proposal.clientName,
-          clientEmail: proposal.clientEmail,
-          clientPhone: proposal.clientPhone,
-          clientAddress: proposal.clientAddress,
-          validUntil: proposal.validUntil,
-          customNotes: proposal.customNotes,
-          discount: proposal.discount || 0,
-          products: proposal.products || [],
-        });
+    const fetchProposal = async () => {
+      if (proposalId) {
+        try {
+          const proposal = await ProposalService.getProposalById(proposalId);
+          if (proposal) {
+            setFormData({
+              title: proposal.title,
+              clientName: proposal.clientName,
+              clientEmail: proposal.clientEmail,
+              clientPhone: proposal.clientPhone,
+              clientAddress: proposal.clientAddress,
+              validUntil: proposal.validUntil,
+              customNotes: proposal.customNotes,
+              discount: proposal.discount || 0,
+              products: proposal.products || [],
+            });
+          }
+        } catch (error) {
+          console.error("Error loading proposal", error);
+        }
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    }
+    };
+    fetchProposal();
   }, [proposalId]);
 
   const selectedProducts = formData.products || [];
@@ -108,8 +132,9 @@ export function SimpleProposalForm({ proposalId }: SimpleProposalFormProps) {
       const newProduct: ProposalProduct = {
         productId: product.id,
         productName: product.name,
-        productImage: product.image || undefined,
-        productDescription: product.description || undefined,
+        productImage: product.images?.[0] || product.image || "",
+        productImages: product.images?.length ? product.images : (product.image ? [product.image] : []),
+        productDescription: product.description || "",
         quantity: 1,
         unitPrice: price,
         total: price,
@@ -180,14 +205,15 @@ export function SimpleProposalForm({ proposalId }: SimpleProposalFormProps) {
 
     try {
       if (proposalId) {
-        MockDB.updateProposal(proposalId, {
-          ...formData,
-          templateId: template?.id,
+        await ProposalService.updateProposal(proposalId, {
+          ...formData, // types should match or be partial
+          // templateId: template?.id, // templateId not in my simple Proposal type, but Firestore accepts extras
           products: selectedProducts,
           status: "draft",
         });
       } else {
-        MockDB.createProposal(tenant.id, {
+        await ProposalService.createProposal({
+          tenantId: tenant.id,
           title: formData.title!,
           clientName: formData.clientName!,
           clientEmail: formData.clientEmail,
@@ -197,10 +223,12 @@ export function SimpleProposalForm({ proposalId }: SimpleProposalFormProps) {
             formData.validUntil ||
             new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           status: "draft",
-          templateId: template?.id,
+          // templateId: template?.id,
           products: selectedProducts,
           customNotes: formData.customNotes,
           discount: formData.discount,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         });
       }
 
@@ -364,16 +392,17 @@ export function SimpleProposalForm({ proposalId }: SimpleProposalFormProps) {
                   return (
                     <div
                       key={product.id}
-                      className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                        selected
-                          ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                          : "border-border hover:border-primary/50"
-                      }`}
+                      className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${selected
+                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                        : "border-border hover:border-primary/50"
+                        }`}
                       onClick={() => toggleProduct(product)}
                     >
                       <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-medium">{product.name}</h4>
-                        <span className="text-sm font-bold text-primary">
+                        <div className="flex flex-col">
+                          <h4 className="font-medium mr-2">{product.name}</h4>
+                        </div>
+                        <span className="text-sm font-bold text-primary whitespace-nowrap">
                           R$ {parseFloat(product.price).toFixed(2)}
                         </span>
                       </div>

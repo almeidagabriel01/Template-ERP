@@ -9,14 +9,15 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MockDB, Proposal, ProposalTemplate } from "@/lib/mock-db";
+import { ProposalTemplate } from "@/types";
+import { ProposalService, Proposal } from "@/services/proposal-service";
+import { ProposalDefaults } from "@/lib/proposal-defaults";
 import { useTenant } from "@/providers/tenant-provider";
 import {
   PdfSectionEditor,
   PdfSection,
   createDefaultSections,
 } from "@/components/features/proposal/pdf-section-editor";
-import { RenderPagedContent } from "@/components/pdf/render-paged-content";
 import { ProposalPdfViewer } from "@/components/pdf/proposal-pdf-viewer";
 import {
   ArrowLeft,
@@ -112,7 +113,7 @@ export default function EditPdfPage() {
   const [theme, setTheme] = React.useState<ThemeType>("modern");
 
   // Style settings
-  const [primaryColor, setPrimaryColor] = React.useState("#2563eb");
+  const [primaryColor, setPrimaryColor] = React.useState(tenant?.primaryColor || "#2563eb");
   const [fontFamily, setFontFamily] = React.useState("'Inter', sans-serif");
 
   // Editable sections
@@ -124,56 +125,124 @@ export default function EditPdfPage() {
 
   React.useEffect(() => {
     if (proposalId && tenant) {
-      const p = MockDB.getProposalById(proposalId);
-      if (p) {
-        // Inject placeholders for missing images (for demo purposes)
-        p.products = p.products.map((prod) => ({
-          ...prod,
-          productImage:
-            prod.productImage ||
-            "https://placehold.co/200x200/e2e8f0/64748b?text=Produto",
-        }));
+      const fetchProposal = async () => {
+        try {
+          const p = await ProposalService.getProposalById(proposalId);
+          if (p) {
+            // Inject placeholders for missing images (for demo purposes)
+            if (p.products) {
+              p.products = p.products.map((prod) => ({
+                ...prod,
+                productImage:
+                  prod.productImage ||
+                  "https://placehold.co/200x200/e2e8f0/64748b?text=Produto",
+                productImages: 
+                  (prod.productImages && prod.productImages.length > 0) 
+                    ? prod.productImages 
+                    : [prod.productImage || "https://placehold.co/200x200/e2e8f0/64748b?text=Produto"]
+              }));
+            } else {
+              p.products = [];
+            }
 
-        setProposal(p);
-        const t = p.templateId
-          ? MockDB.getProposalTemplateById(p.templateId)
-          : MockDB.initializeDefaultTemplate(
-              tenant.id,
-              tenant.name,
-              tenant.primaryColor
-            );
+            setProposal(p);
 
-        if (t) {
-          setTemplate(t);
-          setCoverTitle(p.title || "");
-          setPrimaryColor(t.primaryColor);
-          setFontFamily(t.fontFamily);
-          setTheme(t.theme as ThemeType);
-          if (t.coverImage) setCoverImage(t.coverImage);
-          if ((t as any).coverLogo) setCoverLogo((t as any).coverLogo);
-          else if (tenant.logoUrl) setCoverLogo(tenant.logoUrl);
+            // 1. Check if we have saved PDF settings in the proposal
+            if (p.pdfSettings) {
+              const s = p.pdfSettings;
 
-          if ((t as any).coverImageSettings) {
-            const s = (t as any).coverImageSettings;
-            if (s.opacity !== undefined) setCoverImageOpacity(s.opacity);
-            if (s.fit) setCoverImageFit(s.fit);
-            if (s.fit) setCoverImageFit(s.fit);
-            if (s.position) setCoverImagePosition(s.position);
+              // We MUST set a template object because the render guard requires it (if (!proposal || !template))
+              // effectively we treat the saved settings as an "override" on top of a base template
+              const baseTemplate = ProposalDefaults.createDefaultTemplate(
+                tenant.id,
+                tenant.name,
+                s.primaryColor || tenant.primaryColor
+              );
+              setTemplate(baseTemplate);
+
+              // Load saved settings
+              setCoverTitle(p.title || ""); // Title is always from proposal
+              if (s.primaryColor) {
+                setPrimaryColor(s.primaryColor);
+              } else {
+                setPrimaryColor(tenant.primaryColor || "#2563eb");
+              }
+              if (s.fontFamily) setFontFamily(s.fontFamily);
+              if (s.theme) setTheme(s.theme as ThemeType);
+
+              if (s.coverImage) setCoverImage(s.coverImage);
+              if (s.coverLogo) setCoverLogo(s.coverLogo);
+              else if (tenant.logoUrl) setCoverLogo(tenant.logoUrl);
+
+              if (s.coverImageOpacity !== undefined)
+                setCoverImageOpacity(s.coverImageOpacity);
+              if (s.coverImageFit) setCoverImageFit(s.coverImageFit);
+              if (s.coverImagePosition)
+                setCoverImagePosition(s.coverImagePosition);
+              if (s.repeatHeader !== undefined) setRepeatHeader(s.repeatHeader);
+
+              // Load sections if saved, otherwise regenerate default sections but with saved colors
+              if (s.sections && s.sections.length > 0) {
+                setSections(s.sections);
+              } else {
+                // Fallback to default sections if for some reason they weren't saved
+                // We need a dummy template object or just call createDefaultSections with basic info
+                // Since createDefaultSections expects a template, let's create a temporary one or refactor.
+                // Ideally we should just reuse the logic below for defaults if sections are missing.
+                const t = ProposalDefaults.createDefaultTemplate(
+                  tenant.id,
+                  tenant.name,
+                  s.primaryColor || tenant.primaryColor
+                );
+                setSections(createDefaultSections(t, t.primaryColor));
+              }
+            } else {
+              // 2. No saved settings, initialize from Defaults (as before)
+              const t = ProposalDefaults.createDefaultTemplate(
+                tenant.id,
+                tenant.name,
+                tenant.primaryColor
+              );
+
+              if (t) {
+                setTemplate(t);
+                setCoverTitle(p.title || "");
+                setPrimaryColor(t.primaryColor);
+                setFontFamily(t.fontFamily);
+                setTheme(t.theme as ThemeType);
+                if (t.coverImage) setCoverImage(t.coverImage);
+
+                if (tenant.logoUrl) setCoverLogo(tenant.logoUrl);
+
+                // Defaults
+                setCoverImageOpacity(30);
+                setCoverImageFit("cover");
+                setCoverImagePosition("center");
+                setRepeatHeader(false);
+
+                // Create default sections from template
+                setSections(createDefaultSections(t, t.primaryColor));
+              }
+            }
           }
-          if ((t as any).repeatHeader !== undefined)
-            setRepeatHeader((t as any).repeatHeader);
-
-          // Create default sections from template
-          setSections(createDefaultSections(t, t.primaryColor));
+        } catch (error) {
+          console.error("Error fetching proposal for edit-pdf", error);
         }
-      }
-      setIsLoading(false);
+        setIsLoading(false);
+      };
+      fetchProposal();
     }
   }, [proposalId, tenant]);
 
   const handleCoverImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 750 * 1024) {
+        alert("A imagem de capa deve ter no máximo 750KB.");
+        // Reset input
+        e.target.value = "";
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (event) => {
         setCoverImage(event.target?.result as string);
@@ -185,6 +254,11 @@ export default function EditPdfPage() {
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 300 * 1024) {
+        alert("O logo deve ter no máximo 300KB.");
+        e.target.value = "";
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (event) => {
         setCoverLogo(event.target?.result as string);
@@ -198,26 +272,80 @@ export default function EditPdfPage() {
     setIsSaving(true);
 
     try {
-      MockDB.updateProposalTemplate(template.id, {
+      // NOTE: We are NOT saving the template changes to Firestore yet because we haven't migrated Templates completely.
+      // We only save the Proposal changes (title, etc).
+      // If we want to persist PDF settings, we need to add a 'pdfSettings' field to the Proposal schema in Firestore.
+
+      // Helper to strictly clean data for Firestore
+      const cleanForFirestore = (obj: any): any => {
+        if (obj === undefined) return null;
+        if (obj === null) return null;
+
+        // Handle unexpected types that might crash Firestore or be invalid
+        if (obj instanceof Blob || obj instanceof File) return null;
+        // Check for React Synthetic Events or DOM nodes (heuristic)
+        if (obj.nativeEvent || obj instanceof Element) return null;
+
+        if (typeof obj !== 'object') {
+          return obj;
+        }
+
+        if (Array.isArray(obj)) {
+          // Map undefined to null to preserve index, and clean recursively
+          return obj.map(v => cleanForFirestore(v));
+        }
+
+        if (obj instanceof Date) {
+          return obj.toISOString();
+        }
+
+        const newObj: any = {};
+        for (const key in obj) {
+          if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            const val = obj[key];
+            if (typeof val === 'function' || typeof val === 'symbol') {
+              continue;
+            }
+            const cleaned = cleanForFirestore(val);
+            // Optionally we could skip keys with null values to save space, 
+            // but explicit null is safer for overwriting existing data.
+            newObj[key] = cleaned;
+          }
+        }
+        return newObj;
+      };
+
+      const settings = {
+        theme,
         primaryColor,
         fontFamily,
-        theme,
+        coverTitle, // Redundant but useful for PDF context
         coverImage,
         coverLogo,
-        coverImageSettings: {
-          opacity: coverImageOpacity,
-          fit: coverImageFit,
-          position: coverImagePosition,
-        },
+        coverImageOpacity,
+        coverImageFit,
+        coverImagePosition,
         repeatHeader,
-      } as any);
+        sections, // Saving the edited sections structure
+      };
 
-      MockDB.updateProposal(proposal.id, {
+      const sanitizedSettings = cleanForFirestore(settings);
+
+      // Validate total size (approximate)
+      const payloadSize = JSON.stringify(sanitizedSettings).length;
+      if (payloadSize > 950000) { // 950KB safety margin
+        alert(`O documento está muito grande (${Math.round(payloadSize / 1024)}KB). O limite do banco de dados é 1MB. Por favor, reduza o tamanho das imagens ou remova algumas.`);
+        setIsSaving(false);
+        return;
+      }
+
+      await ProposalService.updateProposal(proposal.id, {
         title: coverTitle,
+        pdfSettings: sanitizedSettings,
       });
 
       await new Promise((r) => setTimeout(r, 300));
-      alert("Alterações salvas!");
+      alert("Proposta e personalizações salvas com sucesso!");
     } catch (error) {
       console.error(error);
       alert("Erro ao salvar");
@@ -740,57 +868,59 @@ export default function EditPdfPage() {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 p-4 border rounded-lg bg-muted/10">
-                    <Label className="font-semibold">
-                      Ajustes da Imagem de Fundo
-                    </Label>
+                  {coverImage && (
+                    <div className="grid gap-4 p-4 border rounded-lg bg-muted/10">
+                      <Label className="font-semibold">
+                        Ajustes da Imagem de Fundo
+                      </Label>
 
-                    <div className="grid gap-2">
-                      <div className="flex justify-between">
-                        <Label className="text-xs">
-                          Opacidade ({coverImageOpacity}%)
-                        </Label>
+                      <div className="grid gap-2">
+                        <div className="flex justify-between">
+                          <Label className="text-xs">
+                            Opacidade ({coverImageOpacity}%)
+                          </Label>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={coverImageOpacity}
+                          onChange={(e) =>
+                            setCoverImageOpacity(parseInt(e.target.value))
+                          }
+                          className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
+                        />
                       </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        value={coverImageOpacity}
-                        onChange={(e) =>
-                          setCoverImageOpacity(parseInt(e.target.value))
-                        }
-                        className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
-                      />
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="grid gap-2">
-                        <Label className="text-xs">Ajuste</Label>
-                        <Select
-                          value={coverImageFit}
-                          onChange={(e) =>
-                            setCoverImageFit(e.target.value as any)
-                          }
-                        >
-                          <option value="cover">Preencher (Cover)</option>
-                          <option value="contain">Conter (Contain)</option>
-                        </Select>
-                      </div>
-                      <div className="grid gap-2">
-                        <Label className="text-xs">Posição</Label>
-                        <Select
-                          value={coverImagePosition}
-                          onChange={(e) =>
-                            setCoverImagePosition(e.target.value)
-                          }
-                        >
-                          <option value="top">Topo</option>
-                          <option value="center">Centro</option>
-                          <option value="bottom">Base</option>
-                        </Select>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                          <Label className="text-xs">Ajuste</Label>
+                          <Select
+                            value={coverImageFit}
+                            onChange={(e) =>
+                              setCoverImageFit(e.target.value as any)
+                            }
+                          >
+                            <option value="cover">Preencher (Cover)</option>
+                            <option value="contain">Conter (Contain)</option>
+                          </Select>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label className="text-xs">Posição</Label>
+                          <Select
+                            value={coverImagePosition}
+                            onChange={(e) =>
+                              setCoverImagePosition(e.target.value)
+                            }
+                          >
+                            <option value="top">Topo</option>
+                            <option value="center">Centro</option>
+                            <option value="bottom">Base</option>
+                          </Select>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="grid gap-2">
                     <Label>Tema da Capa</Label>
@@ -815,18 +945,17 @@ export default function EditPdfPage() {
                                   color: undefined, // Reset text color to inherit theme
                                   backgroundColor:
                                     s.styles.backgroundColor === "#ffffff" ||
-                                    s.styles.backgroundColor === "#f9fafb"
+                                      s.styles.backgroundColor === "#f9fafb"
                                       ? undefined
                                       : s.styles.backgroundColor, // Reset bg only if it was default white/gray
                                 },
                               }))
                             );
                           }}
-                          className={`p-3 rounded-lg border-2 text-left transition-all ${
-                            theme === t.value
-                              ? "border-primary ring-2 ring-primary/20"
-                              : "border-border hover:border-primary/50"
-                          }`}
+                          className={`p-3 rounded-lg border-2 text-left transition-all ${theme === t.value
+                            ? "border-primary ring-2 ring-primary/20"
+                            : "border-border hover:border-primary/50"
+                            }`}
                         >
                           <div
                             className={`w-full h-8 rounded mb-2 ${t.preview}`}

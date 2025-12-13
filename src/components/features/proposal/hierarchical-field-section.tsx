@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
-import { MockDB, CustomFieldType, CustomFieldItem } from "@/lib/mock-db"
+import { CustomFieldType, CustomFieldItem } from "@/types"
+import { CustomFieldService } from "@/services/custom-field-service"
 import { useTenant } from "@/providers/tenant-provider"
 import { Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react"
 import { CustomFieldManager } from "./custom-field-manager"
@@ -38,13 +39,18 @@ export function HierarchicalFieldSection({ content, onUpdate }: HierarchicalFiel
 
     React.useEffect(() => {
         if (tenant) {
-            const types = MockDB.getCustomFieldTypes(tenant.id)
-            setFieldTypes(types)
+            CustomFieldService.getCustomFieldTypes(tenant.id).then(setFieldTypes)
+        }
+    }, [tenant])
+
+    React.useEffect(() => {
+        if (fieldTypes.length > 0) {
             if (content.environmentTypeId) {
-                setEnvironmentType(types.find(t => t.id === content.environmentTypeId) || null)
+                setEnvironmentType(fieldTypes.find(t => t.id === content.environmentTypeId) || null)
+            } else {
+                setEnvironmentType(null)
             }
             if (content.systemTypeId) {
-                setSystemType(types.find(t => t.id === content.systemTypeId) || null)
             }
         }
     }, [tenant, content.environmentTypeId, content.systemTypeId])
@@ -220,8 +226,8 @@ export function HierarchicalFieldSection({ content, onUpdate }: HierarchicalFiel
                                                         type="button"
                                                         onClick={() => toggleSystemItem(entry.id, item.id)}
                                                         className={`flex items-center gap-2 p-2 rounded-lg border-2 transition-all text-left ${isSelected
-                                                                ? 'border-primary bg-primary/10'
-                                                                : 'border-border hover:border-muted-foreground'
+                                                            ? 'border-primary bg-primary/10'
+                                                            : 'border-border hover:border-muted-foreground'
                                                             }`}
                                                     >
                                                         {item.image && (
