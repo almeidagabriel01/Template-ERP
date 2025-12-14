@@ -194,45 +194,51 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       {/* Floating Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-neutral-950/80 backdrop-blur-md border-b border-neutral-800">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-white" />
+      <header className="fixed top-0 left-0 right-0 z-50 bg-neutral-950/70 backdrop-blur-xl border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          {/* Logo */}
+          <div className="flex items-center gap-3 group cursor-pointer">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center shadow-lg shadow-violet-500/25 group-hover:shadow-violet-500/40 transition-shadow">
+              <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold">ERP PRO</span>
+            <span className="text-xl font-bold bg-gradient-to-r from-white to-neutral-400 bg-clip-text text-transparent">
+              ERP PRO
+            </span>
           </div>
 
-          <nav className="hidden md:flex items-center gap-8">
+          {/* Navigation */}
+          <nav className="hidden md:flex items-center gap-1">
             <a
               href="#features"
-              className="text-neutral-400 hover:text-white transition-colors"
+              className="px-4 py-2 text-neutral-400 hover:text-white hover:bg-white/5 rounded-lg transition-all duration-200"
             >
               Recursos
             </a>
             <a
               href="#pricing"
-              className="text-neutral-400 hover:text-white transition-colors"
+              className="px-4 py-2 text-neutral-400 hover:text-white hover:bg-white/5 rounded-lg transition-all duration-200"
             >
               Planos
             </a>
             <a
               href="#contact"
-              className="text-neutral-400 hover:text-white transition-colors"
+              className="px-4 py-2 text-neutral-400 hover:text-white hover:bg-white/5 rounded-lg transition-all duration-200"
             >
               Contato
             </a>
           </nav>
 
-          <div className="flex items-center gap-4">
+          {/* Buttons */}
+          <div className="flex items-center gap-3">
             <Link href="/login" className="hidden md:block">
-              <button className="px-4 py-2 text-neutral-300 hover:text-white transition-colors cursor-pointer">
+              <button className="px-4 py-2 text-neutral-300 hover:text-white hover:bg-white/5 rounded-lg font-medium transition-all duration-200 cursor-pointer">
                 Entrar
               </button>
             </Link>
             <Link href="/login" className="hidden md:block">
-              <button className="px-4 py-2 bg-violet-600 hover:bg-violet-700 rounded-lg font-medium flex items-center gap-2 transition-colors cursor-pointer">
-                Começar Agora <ArrowRight className="w-4 h-4" />
+              <button className="group relative px-5 py-2.5 bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 rounded-xl font-medium flex items-center gap-2 transition-all duration-300 cursor-pointer shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 hover:scale-105">
+                <span>Começar Agora</span>
+                <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
               </button>
             </Link>
             {/* Mobile Menu */}
@@ -513,14 +519,15 @@ export default function LandingPage() {
                 {/* Button always at bottom */}
                 <Link href="/login" className="mt-auto">
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className={`w-full py-3 rounded-lg font-medium transition-all duration-300 cursor-pointer ${plan.popular
-                      ? "bg-violet-600 hover:bg-violet-500 text-white shadow-lg shadow-violet-600/25"
-                      : "bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700 hover:border-neutral-600"
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    className={`group w-full py-3.5 rounded-xl font-medium transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 ${plan.popular
+                      ? "bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white shadow-lg shadow-violet-500/30 hover:shadow-violet-500/50"
+                      : "bg-white/5 hover:bg-white/10 text-white border border-white/10 hover:border-violet-500/30"
                       }`}
                   >
-                    {plan.cta}
+                    <span>{plan.cta}</span>
+                    <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
                   </motion.button>
                 </Link>
               </motion.div>
@@ -559,11 +566,12 @@ export default function LandingPage() {
           >
             <Link href="/login">
               <motion.button
-                className="px-6 md:px-8 py-3 md:py-4 bg-violet-600 hover:bg-violet-700 rounded-lg font-medium text-base md:text-lg flex items-center gap-2 mx-auto transition-colors cursor-pointer"
+                className="group relative px-8 py-4 bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 rounded-xl font-medium text-lg flex items-center gap-3 mx-auto transition-all duration-300 cursor-pointer shadow-xl shadow-violet-500/30 hover:shadow-violet-500/50"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                Começar Gratuitamente <ArrowRight className="w-5 h-5" />
+                <span>Começar Gratuitamente</span>
+                <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
               </motion.button>
             </Link>
           </motion.div>
