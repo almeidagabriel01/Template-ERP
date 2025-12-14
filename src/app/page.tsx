@@ -1,592 +1,357 @@
 "use client";
 
-import * as React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  ArrowRight,
-  Wallet,
-  TrendingUp,
-  TrendingDown,
-  Clock,
-  Users,
-  FileText,
-  Plus,
-  AlertCircle,
-  Package,
-  ArrowUpCircle,
-  ArrowDownCircle,
-  CalendarDays,
-} from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
-import {
-  TransactionService,
-  Transaction,
-} from "@/services/transaction-service";
-import { ProposalService, Proposal } from "@/services/proposal-service";
-import { ClientService, Client } from "@/services/client-service";
-import { useTenant } from "@/providers/tenant-provider";
-import { useAuth } from "@/providers/auth-provider";
+import { useRouter } from "next/navigation";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { HeroParallax } from "@/components/ui/hero-parallax";
+import { Check, ArrowRight, Sparkles, Loader2 } from "lucide-react";
 
-// Helper to get greeting based on time
-const getGreeting = () => {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Bom dia";
-  if (hour < 18) return "Boa tarde";
-  return "Boa noite";
-};
+// Screenshots/Features para o Hero Parallax
+const products = [
+  {
+    title: "Dashboard",
+    link: "#features",
+    thumbnail:
+      "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop",
+  },
+  {
+    title: "Propostas",
+    link: "#features",
+    thumbnail:
+      "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=600&fit=crop",
+  },
+  {
+    title: "Relatórios",
+    link: "#features",
+    thumbnail:
+      "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop",
+  },
+  {
+    title: "Clientes",
+    link: "#features",
+    thumbnail:
+      "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=600&fit=crop",
+  },
+  {
+    title: "Produtos",
+    link: "#features",
+    thumbnail:
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=600&fit=crop",
+  },
+  {
+    title: "Financeiro",
+    link: "#features",
+    thumbnail:
+      "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=600&fit=crop",
+  },
+  {
+    title: "Configurações",
+    link: "#features",
+    thumbnail:
+      "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&h=600&fit=crop",
+  },
+  {
+    title: "Multi-tenant",
+    link: "#features",
+    thumbnail:
+      "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800&h=600&fit=crop",
+  },
+  {
+    title: "PDF Export",
+    link: "#features",
+    thumbnail:
+      "https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=800&h=600&fit=crop",
+  },
+  {
+    title: "Themes",
+    link: "#features",
+    thumbnail:
+      "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&h=600&fit=crop",
+  },
+  {
+    title: "Analytics",
+    link: "#features",
+    thumbnail:
+      "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop",
+  },
+  {
+    title: "API",
+    link: "#features",
+    thumbnail:
+      "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&h=600&fit=crop",
+  },
+  {
+    title: "Integrações",
+    link: "#features",
+    thumbnail:
+      "https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&h=600&fit=crop",
+  },
+  {
+    title: "Suporte",
+    link: "#features",
+    thumbnail:
+      "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=800&h=600&fit=crop",
+  },
+  {
+    title: "Mobile",
+    link: "#features",
+    thumbnail:
+      "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=800&h=600&fit=crop",
+  },
+];
 
-// Format currency
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-};
+// Planos
+const plans = [
+  {
+    name: "Starter",
+    price: "R$97",
+    period: "/mês",
+    description: "Ideal para pequenos negócios",
+    features: [
+      "Até 100 propostas/mês",
+      "1 usuário",
+      "Relatórios básicos",
+      "Suporte por email",
+    ],
+    cta: "Começar Grátis",
+    popular: false,
+  },
+  {
+    name: "Professional",
+    price: "R$197",
+    period: "/mês",
+    description: "Para empresas em crescimento",
+    features: [
+      "Propostas ilimitadas",
+      "5 usuários",
+      "Relatórios avançados",
+      "Suporte prioritário",
+      "Customização de temas",
+      "API de integração",
+    ],
+    cta: "Assinar Agora",
+    popular: true,
+  },
+  {
+    name: "Enterprise",
+    price: "R$497",
+    period: "/mês",
+    description: "Para grandes operações",
+    features: [
+      "Tudo do Professional",
+      "Usuários ilimitados",
+      "Multi-tenant",
+      "Suporte 24/7",
+      "SLA garantido",
+      "Onboarding dedicado",
+    ],
+    cta: "Falar com Vendas",
+    popular: false,
+  },
+];
 
-// Format date
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "short",
-  });
-};
+export default function LandingPage() {
+  const router = useRouter();
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-export default function DashboardPage() {
-  const { tenant } = useTenant();
-  const { user } = useAuth();
-  const [isLoading, setIsLoading] = React.useState(true);
-
-  // Data states
-  const [transactions, setTransactions] = React.useState<Transaction[]>([]);
-  const [proposals, setProposals] = React.useState<Proposal[]>([]);
-  const [clients, setClients] = React.useState<Client[]>([]);
-  const [financialSummary, setFinancialSummary] = React.useState({
-    totalIncome: 0,
-    totalExpense: 0,
-    pendingIncome: 0,
-    pendingExpense: 0,
-  });
-
-  React.useEffect(() => {
-    const fetchData = async () => {
-      if (!tenant) return;
-
-      try {
-        const [transactionsData, proposalsData, clientsData, summary] =
-          await Promise.all([
-            TransactionService.getTransactions(tenant.id),
-            ProposalService.getProposals(tenant.id),
-            ClientService.getClients(tenant.id),
-            TransactionService.getSummary(tenant.id),
-          ]);
-
-        setTransactions(transactionsData);
-        setProposals(proposalsData);
-        setClients(clientsData);
-        setFinancialSummary(summary);
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [tenant]);
-
-  // Calculate monthly data for chart (last 6 months)
-  const chartData = React.useMemo(() => {
-    const months: {
-      [key: string]: { receitas: number; despesas: number; name: string };
-    } = {};
-    const now = new Date();
-
-    // Initialize last 6 months
-    for (let i = 5; i >= 0; i--) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      months[key] = {
-        name: date.toLocaleDateString("pt-BR", { month: "short" }),
-        receitas: 0,
-        despesas: 0,
-      };
-    }
-
-    // Aggregate transactions
-    transactions.forEach((t) => {
-      if (t.status !== "paid") return;
-      const date = new Date(t.date);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      if (months[key]) {
-        if (t.type === "income") {
-          months[key].receitas += t.amount;
-        } else {
-          months[key].despesas += t.amount;
-        }
+  useEffect(() => {
+    // Check if user is logged in, redirect to dashboard if so
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        router.replace("/dashboard");
+      } else {
+        setIsCheckingAuth(false);
       }
     });
 
-    return Object.values(months);
-  }, [transactions]);
+    return () => unsubscribe();
+  }, [router]);
 
-  // Proposal stats
-  const proposalStats = React.useMemo(() => {
-    const approved = proposals.filter((p) => p.status === "approved").length;
-    const pending = proposals.filter(
-      (p) => p.status === "sent" || p.status === "draft"
-    ).length;
-    const rejected = proposals.filter((p) => p.status === "rejected").length;
-    const total = proposals.length;
-    const conversionRate = total > 0 ? Math.round((approved / total) * 100) : 0;
-
-    return { approved, pending, rejected, total, conversionRate };
-  }, [proposals]);
-
-  // Recent items
-  const recentTransactions = transactions.slice(0, 5);
-  const recentProposals = proposals.slice(0, 5);
-
-  // Alerts
-  const overdueTransactions = transactions.filter(
-    (t) => t.status === "overdue"
-  );
-  const upcomingDue = transactions.filter((t) => {
-    if (t.status !== "pending" || !t.dueDate) return false;
-    const dueDate = new Date(t.dueDate);
-    const today = new Date();
-    const diffDays = Math.ceil(
-      (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    return diffDays >= 0 && diffDays <= 7;
-  });
-
-  // New clients this month
-  const newClientsThisMonth = clients.filter((c) => {
-    const created = new Date(c.createdAt);
-    const now = new Date();
+  // Show loading while checking auth
+  if (isCheckingAuth) {
     return (
-      created.getMonth() === now.getMonth() &&
-      created.getFullYear() === now.getFullYear()
-    );
-  }).length;
-
-  // Balance
-  const balance = financialSummary.totalIncome - financialSummary.totalExpense;
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-pulse text-muted-foreground">
-          Carregando dashboard...
-        </div>
+      <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-violet-500" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            {getGreeting()}, {tenant?.name || "Usuário"}! 👋
-          </h1>
-          <p className="text-muted-foreground mt-1 flex items-center gap-2">
-            <CalendarDays className="w-4 h-4" />
-            {new Date().toLocaleDateString("pt-BR", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}
-          </p>
-        </div>
-      </div>
+    <div className="min-h-screen bg-neutral-950 text-white">
+      {/* Floating Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-neutral-950/80 backdrop-blur-md border-b border-neutral-800">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-xl font-bold">ERP PRO</span>
+          </div>
 
-      {/* Financial Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card
-          className={balance >= 0 ? "border-green-500/30" : "border-red-500/30"}
-        >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo Atual</CardTitle>
-            <Wallet
-              className={`h-4 w-4 ${balance >= 0 ? "text-green-500" : "text-red-500"}`}
-            />
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-2xl font-bold ${balance >= 0 ? "text-green-500" : "text-red-500"}`}
+          <nav className="hidden md:flex items-center gap-8">
+            <a
+              href="#features"
+              className="text-neutral-400 hover:text-white transition-colors"
             >
-              {formatCurrency(balance)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Receitas - Despesas pagas
-            </p>
-          </CardContent>
-        </Card>
+              Recursos
+            </a>
+            <a
+              href="#pricing"
+              className="text-neutral-400 hover:text-white transition-colors"
+            >
+              Planos
+            </a>
+            <a
+              href="#contact"
+              className="text-neutral-400 hover:text-white transition-colors"
+            >
+              Contato
+            </a>
+          </nav>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Receitas</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">
-              {formatCurrency(financialSummary.totalIncome)}
-            </div>
-            <p className="text-xs text-muted-foreground">Total recebido</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Despesas</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-500">
-              {formatCurrency(financialSummary.totalExpense)}
-            </div>
-            <p className="text-xs text-muted-foreground">Total pago</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pendências</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-500">
-              {formatCurrency(
-                financialSummary.pendingIncome + financialSummary.pendingExpense
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">A receber + A pagar</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Alerts */}
-      {(overdueTransactions.length > 0 || upcomingDue.length > 0) && (
-        <Card className="border-orange-500/30 bg-orange-500/5">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 text-orange-500">
-              <AlertCircle className="w-4 h-4" />
-              Alertas
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-3">
-            {overdueTransactions.length > 0 && (
-              <Badge variant="destructive" className="gap-1">
-                <AlertCircle className="w-3 h-3" />
-                {overdueTransactions.length} pagamento(s) atrasado(s)
-              </Badge>
-            )}
-            {upcomingDue.length > 0 && (
-              <Badge variant="warning" className="gap-1">
-                <Clock className="w-3 h-3" />
-                {upcomingDue.length} vencendo em 7 dias
-              </Badge>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Chart + Stats */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Chart */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Fluxo de Caixa</CardTitle>
-            <CardDescription>
-              Receitas vs Despesas nos últimos 6 meses
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    className="stroke-muted"
-                  />
-                  <XAxis dataKey="name" className="text-xs" />
-                  <YAxis
-                    className="text-xs"
-                    tickFormatter={(v) => `R$ ${(v / 1000).toFixed(0)}k`}
-                  />
-                  <Tooltip
-                    formatter={(value: number) => formatCurrency(value)}
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Legend />
-                  <Bar
-                    dataKey="receitas"
-                    name="Receitas"
-                    fill="#22c55e"
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar
-                    dataKey="despesas"
-                    name="Despesas"
-                    fill="#ef4444"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Stats */}
-        <div className="space-y-4">
-          {/* Proposals */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                Propostas
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-sm">Total</span>
-                <span className="font-bold">{proposalStats.total}</span>
-              </div>
-              <div className="flex gap-2">
-                <Badge variant="success" className="flex-1 justify-center">
-                  {proposalStats.approved} Aprovadas
-                </Badge>
-                <Badge variant="warning" className="flex-1 justify-center">
-                  {proposalStats.pending} Pendentes
-                </Badge>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t">
-                <span className="text-muted-foreground text-sm">
-                  Taxa de conversão
-                </span>
-                <span className="font-bold text-primary">
-                  {proposalStats.conversionRate}%
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Clients */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Clientes
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-sm">Total</span>
-                <span className="font-bold">{clients.length}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-sm">
-                  Novos este mês
-                </span>
-                <Badge variant="outline">{newClientsThisMonth}</Badge>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Ações Rápidas</CardTitle>
-          <CardDescription>Atalhos para tarefas comuns</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Link href="/proposals/new">
-              <Button
-                variant="outline"
-                className="w-full h-auto py-4 flex flex-col gap-2"
-              >
-                <FileText className="w-5 h-5 text-primary" />
-                <span className="text-sm">Nova Proposta</span>
-              </Button>
+          <div className="flex items-center gap-4">
+            <Link href="/login">
+              <button className="px-4 py-2 text-neutral-300 hover:text-white transition-colors">
+                Entrar
+              </button>
             </Link>
-            <Link href="/financial/new">
-              <Button
-                variant="outline"
-                className="w-full h-auto py-4 flex flex-col gap-2"
-              >
-                <Wallet className="w-5 h-5 text-primary" />
-                <span className="text-sm">Novo Lançamento</span>
-              </Button>
-            </Link>
-            <Link href="/customers/new">
-              <Button
-                variant="outline"
-                className="w-full h-auto py-4 flex flex-col gap-2"
-              >
-                <Users className="w-5 h-5 text-primary" />
-                <span className="text-sm">Novo Cliente</span>
-              </Button>
-            </Link>
-            <Link href="/products/new">
-              <Button
-                variant="outline"
-                className="w-full h-auto py-4 flex flex-col gap-2"
-              >
-                <Package className="w-5 h-5 text-primary" />
-                <span className="text-sm">Novo Produto</span>
-              </Button>
+            <Link href="/login">
+              <button className="px-4 py-2 bg-violet-600 hover:bg-violet-700 rounded-lg font-medium flex items-center gap-2 transition-colors">
+                Começar Agora <ArrowRight className="w-4 h-4" />
+              </button>
             </Link>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </header>
 
-      {/* Recent Activity */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Recent Transactions */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-base">Últimas Transações</CardTitle>
-              <CardDescription>5 lançamentos mais recentes</CardDescription>
-            </div>
-            <Link href="/financial">
-              <Button variant="ghost" size="sm" className="gap-1">
-                Ver todos <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {recentTransactions.length === 0 ? (
-              <p className="text-muted-foreground text-sm text-center py-4">
-                Nenhuma transação ainda
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {recentTransactions.map((t) => (
-                  <div key={t.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`p-1.5 rounded-full ${
-                          t.type === "income"
-                            ? "bg-green-500/10"
-                            : "bg-red-500/10"
-                        }`}
-                      >
-                        {t.type === "income" ? (
-                          <ArrowUpCircle className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <ArrowDownCircle className="w-4 h-4 text-red-500" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium truncate max-w-[150px]">
-                          {t.description}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDate(t.date)}
-                        </p>
-                      </div>
-                    </div>
-                    <span
-                      className={`text-sm font-medium ${
-                        t.type === "income" ? "text-green-500" : "text-red-500"
-                      }`}
-                    >
-                      {t.type === "income" ? "+" : "-"}
-                      {formatCurrency(t.amount)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Hero Parallax Section */}
+      <HeroParallax
+        products={products}
+        title={
+          <>
+            O ERP completo para <br />{" "}
+            <span className="text-violet-500">sua empresa</span>
+          </>
+        }
+        subtitle="Gerencie propostas, clientes, produtos e finanças em um só lugar. Simplifique sua operação e aumente sua produtividade com nossa plataforma intuitiva e moderna."
+      />
 
-        {/* Recent Proposals */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-base">Últimas Propostas</CardTitle>
-              <CardDescription>5 propostas mais recentes</CardDescription>
-            </div>
-            <Link href="/proposals">
-              <Button variant="ghost" size="sm" className="gap-1">
-                Ver todas <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {recentProposals.length === 0 ? (
-              <p className="text-muted-foreground text-sm text-center py-4">
-                Nenhuma proposta ainda
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {recentProposals.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 rounded-full bg-primary/10">
-                        <FileText className="w-4 h-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium truncate max-w-[150px]">
-                          {p.clientName}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDate(p.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge
-                      variant={
-                        p.status === "approved"
-                          ? "success"
-                          : p.status === "rejected"
-                            ? "destructive"
-                            : "warning"
-                      }
-                    >
-                      {p.status === "approved"
-                        ? "Aprovada"
-                        : p.status === "rejected"
-                          ? "Recusada"
-                          : "Pendente"}
-                    </Badge>
+      {/* Pricing Section */}
+      <section id="pricing" className="py-24 px-4 bg-neutral-900/50">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold mb-4">
+              Planos para todos os tamanhos
+            </h2>
+            <p className="text-neutral-400 text-lg max-w-2xl mx-auto">
+              Escolha o plano ideal para sua empresa e comece a transformar sua
+              gestão hoje mesmo.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {plans.map((plan) => (
+              <div
+                key={plan.name}
+                className={`relative p-8 rounded-2xl border ${
+                  plan.popular
+                    ? "border-violet-500 bg-violet-500/10 shadow-xl scale-105"
+                    : "border-neutral-800 bg-neutral-900"
+                }`}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-violet-600 text-white text-sm font-medium px-4 py-1 rounded-full">
+                    Mais Popular
                   </div>
-                ))}
+                )}
+
+                <div className="mb-6">
+                  <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
+                  <p className="text-neutral-400 text-sm">{plan.description}</p>
+                </div>
+
+                <div className="mb-6">
+                  <span className="text-4xl font-bold">{plan.price}</span>
+                  <span className="text-neutral-400">{plan.period}</span>
+                </div>
+
+                <ul className="space-y-3 mb-8">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-center gap-3">
+                      <Check className="w-5 h-5 text-violet-500 shrink-0" />
+                      <span className="text-sm text-neutral-300">
+                        {feature}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Link href="/login">
+                  <button
+                    className={`w-full py-3 rounded-lg font-medium transition-colors ${
+                      plan.popular
+                        ? "bg-violet-600 hover:bg-violet-700 text-white"
+                        : "bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700"
+                    }`}
+                  >
+                    {plan.cta}
+                  </button>
+                </Link>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-24 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl md:text-5xl font-bold mb-6">
+            Pronto para transformar sua gestão?
+          </h2>
+          <p className="text-neutral-400 text-lg mb-8 max-w-2xl mx-auto">
+            Junte-se a centenas de empresas que já simplificaram suas operações
+            com o ERP PRO.
+          </p>
+          <Link href="/login">
+            <button className="px-8 py-4 bg-violet-600 hover:bg-violet-700 rounded-lg font-medium text-lg flex items-center gap-2 mx-auto transition-colors">
+              Começar Gratuitamente <ArrowRight className="w-5 h-5" />
+            </button>
+          </Link>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer id="contact" className="py-12 px-4 border-t border-neutral-800">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-white" />
+              </div>
+              <span className="font-bold">ERP PRO</span>
+            </div>
+
+            <div className="flex items-center gap-6 text-sm text-neutral-400">
+              <a href="#" className="hover:text-white transition-colors">
+                Termos de Uso
+              </a>
+              <a href="#" className="hover:text-white transition-colors">
+                Privacidade
+              </a>
+              <a href="#" className="hover:text-white transition-colors">
+                Suporte
+              </a>
+            </div>
+
+            <p className="text-sm text-neutral-500">
+              © 2024 ERP PRO. Todos os direitos reservados.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
