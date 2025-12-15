@@ -17,6 +17,7 @@ export type User = {
   name: string;
   role: "admin" | "user" | "superadmin";
   tenantId: string;
+  planId?: string;
 };
 
 interface AuthContextType {
@@ -30,7 +31,7 @@ const AuthContext = React.createContext<AuthContextType>({
   user: null,
   isLoading: true,
   login: async () => false,
-  logout: async () => {},
+  logout: async () => { },
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -54,6 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               name: userData.name || firebaseUser.displayName || "User",
               role: userData.role || "admin",
               tenantId: userData.tenantId || "default-tenant",
+              planId: userData.planId || undefined,
             } as User);
           } else {
             // Fallback/Default for new integration (Mocking the DB part until real data exists)
@@ -105,17 +107,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await signOut(auth);
       setUser(null);
-      
+
       // Clear any "Viewing As" tenant from localStorage
       localStorage.removeItem("viewingAsTenant");
-      
+
       // Reset theme colors to default (remove tenant customization)
       document.documentElement.style.removeProperty("--primary");
       const styleTag = document.getElementById("tenant-styles");
       if (styleTag) {
         styleTag.remove();
       }
-      
+
       router.push("/login");
     } catch (error) {
       console.error("Logout failed", error);
