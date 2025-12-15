@@ -23,7 +23,34 @@ export type User = {
     email: string
     password?: string // Kept for types compatibility, but Firebase Auth handles passwords
     role: 'admin' | 'user' | 'superadmin'
+    planId?: string // Reference to user's subscription plan
     // Firebase related fields might be added here later
+}
+
+// Subscription Plans
+export type PlanTier = 'starter' | 'pro' | 'enterprise'
+
+export type PlanFeatures = {
+    maxProposals: number      // -1 for unlimited
+    maxClients: number        // -1 for unlimited
+    maxProducts: number       // -1 for unlimited
+    maxUsers: number          // -1 for unlimited
+    customBranding: boolean
+    prioritySupport: boolean
+    apiAccess: boolean
+    advancedReports: boolean
+}
+
+export type UserPlan = {
+    id: string
+    name: string
+    tier: PlanTier
+    description: string
+    price: number              // Monthly price in BRL
+    features: PlanFeatures
+    order: number              // For sorting/hierarchy (1 = lowest, 4 = highest)
+    highlighted?: boolean      // To highlight a recommended plan
+    createdAt: string
 }
 
 // Proposals
