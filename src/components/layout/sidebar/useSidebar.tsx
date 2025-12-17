@@ -1,0 +1,151 @@
+"use client";
+
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { usePathname } from "next/navigation";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/providers/auth-provider";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { usePermissions } from "@/providers/permissions-provider";
+import { menuItems, MenuItem } from "./config";
+
+interface UseSidebarReturn {
+  isExpanded: boolean;
+  userPlanName: string | null;
+  expandedMenus: Set<string>;
+  visibleMenuItems: MenuItem[];
+  handleMouseEnter: () => void;
+  handleMouseLeave: () => void;
+  toggleSubmenu: (href: string) => void;
+  isMenuActive: (item: MenuItem) => boolean;
+  isParentActive: (item: MenuItem) => boolean;
+  isChildActive: (href: string) => boolean;
+  onExpandChange?: (expanded: boolean) => void;
+}
+
+export function useSidebar(onExpandChange?: (expanded: boolean) => void): UseSidebarReturn {
+  const pathname = usePathname();
+  const { user } = useAuth();
+  const { hasFinancial } = usePlanLimits();
+  const { hasPermission, isMaster } = usePermissions();
+  
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [userPlanName, setUserPlanName] = useState<string | null>(null);
+  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
+
+  // Filter menu items based on permissions
+  const visibleMenuItems = useMemo(() => {
+    return menuItems.filter((item) => {
+      // Financial requires plan access
+      if (item.requiresFinancial && !hasFinancial && !isMaster) return true; // Show but restricted
+      
+      // MASTER sees everything
+      if (isMaster) return true;
+
+      // MEMBER: check if they can view this page
+      if (item.pageId) {
+        // For Settings, check if there are any visible children
+        if (item.children) {
+          const visibleChildren = item.children.filter(child => !child.masterOnly);
+          return visibleChildren.length > 0;
+        }
+        return hasPermission(item.pageId, 'view');
+      }
+
+      return true;
+    });
+  }, [isMaster, hasPermission, hasFinancial]);
+
+  // Toggle submenu expansion
+  const toggleSubmenu = useCallback((href: string) => {
+    setExpandedMenus(prev => {
+      const next = new Set(prev);
+      if (next.has(href)) {
+        next.delete(href);
+      } else {
+        next.add(href);
+      }
+      return next;
+    });
+  }, []);
+
+  // Auto-expand menu if one of its children is active
+  useEffect(() => {
+    menuItems.forEach(item => {
+      if (item.children) {
+        const isChildActive = item.children.some(child =>
+          pathname === child.href || pathname.startsWith(child.href + "/")
+        );
+        if (isChildActive) {
+          setExpandedMenus(prev => new Set([...prev, item.href]));
+        }
+      }
+    });
+  }, [pathname]);
+
+  // Fetch user's current plan name
+  useEffect(() => {
+    const fetchPlanName = async () => {
+      if (!user?.planId) {
+        setUserPlanName(user?.role === "free" ? "Gratuito" : null);
+        return;
+      }
+      try {
+        const planDoc = await getDoc(doc(db, "plans", user.planId));
+        if (planDoc.exists()) {
+          const planData = planDoc.data();
+          setUserPlanName(planData.name || planData.tier);
+        }
+      } catch (error) {
+        console.error("Error fetching plan:", error);
+      }
+    };
+    fetchPlanName();
+  }, [user?.planId, user?.role]);
+
+  const handleMouseEnter = useCallback(() => {
+    setIsExpanded(true);
+    onExpandChange?.(true);
+  }, [onExpandChange]);
+
+  const handleMouseLeave = useCallback(() => {
+    setIsExpanded(false);
+    onExpandChange?.(false);
+  }, [onExpandChange]);
+
+  const isMenuActive = useCallback((item: MenuItem): boolean => {
+    const isMatch = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+    const hasBetterMatch = visibleMenuItems.some(
+      (other) =>
+        other !== item &&
+        other.href.length > item.href.length &&
+        pathname.startsWith(other.href)
+    );
+    const hasChildren = item.children && item.children.length > 0;
+    return isMatch && !hasBetterMatch && !hasChildren;
+  }, [pathname, visibleMenuItems]);
+
+  const isParentActive = useCallback((item: MenuItem): boolean => {
+    return item.children?.some(
+      child => pathname === child.href || pathname.startsWith(child.href + "/")
+    ) ?? false;
+  }, [pathname]);
+
+  const isChildActive = useCallback((href: string): boolean => {
+    return pathname === href || pathname.startsWith(href + "/");
+  }, [pathname]);
+
+  return {
+    isExpanded,
+    userPlanName,
+    expandedMenus,
+    visibleMenuItems,
+    handleMouseEnter,
+    handleMouseLeave,
+    toggleSubmenu,
+    isMenuActive,
+    isParentActive,
+    isChildActive,
+    onExpandChange,
+  };
+}

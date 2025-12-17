@@ -2,93 +2,42 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { UpgradeRequired } from "@/components/ui/upgrade-required";
-import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { usePagePermission } from "@/hooks/usePagePermission";
+import { Transaction } from "@/services/transaction-service";
+import { Plus, Wallet, Search, Loader2 } from "lucide-react";
+import { formatCurrency } from "@/utils/format";
+import { useFinancialData } from "./_hooks/useFinancialData";
 import {
-  Transaction,
-  TransactionService,
-  TransactionType,
-  TransactionStatus,
-} from "@/services/transaction-service";
-import { useTenant } from "@/providers/tenant-provider";
-import {
-  Plus,
-  Wallet,
-  Trash2,
-  Edit,
-  Search,
-  Loader2,
-  TrendingUp,
-  TrendingDown,
-  Clock,
-  AlertCircle,
-  ArrowUpCircle,
-  ArrowDownCircle,
-  Eye,
-} from "lucide-react";
-
-const typeConfig: Record<
-  TransactionType,
-  { label: string; icon: React.ElementType; color: string }
-> = {
-  income: { label: "Receita", icon: ArrowUpCircle, color: "text-green-500" },
-  expense: { label: "Despesa", icon: ArrowDownCircle, color: "text-red-500" },
-};
-
-const statusConfig: Record<
-  TransactionStatus,
-  {
-    label: string;
-    variant: "default" | "destructive" | "outline" | "success" | "warning";
-  }
-> = {
-  paid: { label: "Pago", variant: "success" },
-  pending: { label: "Pendente", variant: "warning" },
-  overdue: { label: "Atrasado", variant: "destructive" },
-};
+  FinancialSummaryCards,
+  TransactionCard,
+  DeleteTransactionDialog,
+  TransactionFilters,
+} from "./_components";
 
 export default function FinancialPage() {
-  const { tenant } = useTenant();
-  const { hasFinancial, isLoading: isPlanLoading } = usePlanLimits();
-  const [transactions, setTransactions] = React.useState<Transaction[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [searchTerm, setSearchTerm] = React.useState("");
-  const [filterType, setFilterType] = React.useState<TransactionType | "all">(
-    "all"
-  );
-  const [summary, setSummary] = React.useState({
-    totalIncome: 0,
-    totalExpense: 0,
-    pendingIncome: 0,
-    pendingExpense: 0,
-  });
+  const { canCreate, canEdit, canDelete } = usePagePermission("financial");
+  const {
+    summary,
+    isLoading,
+    hasFinancial,
+    isPlanLoading,
+    searchTerm,
+    setSearchTerm,
+    filterType,
+    setFilterType,
+    filteredTransactions,
+    deleteTransaction,
+    transactions,
+  } = useFinancialData();
 
-  // useEffect MUST be called before any conditional returns
-  React.useEffect(() => {
-    // Only fetch if user has access
-    if (!hasFinancial && !isPlanLoading) return;
-
-    const fetchData = async () => {
-      if (tenant) {
-        try {
-          const [data, summaryData] = await Promise.all([
-            TransactionService.getTransactions(tenant.id),
-            TransactionService.getSummary(tenant.id),
-          ]);
-          setTransactions(data);
-          setSummary(summaryData);
-        } catch (error) {
-          console.error("Failed to fetch transactions", error);
-        }
-      }
-      setIsLoading(false);
-    };
-    fetchData();
-  }, [tenant, hasFinancial, isPlanLoading]);
+  // Delete confirmation dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [transactionToDelete, setTransactionToDelete] =
+    React.useState<Transaction | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   // Check plan access - MUST be AFTER all hooks
   if (!isPlanLoading && !hasFinancial) {
@@ -100,61 +49,19 @@ export default function FinancialPage() {
     );
   }
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir este lançamento?")) {
-      try {
-        await TransactionService.deleteTransaction(id);
-        setTransactions((prev) => prev.filter((t) => t.id !== id));
-        // Refresh summary
-        if (tenant) {
-          const summaryData = await TransactionService.getSummary(tenant.id);
-          setSummary(summaryData);
-        }
-      } catch (error) {
-        console.error("Error deleting transaction:", error);
-        alert("Erro ao excluir lançamento");
-      }
-    }
+  const openDeleteDialog = (transaction: Transaction) => {
+    setTransactionToDelete(transaction);
+    setDeleteDialogOpen(true);
   };
 
-  const filteredTransactions = React.useMemo(() => {
-    let filtered = transactions;
+  const confirmDelete = async () => {
+    if (!transactionToDelete) return;
 
-    // Filter out subsequent installments (show only installmentNumber === 1 or non-installments)
-    filtered = filtered.filter(
-      (t) => !t.isInstallment || t.installmentNumber === 1
-    );
-
-    if (filterType !== "all") {
-      filtered = filtered.filter((t) => t.type === filterType);
-    }
-
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (t) =>
-          t.description.toLowerCase().includes(term) ||
-          t.clientName?.toLowerCase().includes(term) ||
-          t.category?.toLowerCase().includes(term)
-      );
-    }
-
-    return filtered;
-  }, [transactions, searchTerm, filterType]);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    setIsDeleting(true);
+    await deleteTransaction(transactionToDelete);
+    setIsDeleting(false);
+    setDeleteDialogOpen(false);
+    setTransactionToDelete(null);
   };
 
   if (isLoading) {
@@ -164,6 +71,8 @@ export default function FinancialPage() {
       </div>
     );
   }
+
+  const balance = summary.totalIncome - summary.totalExpense;
 
   return (
     <div className="space-y-6">
@@ -176,7 +85,6 @@ export default function FinancialPage() {
           </p>
         </div>
 
-        {/* Balance in Header */}
         <div className="flex items-center gap-4 md:gap-8">
           <div className="text-center md:text-right">
             <div className="flex items-center gap-2 text-muted-foreground mb-1 justify-center md:justify-end">
@@ -186,116 +94,33 @@ export default function FinancialPage() {
               </span>
             </div>
             <div
-              className={`text-2xl md:text-2xl font-bold ${
-                summary.totalIncome - summary.totalExpense >= 0
-                  ? "text-green-500"
-                  : "text-red-500"
-              }`}
+              className={`text-2xl font-bold ${balance >= 0 ? "text-green-500" : "text-red-500"}`}
             >
-              {formatCurrency(summary.totalIncome - summary.totalExpense)}
+              {formatCurrency(balance)}
             </div>
           </div>
 
-          <Link href="/financial/new">
-            <Button size="lg" className="gap-2">
-              <Plus className="w-5 h-5" />
-              Novo Lançamento
-            </Button>
-          </Link>
+          {canCreate && (
+            <Link href="/financial/new">
+              <Button size="lg" className="gap-2">
+                <Plus className="w-5 h-5" />
+                Novo Lançamento
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Receitas Pagas
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">
-              {formatCurrency(summary.totalIncome)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Despesas Pagas
-            </CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-500">
-              {formatCurrency(summary.totalExpense)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">A Receber</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-500">
-              {formatCurrency(summary.pendingIncome)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">A Pagar</CardTitle>
-            <AlertCircle className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-500">
-              {formatCurrency(summary.pendingExpense)}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <FinancialSummaryCards summary={summary} />
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por descrição, cliente ou categoria..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant={filterType === "all" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFilterType("all")}
-          >
-            Todos
-          </Button>
-          <Button
-            variant={filterType === "income" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFilterType("income")}
-            className="gap-1"
-          >
-            <ArrowUpCircle className="w-4 h-4" />
-            Receitas
-          </Button>
-          <Button
-            variant={filterType === "expense" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFilterType("expense")}
-            className="gap-1"
-          >
-            <ArrowDownCircle className="w-4 h-4" />
-            Despesas
-          </Button>
-        </div>
-      </div>
+      <TransactionFilters
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filterType={filterType}
+        onFilterChange={setFilterType}
+      />
 
       {/* Transactions List */}
       {transactions.length === 0 ? (
@@ -310,12 +135,14 @@ export default function FinancialPage() {
             <p className="text-muted-foreground text-center mb-6 max-w-md">
               Comece a registrar suas receitas e despesas.
             </p>
-            <Link href="/financial/new">
-              <Button className="gap-2">
-                <Plus className="w-4 h-4" />
-                Criar Primeiro Lançamento
-              </Button>
-            </Link>
+            {canCreate && (
+              <Link href="/financial/new">
+                <Button className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Criar Primeiro Lançamento
+                </Button>
+              </Link>
+            )}
           </CardContent>
         </Card>
       ) : filteredTransactions.length === 0 ? (
@@ -332,107 +159,26 @@ export default function FinancialPage() {
         </Card>
       ) : (
         <div className="grid gap-3">
-          {filteredTransactions.map((transaction) => {
-            const typeInfo = typeConfig[transaction.type];
-            const statusInfo = statusConfig[transaction.status];
-            const TypeIcon = typeInfo.icon;
-
-            return (
-              <Card
-                key={transaction.id}
-                className="hover:bg-muted/50 transition-colors"
-              >
-                <CardContent className="flex items-center gap-4 py-4 px-4">
-                  <div
-                    className={`p-2 rounded-full bg-muted ${typeInfo.color}`}
-                  >
-                    <TypeIcon className="w-5 h-5" />
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium truncate">
-                        {transaction.description}
-                      </span>
-                      {transaction.category && (
-                        <Badge variant="outline" className="text-xs">
-                          {transaction.category}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
-                      <span>{formatDate(transaction.date)}</span>
-                      {transaction.wallet && (
-                        <>
-                          <span>•</span>
-                          <span>{transaction.wallet}</span>
-                        </>
-                      )}
-                      {transaction.isInstallment && (
-                        <>
-                          <span>•</span>
-                          <span className="text-primary">
-                            {transaction.installmentNumber}/
-                            {transaction.installmentCount}x
-                          </span>
-                        </>
-                      )}
-                      {transaction.clientName && (
-                        <>
-                          <span>•</span>
-                          <span>{transaction.clientName}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <div className={`font-bold ${typeInfo.color}`}>
-                      {transaction.type === "expense" ? "-" : "+"}
-                      {formatCurrency(transaction.amount)}
-                    </div>
-                    <Badge variant={statusInfo.variant} className="text-xs">
-                      {statusInfo.label}
-                    </Badge>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <Link href={`/financial/${transaction.id}/view`}>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        title="Visualizar"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    </Link>
-                    <Link href={`/financial/${transaction.id}`}>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        title="Editar"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => handleDelete(transaction.id)}
-                      title="Excluir"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {filteredTransactions.map((transaction) => (
+            <TransactionCard
+              key={transaction.id}
+              transaction={transaction}
+              canEdit={canEdit}
+              canDelete={canDelete}
+              onDelete={openDeleteDialog}
+            />
+          ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteTransactionDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        transaction={transactionToDelete}
+        onConfirm={confirmDelete}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }
