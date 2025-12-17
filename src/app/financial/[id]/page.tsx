@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { toast } from "react-toastify";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import {
 } from "@/services/transaction-service";
 import { ClientSelect } from "@/components/features/client-select";
 import { DynamicSelect } from "@/components/features/dynamic-select";
+import { usePagePermission } from "@/hooks/usePagePermission";
 import {
   ArrowLeft,
   Loader2,
@@ -33,6 +35,13 @@ export default function EditTransactionPage() {
   const router = useRouter();
   const params = useParams();
   const transactionId = params.id as string;
+  const { canEdit, canView, isLoading: permLoading } = usePagePermission("financial");
+
+  React.useEffect(() => {
+    if (!permLoading && !canView) {
+      router.push("/financial");
+    }
+  }, [permLoading, canView, router]);
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSaving, setIsSaving] = React.useState(false);
@@ -152,10 +161,11 @@ export default function EditTransactionPage() {
         notes: formData.notes || undefined,
       });
 
+      toast.success("Lançamento atualizado com sucesso!");
       router.push("/financial");
     } catch (error) {
       console.error("Error updating transaction:", error);
-      alert("Erro ao atualizar lançamento");
+      toast.error("Erro ao atualizar lançamento");
     } finally {
       setIsSaving(false);
     }
@@ -193,10 +203,10 @@ export default function EditTransactionPage() {
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight">
-            Editar Lançamento
+            {canEdit ? "Editar Lançamento" : "Visualizar Lançamento"}
           </h1>
           <p className="text-muted-foreground text-sm">
-            Atualize as informações do lançamento
+            {canEdit ? "Atualize as informações do lançamento" : "Visualizando informações do lançamento"}
           </p>
         </div>
       </div>
@@ -217,11 +227,10 @@ export default function EditTransactionPage() {
                 onClick={() =>
                   setFormData((prev) => ({ ...prev, type: "income" }))
                 }
-                className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 transition-all ${
-                  formData.type === "income"
-                    ? "border-green-500 bg-green-500/10 text-green-500"
-                    : "border-border hover:border-green-500/50"
-                }`}
+                className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 transition-all ${formData.type === "income"
+                  ? "border-green-500 bg-green-500/10 text-green-500"
+                  : "border-border hover:border-green-500/50"
+                  }`}
               >
                 <ArrowUpCircle className="w-5 h-5" />
                 <span className="font-medium">Receita</span>
@@ -231,11 +240,10 @@ export default function EditTransactionPage() {
                 onClick={() =>
                   setFormData((prev) => ({ ...prev, type: "expense" }))
                 }
-                className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 transition-all ${
-                  formData.type === "expense"
-                    ? "border-red-500 bg-red-500/10 text-red-500"
-                    : "border-border hover:border-red-500/50"
-                }`}
+                className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 transition-all ${formData.type === "expense"
+                  ? "border-red-500 bg-red-500/10 text-red-500"
+                  : "border-border hover:border-red-500/50"
+                  }`}
               >
                 <ArrowDownCircle className="w-5 h-5" />
                 <span className="font-medium">Despesa</span>
@@ -362,17 +370,15 @@ export default function EditTransactionPage() {
                   <Link
                     key={installment.id}
                     href={`/financial/${installment.id}`}
-                    className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                      installment.id === transactionId
-                        ? "bg-primary/10 border-primary"
-                        : "hover:bg-muted"
-                    }`}
+                    className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${installment.id === transactionId
+                      ? "bg-primary/10 border-primary"
+                      : "hover:bg-muted"
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <span
-                        className={`text-sm font-medium ${
-                          installment.id === transactionId ? "text-primary" : ""
-                        }`}
+                        className={`text-sm font-medium ${installment.id === transactionId ? "text-primary" : ""
+                          }`}
                       >
                         Parcela {installment.installmentNumber}/
                         {installment.installmentCount}
@@ -449,21 +455,23 @@ export default function EditTransactionPage() {
             variant="outline"
             onClick={() => router.push("/financial")}
           >
-            Cancelar
+            {canEdit ? "Cancelar" : "Voltar"}
           </Button>
-          <Button type="submit" disabled={isSaving} className="gap-2">
-            {isSaving ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Salvando...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                Salvar Alterações
-              </>
-            )}
-          </Button>
+          {canEdit && (
+            <Button type="submit" disabled={isSaving} className="gap-2">
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Salvar Alterações
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </form>
     </div>

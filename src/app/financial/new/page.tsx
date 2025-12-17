@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ import { ClientSelect } from "@/components/features/client-select";
 import { DynamicSelect } from "@/components/features/dynamic-select";
 import { useTenant } from "@/providers/tenant-provider";
 import { useClientActions } from "@/hooks/useClientActions";
+import { usePagePermission } from "@/hooks/usePagePermission";
 import {
   ArrowLeft,
   Loader2,
@@ -32,6 +34,21 @@ import {
 export default function NewTransactionPage() {
   const router = useRouter();
   const { tenant } = useTenant();
+  const { canCreate, isLoading: permLoading } = usePagePermission("financial");
+
+  React.useEffect(() => {
+    if (!permLoading && !canCreate) {
+      router.push("/financial");
+    }
+  }, [permLoading, canCreate, router]);
+
+  if (permLoading) {
+    return (
+      <div className="flex justify-center p-8">
+        <Loader2 className="w-6 h-6 animate-spin" />
+      </div>
+    );
+  }
   const [isSaving, setIsSaving] = React.useState(false);
 
   const { createClient } = useClientActions();
@@ -165,10 +182,11 @@ export default function NewTransactionPage() {
         });
       }
 
+      toast.success("Lançamento criado com sucesso!");
       router.push("/financial");
     } catch (error) {
       console.error("Error creating transaction:", error);
-      alert("Erro ao criar lançamento");
+      toast.error("Erro ao criar lançamento");
     } finally {
       setIsSaving(false);
     }
@@ -210,8 +228,8 @@ export default function NewTransactionPage() {
                   setFormData((prev) => ({ ...prev, type: "income" }))
                 }
                 className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 transition-all ${formData.type === "income"
-                    ? "border-green-500 bg-green-500/10 text-green-500"
-                    : "border-border hover:border-green-500/50"
+                  ? "border-green-500 bg-green-500/10 text-green-500"
+                  : "border-border hover:border-green-500/50"
                   }`}
               >
                 <ArrowUpCircle className="w-5 h-5" />
@@ -223,8 +241,8 @@ export default function NewTransactionPage() {
                   setFormData((prev) => ({ ...prev, type: "expense" }))
                 }
                 className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 transition-all ${formData.type === "expense"
-                    ? "border-red-500 bg-red-500/10 text-red-500"
-                    : "border-border hover:border-red-500/50"
+                  ? "border-red-500 bg-red-500/10 text-red-500"
+                  : "border-border hover:border-red-500/50"
                   }`}
               >
                 <ArrowDownCircle className="w-5 h-5" />

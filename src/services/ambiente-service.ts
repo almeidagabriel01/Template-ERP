@@ -47,13 +47,16 @@ export const AmbienteService = {
             const functions = getFunctions(undefined, 'southamerica-east1');
             const createFunc = httpsCallable<any, { success: boolean; ambienteId: string }>(functions, 'createAmbiente');
             
+            // Ensure order is a valid number (default to 0 if NaN or undefined)
+            const safeOrder = typeof data.order === 'number' && !isNaN(data.order) ? data.order : 0;
+            
             const result = await createFunc({
                 name: data.name,
                 icon: data.icon,
-                order: data.order,
+                order: safeOrder,
             });
             
-            return { id: result.data.ambienteId, ...data };
+            return { id: result.data.ambienteId, ...data, order: safeOrder };
         } catch (error) {
             console.error("Error creating ambiente:", error);
             throw error;
@@ -91,7 +94,12 @@ export const AmbienteService = {
         try {
             const ambientes = await AmbienteService.getAmbientes(tenantId);
             if (ambientes.length === 0) return 0;
-            return Math.max(...ambientes.map(a => a.order)) + 1;
+            // Filter out any NaN or undefined values, default to 0
+            const orders = ambientes.map(a => {
+                const orderValue = typeof a.order === 'number' && !isNaN(a.order) ? a.order : 0;
+                return orderValue;
+            });
+            return Math.max(...orders) + 1;
         } catch {
             return 0;
         }

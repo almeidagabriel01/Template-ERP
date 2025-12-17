@@ -66,7 +66,7 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
 
   // Check if proposal has sistemas (automation niche)
   const hasSistemas = proposal.sistemas && proposal.sistemas.length > 0;
-  
+
   // Helper to add products for a specific sistema as a single block
   const addSistemaProducts = (sistema: any, productsForSistema: any[]) => {
     // Sort products: Standard first, then Extras
@@ -76,36 +76,29 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
       return 0;
     });
 
-    // 1. Header
-    items.push({
-      type: "sistema-container-header",
-      data: { sistema },
-      height: 120, // Header height
-    });
+    // Calculate total height for the entire sistema block
+    let totalHeight = 120; // Header height
 
-    // 2. Products
-    sortedProducts.forEach((product, idx) => {
-      let h = 80; // Compact product row height
-      if ((product.productImages && product.productImages.length > 0) || product.productImage) {
-        h += 100;
+    sortedProducts.forEach((product) => {
+      let h = 100; // Base product row height
+      // Add height for multiple images
+      const imageCount = product.productImages?.length || (product.productImage ? 1 : 0);
+      if (imageCount > 0) {
+        h += 80; // Height for image row
       }
-      // Add padding/margin overhead for the wrapper
-      h += 20; 
-
-      items.push({
-        type: "sistema-container-product",
-        data: { product, isLast: idx === sortedProducts.length - 1 },
-        height: h
-      });
+      totalHeight += h;
     });
 
-    // 3. Footer
+    totalHeight += 80; // Footer height
+
+    // Create a single block for the entire sistema to prevent page breaks
     items.push({
-      type: "sistema-container-footer",
-      data: { 
-        subtotal: sortedProducts.reduce((sum: number, p: any) => sum + p.total, 0) 
+      type: "sistema-block",
+      data: {
+        sistema,
+        products: sortedProducts,
       },
-      height: 80 // Footer height
+      height: totalHeight,
     });
   };
 
@@ -131,193 +124,82 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
     }
   };
 
-  
+
   // 1. Check if there's an explicit "product-table" section
   const productSectionIndex = sections.findIndex(s => s.type === 'product-table');
-  
+
   if (productSectionIndex !== -1) {
     // EXPLICIT MODE: Render sections, replacing the product-table section with actual products
     sections.forEach(section => {
-        if (section.type === 'product-table') {
-            // Render products here
-            if (hasSistemas) {
-              // AUTOMATION MODE: Group products by sistema
-              proposal.sistemas.forEach((sistema: any) => {
-                const systemInstanceId = `${sistema.sistemaId}-${sistema.ambienteId}`;
-                let productsForSistema = products.filter((p: any) => p.systemInstanceId === systemInstanceId);
-                
-                // Fallback for legacy
-                const isLegacy = !products.some((p: any) => p.systemInstanceId);
-                if (productsForSistema.length === 0 && isLegacy) {
-                   productsForSistema = products.filter((p: any) => sistema.productIds?.includes(p.productId));
-                }
+      if (section.type === 'product-table') {
+        // Render products here
+        if (hasSistemas) {
+          // AUTOMATION MODE: Group products by sistema
+          proposal.sistemas.forEach((sistema: any) => {
+            const systemInstanceId = `${sistema.sistemaId}-${sistema.ambienteId}`;
+            let productsForSistema = products.filter((p: any) => p.systemInstanceId === systemInstanceId);
 
-                if (productsForSistema.length > 0) {
-                  addSistemaProducts(sistema, productsForSistema);
-                }
-              });
+            // Fallback for legacy
+            const isLegacy = !products.some((p: any) => p.systemInstanceId);
+            if (productsForSistema.length === 0 && isLegacy) {
+              productsForSistema = products.filter((p: any) => sistema.productIds?.includes(p.productId));
+            }
 
-              // Add extra products (not in any sistema) as a single block
-              const sistemaProductIds = new Set(
-                proposal.sistemas.flatMap((s: any) => s.productIds || [])
-              );
-              // Filter out products that have instance ID OR are in claimed IDs set
-              const extraProducts = products.filter((p: any) => !p.systemInstanceId && !sistemaProductIds.has(p.productId));
-              if (extraProducts.length > 0) {
-                // Calculate total height for the block
-                let blockHeight = 140; // Base height for header
-                extraProducts.forEach((product) => {
-                  let h = 80;
-                  if ((product.productImages && product.productImages.length > 0) || product.productImage) {
-                    h += 100;
-                  }
-                  blockHeight += h;
-                });
-                blockHeight += 60; // Subtotal
-                
-                items.push({
-                  type: "extra-products-block",
-                  data: {
-                    products: extraProducts,
-                  },
-                  height: blockHeight,
-                });
+            if (productsForSistema.length > 0) {
+              addSistemaProducts(sistema, productsForSistema);
+            }
+          });
+
+          // Add extra products (not in any sistema) as a single block
+          const sistemaProductIds = new Set(
+            proposal.sistemas.flatMap((s: any) => s.productIds || [])
+          );
+          // Filter out products that have instance ID OR are in claimed IDs set
+          const extraProducts = products.filter((p: any) => !p.systemInstanceId && !sistemaProductIds.has(p.productId));
+          if (extraProducts.length > 0) {
+            // Calculate total height for the block
+            let blockHeight = 140; // Base height for header
+            extraProducts.forEach((product) => {
+              let h = 80;
+              if ((product.productImages && product.productImages.length > 0) || product.productImage) {
+                h += 100;
               }
-              items.push({ type: "totals", height: ESTIMATED_HEIGHTS.TOTALS });
-            } else {
-              // Regular mode
-             if (products.length > 0) {
-                items.push({ type: "product-header", height: ESTIMATED_HEIGHTS.PRODUCT_HEADER });
-                products.forEach((product, i) => {
-                  let h = 150; 
-                  if ((product.productImages && product.productImages.length > 0) || product.productImage) {
-                     h += 200; 
-                  }
-                  if (product.productDescription && product.productDescription.length > 50) {
-                    h += 20; 
-                  }
-                  items.push({
-                    type: "product-row",
-                    data: { ...product, index: i },
-                    height: h,
-                  });
-                });
-                items.push({ type: "totals", height: ESTIMATED_HEIGHTS.TOTALS });
-             }
-            }
+              blockHeight += h;
+            });
+            blockHeight += 60; // Subtotal
+
+            items.push({
+              type: "extra-products-block",
+              data: {
+                products: extraProducts,
+              },
+              height: blockHeight,
+            });
+          }
+          items.push({ type: "totals", height: ESTIMATED_HEIGHTS.TOTALS });
         } else {
-            // Render normal section
-            let height = ESTIMATED_HEIGHTS.SECTION_PADDING;
-            if (section.type === "text") {
-              const lines = section.content.split("\n").length;
-              height += lines * ESTIMATED_HEIGHTS.LINE_HEIGHT;
-              // Add extra for margins
-              if (section.styles.marginTop)
-                height += parseInt(section.styles.marginTop as string) || 0;
-              if (section.styles.marginBottom)
-                height += parseInt(section.styles.marginBottom as string) || 0;
-            } else if (section.type === "image") {
-              height += ESTIMATED_HEIGHTS.IMAGE_DEFAULT;
-            } else if (section.type === "divider") {
-              height += 20;
-            }
-             items.push({
-                type: "section",
-                data: section,
-                height: height
-             });
+          // Regular mode
+          if (products.length > 0) {
+            items.push({ type: "product-header", height: ESTIMATED_HEIGHTS.PRODUCT_HEADER });
+            products.forEach((product, i) => {
+              let h = 150;
+              if ((product.productImages && product.productImages.length > 0) || product.productImage) {
+                h += 200;
+              }
+              if (product.productDescription && product.productDescription.length > 50) {
+                h += 20;
+              }
+              items.push({
+                type: "product-row",
+                data: { ...product, index: i },
+                height: h,
+              });
+            });
+            items.push({ type: "totals", height: ESTIMATED_HEIGHTS.TOTALS });
+          }
         }
-    });
-  } else {
-    // SMART FALLBACK MODE (Legacy behavior + Improvements)
-    // Find a good spot for products: Before "Garantia", "Termos", "Obrigado" or "Considerações Finais"
-    // OR if not found, after the Introduction (usually first text section)
-    
-    let insertIndex = -1;
-    const footerKeywords = ["garantia", "termos", "condições", "considerações", "obrigado", "agradecemos", "validade"];
-    
-    // Check titles/content to find a footer section
-    for (let i = 0; i < sections.length; i++) {
-        const s = sections[i];
-        const text = (s.content || "").toLowerCase();
-        if (footerKeywords.some(k => text.includes(k))) {
-            insertIndex = i;
-            break;
-        }
-    }
-    
-    // If no footer section found, put it after the first 2 sections (Header + Intro roughly)
-    // Or if only 1 section, put it at end.
-    if (insertIndex === -1) {
-        insertIndex = sections.length > 1 ? 1 : sections.length;
-    }
-
-    // Iterate and insert
-    for (let i = 0; i < sections.length; i++) {
-        // If this is the insertion point, add products first
-        if (i === insertIndex) {
-             if (hasSistemas) {
-               // AUTOMATION MODE: Group products by sistema
-               proposal.sistemas.forEach((sistema: any)  => {
-                 const systemInstanceId = `${sistema.sistemaId}-${sistema.ambienteId}`;
-                 let productsForSistema = products.filter((p: any) => p.systemInstanceId === systemInstanceId);
-                 
-                 // Fallback for legacy
-                 const isLegacy = !products.some((p: any) => p.systemInstanceId);
-                 if (productsForSistema.length === 0 && isLegacy) {
-                    productsForSistema = products.filter((p: any) => sistema.productIds?.includes(p.productId));
-                 }
-
-                 if (productsForSistema.length > 0) {
-                   addSistemaProducts(sistema, productsForSistema);
-                 }
-               });
-
-               // Add extra products (not in any sistema)
-               const sistemaProductIds = new Set(
-                 proposal.sistemas.flatMap((s: any) => s.productIds || [])
-               );
-               const extraProducts = products.filter((p: any) => !p.systemInstanceId && !sistemaProductIds.has(p.productId));
-               if (extraProducts.length > 0) {
-                 items.push({
-                   type: "extra-products-header",
-                   height: 60,
-                 });
-                 extraProducts.forEach((product, idx) => {
-                   let h = 150;
-                   if ((product.productImages && product.productImages.length > 0) || product.productImage) {
-                     h += 200;
-                   }
-                   items.push({
-                     type: "product-row",
-                     data: { ...product, index: idx },
-                     height: h,
-                   });
-                 });
-               }
-               items.push({ type: "totals", height: ESTIMATED_HEIGHTS.TOTALS });
-             } else if (products.length > 0) {
-                items.push({ type: "product-header", height: ESTIMATED_HEIGHTS.PRODUCT_HEADER });
-                products.forEach((product, idx) => {
-                  let h = 150; 
-                  if ((product.productImages && product.productImages.length > 0) || product.productImage) {
-                     h += 200; 
-                  }
-                  if (product.productDescription && product.productDescription.length > 50) {
-                    h += 20; 
-                  }
-                  items.push({
-                    type: "product-row",
-                    data: { ...product, index: idx },
-                    height: h,
-                  });
-                });
-                items.push({ type: "totals", height: ESTIMATED_HEIGHTS.TOTALS });
-             }
-        }
-        
-        // Add the section
-        const section = sections[i];
+      } else {
+        // Render normal section
         let height = ESTIMATED_HEIGHTS.SECTION_PADDING;
         if (section.type === "text") {
           const lines = section.content.split("\n").length;
@@ -332,43 +214,154 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
         } else if (section.type === "divider") {
           height += 20;
         }
-         items.push({
-            type: "section",
-            data: section,
-            height: height
-         });
+        items.push({
+          type: "section",
+          data: section,
+          height: height
+        });
+      }
+    });
+  } else {
+    // SMART FALLBACK MODE (Legacy behavior + Improvements)
+    // Find a good spot for products: Before "Garantia", "Termos", "Obrigado" or "Considerações Finais"
+    // OR if not found, after the Introduction (usually first text section)
+
+    let insertIndex = -1;
+    const footerKeywords = ["garantia", "termos", "condições", "considerações", "obrigado", "agradecemos", "validade"];
+
+    // Check titles/content to find a footer section
+    for (let i = 0; i < sections.length; i++) {
+      const s = sections[i];
+      const text = (s.content || "").toLowerCase();
+      if (footerKeywords.some(k => text.includes(k))) {
+        insertIndex = i;
+        break;
+      }
     }
-    
-    // If insertion point was at the very end
-    if (insertIndex >= sections.length) {
-         if (hasSistemas) {
-           proposal.sistemas.forEach((sistema: any) => {
-             const productsForSistema = products.filter((p: any) => 
-               sistema.productIds?.includes(p.productId)
-             );
-             if (productsForSistema.length > 0) {
-               addSistemaProducts(sistema, productsForSistema);
-             }
-           });
-           items.push({ type: "totals", height: ESTIMATED_HEIGHTS.TOTALS });
-         } else if (products.length > 0) {
-            items.push({ type: "product-header", height: ESTIMATED_HEIGHTS.PRODUCT_HEADER });
-            products.forEach((product, idx) => {
-                  let h = 150; 
-                  if ((product.productImages && product.productImages.length > 0) || product.productImage) {
-                     h += 200; 
-                  }
-                  if (product.productDescription && product.productDescription.length > 50) {
-                    h += 20; 
-                  }
+
+    // If no footer section found, put it after the first 2 sections (Header + Intro roughly)
+    // Or if only 1 section, put it at end.
+    if (insertIndex === -1) {
+      insertIndex = sections.length > 1 ? 1 : sections.length;
+    }
+
+    // Iterate and insert
+    for (let i = 0; i < sections.length; i++) {
+      // If this is the insertion point, add products first
+      if (i === insertIndex) {
+        if (hasSistemas) {
+          // AUTOMATION MODE: Group products by sistema
+          proposal.sistemas.forEach((sistema: any) => {
+            const systemInstanceId = `${sistema.sistemaId}-${sistema.ambienteId}`;
+            let productsForSistema = products.filter((p: any) => p.systemInstanceId === systemInstanceId);
+
+            // Fallback for legacy
+            const isLegacy = !products.some((p: any) => p.systemInstanceId);
+            if (productsForSistema.length === 0 && isLegacy) {
+              productsForSistema = products.filter((p: any) => sistema.productIds?.includes(p.productId));
+            }
+
+            if (productsForSistema.length > 0) {
+              addSistemaProducts(sistema, productsForSistema);
+            }
+          });
+
+          // Add extra products (not in any sistema)
+          const sistemaProductIds = new Set(
+            proposal.sistemas.flatMap((s: any) => s.productIds || [])
+          );
+          const extraProducts = products.filter((p: any) => !p.systemInstanceId && !sistemaProductIds.has(p.productId));
+          if (extraProducts.length > 0) {
+            items.push({
+              type: "extra-products-header",
+              height: 60,
+            });
+            extraProducts.forEach((product, idx) => {
+              let h = 150;
+              if ((product.productImages && product.productImages.length > 0) || product.productImage) {
+                h += 200;
+              }
               items.push({
                 type: "product-row",
                 data: { ...product, index: idx },
                 height: h,
               });
             });
-            items.push({ type: "totals", height: ESTIMATED_HEIGHTS.TOTALS });
-         }
+          }
+          items.push({ type: "totals", height: ESTIMATED_HEIGHTS.TOTALS });
+        } else if (products.length > 0) {
+          items.push({ type: "product-header", height: ESTIMATED_HEIGHTS.PRODUCT_HEADER });
+          products.forEach((product, idx) => {
+            let h = 150;
+            if ((product.productImages && product.productImages.length > 0) || product.productImage) {
+              h += 200;
+            }
+            if (product.productDescription && product.productDescription.length > 50) {
+              h += 20;
+            }
+            items.push({
+              type: "product-row",
+              data: { ...product, index: idx },
+              height: h,
+            });
+          });
+          items.push({ type: "totals", height: ESTIMATED_HEIGHTS.TOTALS });
+        }
+      }
+
+      // Add the section
+      const section = sections[i];
+      let height = ESTIMATED_HEIGHTS.SECTION_PADDING;
+      if (section.type === "text") {
+        const lines = section.content.split("\n").length;
+        height += lines * ESTIMATED_HEIGHTS.LINE_HEIGHT;
+        // Add extra for margins
+        if (section.styles.marginTop)
+          height += parseInt(section.styles.marginTop as string) || 0;
+        if (section.styles.marginBottom)
+          height += parseInt(section.styles.marginBottom as string) || 0;
+      } else if (section.type === "image") {
+        height += ESTIMATED_HEIGHTS.IMAGE_DEFAULT;
+      } else if (section.type === "divider") {
+        height += 20;
+      }
+      items.push({
+        type: "section",
+        data: section,
+        height: height
+      });
+    }
+
+    // If insertion point was at the very end
+    if (insertIndex >= sections.length) {
+      if (hasSistemas) {
+        proposal.sistemas.forEach((sistema: any) => {
+          const productsForSistema = products.filter((p: any) =>
+            sistema.productIds?.includes(p.productId)
+          );
+          if (productsForSistema.length > 0) {
+            addSistemaProducts(sistema, productsForSistema);
+          }
+        });
+        items.push({ type: "totals", height: ESTIMATED_HEIGHTS.TOTALS });
+      } else if (products.length > 0) {
+        items.push({ type: "product-header", height: ESTIMATED_HEIGHTS.PRODUCT_HEADER });
+        products.forEach((product, idx) => {
+          let h = 150;
+          if ((product.productImages && product.productImages.length > 0) || product.productImage) {
+            h += 200;
+          }
+          if (product.productDescription && product.productDescription.length > 50) {
+            h += 20;
+          }
+          items.push({
+            type: "product-row",
+            data: { ...product, index: idx },
+            height: h,
+          });
+        });
+        items.push({ type: "totals", height: ESTIMATED_HEIGHTS.TOTALS });
+      }
     }
   }
 
@@ -379,24 +372,24 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
 
   items.forEach((item, index) => {
     let forceBreak = false;
-    
+
     // Orphan Control: If we have a header/title, check if the NEXT item fits.
     // If not, break page now so header stays with content.
     if (item.type === "product-header" || (item.type === "section" && item.data.type === "title")) {
-        const nextItem = items[index + 1];
-        if (nextItem) {
-            // Check if adding BOTH fits. If not, break.
-            if (currentHeight + item.height + nextItem.height > SAFE_HEIGHT) {
-                forceBreak = true;
-            }
+      const nextItem = items[index + 1];
+      if (nextItem) {
+        // Check if adding BOTH fits. If not, break.
+        if (currentHeight + item.height + nextItem.height > SAFE_HEIGHT) {
+          forceBreak = true;
         }
+      }
     }
-    
+
     // Para sistema-block e extra-products-block, se não couber inteiro, nova página
     if (item.type === "sistema-block" || item.type === "extra-products-block") {
-        if (currentHeight + item.height > SAFE_HEIGHT && currentHeight > ESTIMATED_HEIGHTS.HEADER) {
-            forceBreak = true;
-        }
+      if (currentHeight + item.height > SAFE_HEIGHT && currentHeight > ESTIMATED_HEIGHTS.HEADER) {
+        forceBreak = true;
+      }
     }
 
     if (forceBreak || currentHeight + item.height > SAFE_HEIGHT) {
@@ -450,12 +443,12 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                     : item.data.styles.backgroundColor,
                 padding:
                   item.data.styles.backgroundColor &&
-                  item.data.styles.backgroundColor !== "transparent"
+                    item.data.styles.backgroundColor !== "transparent"
                     ? "12px"
                     : undefined,
                 borderRadius:
                   item.data.styles.backgroundColor &&
-                  item.data.styles.backgroundColor !== "transparent"
+                    item.data.styles.backgroundColor !== "transparent"
                     ? "8px"
                     : undefined,
               }}
@@ -505,19 +498,19 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
         return (
           <div className="mt-6">
             {/* Header do Sistema - Topo do Container */}
-            <div 
+            <div
               className="rounded-t-xl border-2 border-b-0 overflow-hidden"
               style={{ borderColor: primaryColor }}
             >
-              <div 
+              <div
                 className="p-5"
-                style={{ 
+                style={{
                   background: `linear-gradient(135deg, ${primaryColor}20 0%, ${primaryColor}10 100%)`,
                   borderBottom: `2px solid ${primaryColor}30`,
                 }}
               >
                 <div className="flex items-center gap-4">
-                  <div 
+                  <div
                     className="w-14 h-14 rounded-xl flex items-center justify-center shadow-lg"
                     style={{ backgroundColor: primaryColor }}
                   >
@@ -527,9 +520,9 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span 
+                      <span
                         className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow"
-                        style={{ 
+                        style={{
                           backgroundColor: primaryColor,
                           color: getContrastTextColor(primaryColor),
                         }}
@@ -537,7 +530,7 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                         📍 {sistemaHeaderInfo.ambienteName}
                       </span>
                     </div>
-                    <h3 
+                    <h3
                       className="text-2xl font-bold"
                       style={{ color: primaryColor }}
                     >
@@ -557,13 +550,13 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
       case "sistema-container-product":
         const productItem = item.data.product;
         return (
-          <div 
+          <div
             className="border-x-2 bg-white px-4 py-2"
             style={{ borderColor: primaryColor }}
           >
             <div
               className={`flex items-center gap-4 p-4 rounded-lg border ${productItem.isExtra ? 'bg-blue-50/50 border-blue-100' : ''}`}
-              style={{ 
+              style={{
                 backgroundColor: productItem.isExtra ? '#eff6ff' : '#ffffff',
                 borderColor: productItem.isExtra ? '#bfdbfe' : '#e5e7eb',
               }}
@@ -579,7 +572,7 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                   />
                 </div>
               )}
-              
+
               {/* Info do produto */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
@@ -594,7 +587,7 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                   {productItem.quantity} un. × {formatCurrency(productItem.unitPrice)}
                 </p>
               </div>
-              
+
               {/* Valor */}
               <div className="text-right">
                 <span className="font-bold text-lg" style={{ color: primaryColor }}>
@@ -607,16 +600,16 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
       case "sistema-container-footer":
         return (
           <div className="mb-6">
-            <div 
+            <div
               className="rounded-b-xl border-2 border-t-0 bg-white p-4"
               style={{ borderColor: primaryColor }}
             >
-              <div 
+              <div
                 className="flex justify-between items-center pt-2"
                 style={{ borderTop: `2px dashed ${primaryColor}30` }}
               >
                 <span className="font-semibold text-gray-700">Subtotal do Sistema:</span>
-                <span 
+                <span
                   className="text-xl font-bold"
                   style={{ color: primaryColor }}
                 >
@@ -631,24 +624,24 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
         const sistemaInfo = sistemaBlockData.sistema;
         const sistemaProductsList = sistemaBlockData.products;
         const sistemaSubtotal = sistemaProductsList.reduce((sum: number, p: any) => sum + p.total, 0);
-        
+
         return (
           <div className="mt-6 mb-4">
             {/* Container unificado para Sistema + Produtos */}
-            <div 
+            <div
               className="rounded-xl border-2 overflow-hidden"
               style={{ borderColor: primaryColor }}
             >
               {/* Header do Sistema */}
-              <div 
+              <div
                 className="p-5"
-                style={{ 
+                style={{
                   background: `linear-gradient(135deg, ${primaryColor}20 0%, ${primaryColor}10 100%)`,
                   borderBottom: `2px solid ${primaryColor}30`,
                 }}
               >
                 <div className="flex items-center gap-4">
-                  <div 
+                  <div
                     className="w-14 h-14 rounded-xl flex items-center justify-center shadow-lg"
                     style={{ backgroundColor: primaryColor }}
                   >
@@ -658,9 +651,9 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span 
+                      <span
                         className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow"
-                        style={{ 
+                        style={{
                           backgroundColor: primaryColor,
                           color: getContrastTextColor(primaryColor),
                         }}
@@ -668,7 +661,7 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                         📍 {sistemaInfo.ambienteName}
                       </span>
                     </div>
-                    <h3 
+                    <h3
                       className="text-2xl font-bold"
                       style={{ color: primaryColor }}
                     >
@@ -682,54 +675,78 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                   </div>
                 </div>
               </div>
-              
+
               {/* Produtos do Sistema */}
               <div className="p-4 space-y-3 bg-white">
-                {sistemaProductsList.map((product: any, idx: number) => (
-                  <div
-                    key={product.productId}
-                    className="flex items-center gap-4 p-4 rounded-lg border"
-                    style={{ 
-                      backgroundColor: idx % 2 === 0 ? '#f9fafb' : '#ffffff',
-                      borderColor: '#e5e7eb',
-                    }}
-                  >
-                    {/* Imagem do produto (se houver) */}
-                    {(product.productImage || (product.productImages && product.productImages.length > 0)) && (
-                      <div className="w-16 h-16 bg-white rounded-lg border overflow-hidden flex-shrink-0">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={product.productImages?.[0] || product.productImage}
-                          alt=""
-                          className="w-full h-full object-contain p-1"
-                        />
+                {sistemaProductsList.map((product: any, idx: number) => {
+                  const allImages = product.productImages?.length
+                    ? product.productImages
+                    : product.productImage ? [product.productImage] : [];
+
+                  return (
+                    <div
+                      key={`${product.productId}-${idx}`}
+                      className="p-4 rounded-lg border"
+                      style={{
+                        backgroundColor: product.isExtra ? '#eff6ff' : (idx % 2 === 0 ? '#f9fafb' : '#ffffff'),
+                        borderColor: product.isExtra ? '#bfdbfe' : '#e5e7eb',
+                      }}
+                    >
+                      {/* Imagens do produto (todas) */}
+                      {allImages.length > 0 && (
+                        <div className="flex gap-2 mb-3 justify-center flex-wrap">
+                          {allImages.map((imgSrc: string, imgIdx: number) => (
+                            <div
+                              key={imgIdx}
+                              className="w-20 h-20 bg-white rounded-lg border overflow-hidden flex-shrink-0 shadow-sm"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={imgSrc}
+                                alt=""
+                                className="w-full h-full object-contain p-1"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Info do produto */}
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-semibold text-gray-900">{product.productName}</h4>
+                            {product.isExtra && (
+                              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200">
+                                Extra
+                              </span>
+                            )}
+                          </div>
+                          {product.productDescription && (
+                            <p className="text-xs text-gray-500 line-clamp-2">
+                              {product.productDescription}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Quantidade e Valor */}
+                        <div className="text-right flex-shrink-0">
+                          <span className="font-bold text-lg" style={{ color: primaryColor }}>
+                            {product.quantity}x {formatCurrency(product.total)}
+                          </span>
+                        </div>
                       </div>
-                    )}
-                    
-                    {/* Info do produto */}
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-gray-900 truncate">{product.productName}</h4>
-                      <p className="text-sm text-gray-500">
-                        {product.quantity} un. × {formatCurrency(product.unitPrice)}
-                      </p>
                     </div>
-                    
-                    {/* Valor */}
-                    <div className="text-right">
-                      <span className="font-bold text-lg" style={{ color: primaryColor }}>
-                        {formatCurrency(product.total)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                
+                  );
+                })}
+
                 {/* Subtotal do Sistema */}
-                <div 
+                <div
                   className="flex justify-between items-center pt-3 mt-2"
                   style={{ borderTop: `2px dashed ${primaryColor}30` }}
                 >
                   <span className="font-semibold text-gray-700">Subtotal do Sistema:</span>
-                  <span 
+                  <span
                     className="text-xl font-bold"
                     style={{ color: primaryColor }}
                   >
@@ -745,24 +762,24 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
         const sistemaExtrasInfo = sistemaExtrasData.sistema;
         const sistemaExtrasList = sistemaExtrasData.products;
         const sistemaExtrasSubtotal = sistemaExtrasList.reduce((sum: number, p: any) => sum + p.total, 0);
-        
+
         return (
           <div className="mt-2 mb-4 ml-4">
             {/* Container unificado para Extras do Sistema */}
-            <div 
+            <div
               className="rounded-xl border-2 overflow-hidden"
               style={{ borderColor: primaryColor, borderStyle: 'dashed' }}
             >
               {/* Header do Sistema Extra */}
-              <div 
+              <div
                 className="p-3"
-                style={{ 
+                style={{
                   background: `linear-gradient(135deg, ${primaryColor}10 0%, ${primaryColor}05 100%)`,
                   borderBottom: `2px dashed ${primaryColor}30`,
                 }}
               >
                 <div className="flex items-center gap-4">
-                  <div 
+                  <div
                     className="w-10 h-10 rounded-lg flex items-center justify-center shadow-sm"
                     style={{ backgroundColor: primaryColor }}
                   >
@@ -772,9 +789,9 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span 
+                      <span
                         className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shadow"
-                        style={{ 
+                        style={{
                           backgroundColor: '#dbeafe', // blue-100
                           color: '#1e40af', // blue-800
                         }}
@@ -782,7 +799,7 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                         Extra
                       </span>
                     </div>
-                    <h3 
+                    <h3
                       className="text-lg font-bold"
                       style={{ color: primaryColor }}
                     >
@@ -791,14 +808,14 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                   </div>
                 </div>
               </div>
-              
+
               {/* Produtos Extras do Sistema */}
               <div className="p-3 space-y-2 bg-white">
                 {sistemaExtrasList.map((product: any, idx: number) => (
                   <div
                     key={product.productId}
                     className="flex items-center gap-4 p-3 rounded-lg border"
-                    style={{ 
+                    style={{
                       backgroundColor: '#f0f9ff', // light blue bg
                       borderColor: '#bfdbfe', // light blue border
                     }}
@@ -814,7 +831,7 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                         />
                       </div>
                     )}
-                    
+
                     {/* Info do produto */}
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-gray-900 truncate text-sm">{product.productName}</h4>
@@ -822,7 +839,7 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                         {product.quantity} un. × {formatCurrency(product.unitPrice)}
                       </p>
                     </div>
-                    
+
                     {/* Valor */}
                     <div className="text-right">
                       <span className="font-bold text-base" style={{ color: primaryColor }}>
@@ -831,14 +848,14 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                     </div>
                   </div>
                 ))}
-                
+
                 {/* Subtotal do Sistema Extra */}
-                <div 
+                <div
                   className="flex justify-between items-center pt-2 mt-2"
                   style={{ borderTop: `2px dashed ${primaryColor}30` }}
                 >
                   <span className="font-semibold text-gray-700 text-sm">Subtotal Extras:</span>
-                  <span 
+                  <span
                     className="text-lg font-bold"
                     style={{ color: primaryColor }}
                   >
@@ -853,22 +870,22 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
         return (
           <div className="mt-8 mb-4">
             {/* Separador visual antes do sistema */}
-            <div 
+            <div
               className="h-1 w-full rounded-full mb-4"
               style={{ backgroundColor: primaryColor, opacity: 0.3 }}
             />
-            
+
             {/* Card do Sistema */}
-            <div 
+            <div
               className="p-5 rounded-xl border-2 shadow-sm"
-              style={{ 
+              style={{
                 borderColor: primaryColor,
                 background: `linear-gradient(135deg, ${primaryColor}15 0%, ${primaryColor}05 100%)`,
               }}
             >
               {/* Header com ícone e badge do ambiente */}
               <div className="flex items-center gap-4">
-                <div 
+                <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center shadow-md"
                   style={{ backgroundColor: primaryColor }}
                 >
@@ -878,14 +895,14 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span 
+                    <span
                       className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full text-white"
                       style={{ backgroundColor: primaryColor }}
                     >
                       📍 {item.data.ambienteName}
                     </span>
                   </div>
-                  <h3 
+                  <h3
                     className="text-xl font-bold"
                     style={{ color: primaryColor }}
                   >
@@ -898,9 +915,9 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                   )}
                 </div>
               </div>
-              
+
               {/* Indicador de produtos */}
-              <div 
+              <div
                 className="mt-4 pt-3 border-t text-xs font-medium uppercase tracking-wide"
                 style={{ borderColor: `${primaryColor}30`, color: primaryColor }}
               >
@@ -913,24 +930,24 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
         const extraBlockData = item.data;
         const extraProductsList = extraBlockData.products;
         const extraSubtotal = extraProductsList.reduce((sum: number, p: any) => sum + p.total, 0);
-        
+
         return (
           <div className="mt-6 mb-4">
             {/* Container unificado para Produtos Extras - Estilo idêntico ao System Block */}
-            <div 
+            <div
               className="rounded-xl border-2 overflow-hidden"
               style={{ borderColor: primaryColor }}
             >
               {/* Header */}
-              <div 
+              <div
                 className="p-5"
-                style={{ 
+                style={{
                   background: `linear-gradient(135deg, ${primaryColor}20 0%, ${primaryColor}10 100%)`,
                   borderBottom: `2px solid ${primaryColor}30`,
                 }}
               >
                 <div className="flex items-center gap-4">
-                  <div 
+                  <div
                     className="w-14 h-14 rounded-xl flex items-center justify-center shadow-lg"
                     style={{ backgroundColor: primaryColor }}
                   >
@@ -939,10 +956,10 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                     </svg>
                   </div>
                   <div className="flex-1">
-                     <div className="flex items-center gap-2 mb-1">
-                      <span 
+                    <div className="flex items-center gap-2 mb-1">
+                      <span
                         className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow"
-                        style={{ 
+                        style={{
                           backgroundColor: primaryColor,
                           color: getContrastTextColor(primaryColor),
                         }}
@@ -959,14 +976,14 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                   </div>
                 </div>
               </div>
-              
+
               {/* Produtos Extras */}
               <div className="p-4 space-y-3 bg-white">
                 {extraProductsList.map((product: any, idx: number) => (
                   <div
                     key={product.productId}
                     className="flex items-center gap-4 p-4 rounded-lg border"
-                    style={{ 
+                    style={{
                       backgroundColor: idx % 2 === 0 ? '#f9fafb' : '#ffffff',
                       borderColor: '#e5e7eb',
                     }}
@@ -982,7 +999,7 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                         />
                       </div>
                     )}
-                    
+
                     {/* Info do produto */}
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-gray-900 truncate">{product.productName}</h4>
@@ -990,7 +1007,7 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                         {product.quantity} un. × {formatCurrency(product.unitPrice)}
                       </p>
                     </div>
-                    
+
                     {/* Valor */}
                     <div className="text-right">
                       <span className="font-bold text-lg text-gray-700">
@@ -999,9 +1016,9 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                     </div>
                   </div>
                 ))}
-                
+
                 {/* Subtotal Extras */}
-                <div 
+                <div
                   className="flex justify-between items-center pt-3 mt-2"
                   style={{ borderTop: '2px dashed #d1d5db' }}
                 >
@@ -1052,14 +1069,14 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                   </div>
                 ))
               ) : product.productImage ? (
-                 <div className="w-48 h-48 bg-white rounded-lg border overflow-hidden flex-shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={product.productImage}
-                      alt=""
-                      className="w-full h-full object-contain p-2"
-                    />
-                   </div>
+                <div className="w-48 h-48 bg-white rounded-lg border overflow-hidden flex-shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={product.productImage}
+                    alt=""
+                    className="w-full h-full object-contain p-2"
+                  />
+                </div>
               ) : null}
             </div>
 
@@ -1072,7 +1089,7 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
                       {product.productName}
                     </span>
                   </div>
-                  
+
                   {/* Category/Manufacturer Badges - Moved here */}
                   {(product.category || product.manufacturer) && (
                     <div className="flex gap-2 mt-1">
@@ -1102,10 +1119,10 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
 
               {/* Footer / Specs */}
               <div className="mt-4 pt-3 border-t flex justify-between items-end">
-                 {/* Left side of footer (can be used for SKU or other info if needed) */}
-                 <div className="text-sm text-gray-400">
-                    {/* Placeholder for future SKU or code */}
-                 </div>
+                {/* Left side of footer (can be used for SKU or other info if needed) */}
+                <div className="text-sm text-gray-400">
+                  {/* Placeholder for future SKU or code */}
+                </div>
 
                 <div className="text-right">
                   <div className="text-xs text-gray-500 mb-1">

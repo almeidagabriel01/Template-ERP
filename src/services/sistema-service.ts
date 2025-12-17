@@ -56,15 +56,21 @@ export const SistemaService = {
             const functions = getFunctions(undefined, 'southamerica-east1');
             const createFunc = httpsCallable<any, { success: boolean; sistemaId: string }>(functions, 'createSistema');
             
+            // Sanitize product quantities to ensure no NaN values
+            const sanitizedProducts = (data.defaultProducts || []).map(p => ({
+                ...p,
+                quantity: typeof p.quantity === 'number' && !isNaN(p.quantity) ? Math.max(1, p.quantity) : 1,
+            }));
+            
             const result = await createFunc({
                 name: data.name,
                 description: data.description,
                 icon: data.icon,
-                ambienteIds: data.ambienteIds,
-                defaultProducts: data.defaultProducts,
+                ambienteIds: data.ambienteIds || [],
+                defaultProducts: sanitizedProducts,
             });
             
-            return { id: result.data.sistemaId, ...data };
+            return { id: result.data.sistemaId, ...data, defaultProducts: sanitizedProducts };
         } catch (error) {
             console.error("Error creating sistema:", error);
             throw error;
