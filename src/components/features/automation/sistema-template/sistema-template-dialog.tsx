@@ -1,0 +1,156 @@
+"use client";
+
+import * as React from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import { Sistema } from "@/types/automation";
+import { useSistemaForm } from "./useSistemaForm";
+import {
+  SistemaInfoSection,
+  AmbienteSelectorSection,
+  ProductSelectorSection,
+} from "./sections";
+
+interface SistemaTemplateDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  editingSistema?: Sistema | null;
+  preselectedAmbienteId?: string;
+  onSave?: (sistema: Sistema) => void;
+  onBack?: () => void;
+}
+
+export function SistemaTemplateDialog({
+  isOpen,
+  onClose,
+  editingSistema,
+  preselectedAmbienteId,
+  onSave,
+  onBack,
+}: SistemaTemplateDialogProps) {
+  const {
+    name,
+    setName,
+    description,
+    setDescription,
+    selectedAmbientes,
+    selectedProducts,
+    productSearch,
+    setProductSearch,
+    showProductList,
+    setShowProductList,
+    ambientes,
+    products,
+    isLoading,
+    isSaving,
+    isEditing,
+    productListRef,
+    toggleAmbiente,
+    addProduct,
+    removeProduct,
+    updateProductQuantity,
+    handleSave,
+  } = useSistemaForm({
+    isOpen,
+    editingSistema,
+    preselectedAmbienteId,
+    onSave,
+    onClose,
+  });
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-xl">
+            {isEditing ? "Editar Sistema" : "Novo Template de Sistema"}
+          </DialogTitle>
+          <DialogDescription>
+            Configure o sistema com descrição e produtos padrão.
+          </DialogDescription>
+        </DialogHeader>
+
+        {isLoading ? (
+          <div className="py-12 text-center text-muted-foreground">
+            <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-3" />
+            Carregando...
+          </div>
+        ) : (
+          <div className="space-y-6 py-2">
+            <SistemaInfoSection
+              name={name}
+              description={description}
+              onNameChange={setName}
+              onDescriptionChange={setDescription}
+            />
+
+            <AmbienteSelectorSection
+              ambientes={ambientes}
+              selectedAmbientes={selectedAmbientes}
+              onToggle={toggleAmbiente}
+            />
+
+            <ProductSelectorSection
+              products={products}
+              selectedProducts={selectedProducts}
+              productSearch={productSearch}
+              showProductList={showProductList}
+              productListRef={productListRef}
+              onSearchChange={setProductSearch}
+              onShowList={() => setShowProductList(true)}
+              onAddProduct={addProduct}
+              onRemoveProduct={removeProduct}
+              onUpdateQuantity={updateProductQuantity}
+            />
+          </div>
+        )}
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          {onBack ? (
+            <>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  onClose();
+                  onBack();
+                }}
+                className="mr-auto"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Voltar
+              </Button>
+              <Button onClick={handleSave} disabled={!name.trim() || isSaving}>
+                {isSaving
+                  ? "Salvando..."
+                  : isEditing
+                    ? "Salvar Alterações"
+                    : "Criar Sistema"}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={onClose}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSave} disabled={!name.trim() || isSaving}>
+                {isSaving
+                  ? "Salvando..."
+                  : isEditing
+                    ? "Salvar Alterações"
+                    : "Criar Sistema"}
+              </Button>
+            </>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

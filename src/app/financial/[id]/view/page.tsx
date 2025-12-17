@@ -12,6 +12,7 @@ import {
   TransactionType,
   TransactionStatus,
 } from "@/services/transaction-service";
+import { usePagePermission } from "@/hooks/usePagePermission";
 import {
   ArrowLeft,
   Loader2,
@@ -50,6 +51,7 @@ export default function ViewTransactionPage() {
   const router = useRouter();
   const params = useParams();
   const transactionId = params.id as string;
+  const { canEdit } = usePagePermission("financial");
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [transaction, setTransaction] = React.useState<Transaction | null>(
@@ -139,8 +141,8 @@ export default function ViewTransactionPage() {
   const paidAmount =
     relatedInstallments.length > 0
       ? relatedInstallments
-          .filter((t) => t.status === "paid")
-          .reduce((sum, t) => sum + t.amount, 0)
+        .filter((t) => t.status === "paid")
+        .reduce((sum, t) => sum + t.amount, 0)
       : transaction.status === "paid"
         ? transaction.amount
         : 0;
@@ -166,12 +168,14 @@ export default function ViewTransactionPage() {
             </p>
           </div>
         </div>
-        <Link href={`/financial/${transactionId}`}>
-          <Button className="gap-2">
-            <Edit className="w-4 h-4" />
-            Editar
-          </Button>
-        </Link>
+        {canEdit && (
+          <Link href={`/financial/${transactionId}`}>
+            <Button className="gap-2">
+              <Edit className="w-4 h-4" />
+              Editar
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Main Info Card */}

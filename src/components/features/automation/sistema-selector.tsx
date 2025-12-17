@@ -65,7 +65,7 @@ export function SistemaSelector({ value, onChange, onProductsChange }: SistemaSe
     // Filter sistemas when ambiente changes
     React.useEffect(() => {
         if (selectedAmbienteId) {
-            const filtered = sistemas.filter((s) => s.ambienteIds.includes(selectedAmbienteId));
+            const filtered = sistemas.filter((s) => (s.ambienteIds || []).includes(selectedAmbienteId));
             setFilteredSistemas(filtered);
         } else {
             setFilteredSistemas([]);
@@ -126,7 +126,7 @@ export function SistemaSelector({ value, onChange, onProductsChange }: SistemaSe
 
     const handleSistemaCreated = (sistema: Sistema) => {
         // Auto-select the new sistema if it belongs to selected ambiente
-        const shouldSelect = sistema.ambienteIds.includes(selectedAmbienteId);
+        const shouldSelect = (sistema.ambienteIds || []).includes(selectedAmbienteId);
 
         if (!shouldSelect) {
             loadData();
@@ -143,25 +143,25 @@ export function SistemaSelector({ value, onChange, onProductsChange }: SistemaSe
                 description: sistema.description,
                 products: [...sistema.defaultProducts],
             };
-            
+
             // Directly trigger change, avoiding stale state lookup in handleSistemaChange
             onChange(proposalSistema);
             onProductsChange?.(proposalSistema.products);
-            
+
             // Update local state purely for visual feedback before unmount
             setSelectedSistemaId(sistema.id);
         } else {
-             // Fallback
-             loadData();
+            // Fallback
+            loadData();
         }
     };
 
     const handleDeleteSistema = async () => {
         if (!selectedSistemaId) return;
-        
+
         const sistema = sistemas.find((s) => s.id === selectedSistemaId);
         if (!sistema) return;
-        
+
         if (!confirm(`Tem certeza que deseja excluir o template "${sistema.name}"? Esta ação não pode ser desfeita.`)) {
             return;
         }
