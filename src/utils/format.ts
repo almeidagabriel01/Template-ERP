@@ -10,6 +10,45 @@ export function formatPrice(price: number): string {
 }
 
 /**
+ * Format currency value (always shows value, never "Grátis")
+ */
+const currencyFormatter = new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+});
+
+export function formatCurrency(value: number): string {
+    return currencyFormatter.format(value);
+}
+
+/**
+ * Format date to Brazilian short format (e.g., "15 dez")
+ */
+export function formatDateShort(dateString: string): string {
+    return new Date(dateString).toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "short",
+    });
+}
+
+/**
+ * Format date to Brazilian full format (e.g., "15/12/2024")
+ */
+export function formatDateFull(dateString: string): string {
+    return new Date(dateString).toLocaleDateString("pt-BR");
+}
+
+/**
+ * Get greeting based on current hour
+ */
+export function getGreeting(): string {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Bom dia";
+    if (hour < 18) return "Boa tarde";
+    return "Boa noite";
+}
+
+/**
  * Format limit value (-1 means unlimited)
  */
 export function formatLimit(value: number): string {
