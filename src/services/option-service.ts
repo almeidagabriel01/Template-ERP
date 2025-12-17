@@ -6,26 +6,31 @@ import { collection, doc, getDocs, query, where } from "firebase/firestore";
 export type Option = {
     id: string;
     tenantId: string;
-    type: string; // e.g. "product_categories", "product_manufacturers"
+    type: string; // e.g. "product_categories", "product_manufacturers", "wallets"
     label: string;
     createdAt?: string;
 }
 
-const COLLECTION_NAME = "custom_options";
+// Use the same collection name as the Cloud Function
+const COLLECTION_NAME = "options";
 
 export const OptionService = {
     getOptions: async (tenantId: string, type: string): Promise<Option[]> => {
         try {
+            // Cloud Function uses 'fieldType' field instead of 'type'
             const q = query(
                 collection(db, COLLECTION_NAME),
                 where("tenantId", "==", tenantId),
-                where("type", "==", type)
+                where("fieldType", "==", type)
             );
             
             const querySnapshot = await getDocs(q);
             return querySnapshot.docs.map(doc => ({
                 id: doc.id,
-                ...doc.data()
+                tenantId: doc.data().tenantId,
+                type: doc.data().fieldType, // Map fieldType to type for consistency
+                label: doc.data().label,
+                createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || doc.data().createdAt,
             } as Option));
         } catch (error) {
             console.error("Error fetching options:", error);

@@ -2,12 +2,24 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { toast } from "react-toastify";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { UpgradeRequired } from "@/components/ui/upgrade-required";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { usePagePermission } from "@/hooks/usePagePermission";
 import {
   Transaction,
   TransactionService,
@@ -54,6 +66,7 @@ const statusConfig: Record<
 export default function FinancialPage() {
   const { tenant } = useTenant();
   const { hasFinancial, isLoading: isPlanLoading } = usePlanLimits();
+  const { canCreate, canEdit, canDelete } = usePagePermission("financial");
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -66,6 +79,11 @@ export default function FinancialPage() {
     pendingIncome: 0,
     pendingExpense: 0,
   });
+
+  // Delete confirmation dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [transactionToDelete, setTransactionToDelete] = React.useState<Transaction | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   // useEffect MUST be called before any conditional returns
   React.useEffect(() => {
@@ -100,20 +118,31 @@ export default function FinancialPage() {
     );
   }
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir este lançamento?")) {
-      try {
-        await TransactionService.deleteTransaction(id);
-        setTransactions((prev) => prev.filter((t) => t.id !== id));
-        // Refresh summary
-        if (tenant) {
-          const summaryData = await TransactionService.getSummary(tenant.id);
-          setSummary(summaryData);
-        }
-      } catch (error) {
-        console.error("Error deleting transaction:", error);
-        alert("Erro ao excluir lançamento");
+  const openDeleteDialog = (transaction: Transaction) => {
+    setTransactionToDelete(transaction);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!transactionToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await TransactionService.deleteTransaction(transactionToDelete.id);
+      setTransactions((prev) => prev.filter((t) => t.id !== transactionToDelete.id));
+      // Refresh summary
+      if (tenant) {
+        const summaryData = await TransactionService.getSummary(tenant.id);
+        setSummary(summaryData);
       }
+      toast.success("Lançamento excluído com sucesso!");
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+      toast.error("Erro ao excluir lançamento");
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setTransactionToDelete(null);
     }
   };
 
@@ -186,22 +215,23 @@ export default function FinancialPage() {
               </span>
             </div>
             <div
-              className={`text-2xl md:text-2xl font-bold ${
-                summary.totalIncome - summary.totalExpense >= 0
-                  ? "text-green-500"
-                  : "text-red-500"
-              }`}
+              className={`text-2xl md:text-2xl font-bold ${summary.totalIncome - summary.totalExpense >= 0
+                ? "text-green-500"
+                : "text-red-500"
+                }`}
             >
               {formatCurrency(summary.totalIncome - summary.totalExpense)}
             </div>
           </div>
 
-          <Link href="/financial/new">
-            <Button size="lg" className="gap-2">
-              <Plus className="w-5 h-5" />
-              Novo Lançamento
-            </Button>
-          </Link>
+          {canCreate && (
+            <Link href="/financial/new">
+              <Button size="lg" className="gap-2">
+                <Plus className="w-5 h-5" />
+                Novo Lançamento
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -310,12 +340,14 @@ export default function FinancialPage() {
             <p className="text-muted-foreground text-center mb-6 max-w-md">
               Comece a registrar suas receitas e despesas.
             </p>
-            <Link href="/financial/new">
-              <Button className="gap-2">
-                <Plus className="w-4 h-4" />
-                Criar Primeiro Lançamento
-              </Button>
-            </Link>
+            {canCreate && (
+              <Link href="/financial/new">
+                <Button className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Criar Primeiro Lançamento
+                </Button>
+              </Link>
+            )}
           </CardContent>
         </Card>
       ) : filteredTransactions.length === 0 ? (
@@ -407,25 +439,29 @@ export default function FinancialPage() {
                         <Eye className="w-4 h-4" />
                       </Button>
                     </Link>
-                    <Link href={`/financial/${transaction.id}`}>
+                    {canEdit && (
+                      <Link href={`/financial/${transaction.id}`}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Editar"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </Link>
+                    )}
+                    {canDelete && (
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
-                        title="Editar"
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => openDeleteDialog(transaction)}
+                        title="Excluir"
                       >
-                        <Edit className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" />
                       </Button>
-                    </Link>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => handleDelete(transaction.id)}
-                      title="Excluir"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -433,6 +469,33 @@ export default function FinancialPage() {
           })}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Lançamento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o lançamento{" "}
+              <strong>"{transactionToDelete?.description}"</strong>?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                confirmDelete();
+              }}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {isDeleting ? "Excluindo..." : "Sim, Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

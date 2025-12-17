@@ -1,6 +1,7 @@
 
 import * as React from "react";
 import { Proposal } from "@/services/proposal-service";
+import { ProductService } from "@/services/product-service";
 import { ProposalSection, ProposalTemplate } from "@/types";
 import {
   PdfSection,
@@ -42,6 +43,55 @@ export function ProposalPdfViewer({
   tenant,
   customSettings,
 }: ProposalPdfViewerProps) {
+  // State for products enriched with images from products collection
+  const [enrichedProducts, setEnrichedProducts] = React.useState<any[]>(proposal.products || []);
+  const [isLoadingProducts, setIsLoadingProducts] = React.useState(true);
+
+  // Load product images from products collection
+  React.useEffect(() => {
+    const loadProductImages = async () => {
+      if (!tenant?.id || !proposal.products?.length) {
+        setEnrichedProducts(proposal.products || []);
+        setIsLoadingProducts(false);
+        return;
+      }
+
+      try {
+        // Get all products from the tenant's catalog
+        const catalogProducts = await ProductService.getProducts(tenant.id);
+
+        // Create a map for quick lookup
+        const productMap = new Map(
+          catalogProducts.map(p => [p.id, p])
+        );
+
+        // Enrich proposal products with images from catalog
+        const enriched = (proposal.products || []).map(proposalProduct => {
+          const catalogProduct = productMap.get(proposalProduct.productId);
+          if (catalogProduct) {
+            return {
+              ...proposalProduct,
+              productImage: catalogProduct.images?.[0] || catalogProduct.image || "",
+              productImages: catalogProduct.images?.length ? catalogProduct.images :
+                catalogProduct.image ? [catalogProduct.image] : [],
+              productDescription: catalogProduct.description || proposalProduct.productDescription || "",
+            };
+          }
+          return proposalProduct;
+        });
+
+        setEnrichedProducts(enriched);
+      } catch (error) {
+        console.error("Error loading product images:", error);
+        setEnrichedProducts(proposal.products || []);
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    };
+
+    loadProductImages();
+  }, [tenant?.id, proposal.products]);
+
   // Merge settings: Custom > Template > Defaults
   const theme =
     customSettings?.theme || (template?.theme as ThemeType) || "modern";
@@ -82,7 +132,8 @@ export function ProposalPdfViewer({
     customSettings?.sections ||
     (template ? createDefaultSections(template, primaryColor) : []);
 
-  const products = proposal.products || [];
+  // Use enriched products with images loaded from catalog
+  const products = enrichedProducts;
 
   // Helper: Adjust Color
   const adjustColor = (hex: string, percent: number): string => {

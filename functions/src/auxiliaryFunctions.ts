@@ -136,9 +136,22 @@ export const deleteAmbiente = functions
 // SISTEMA FUNCTIONS
 // ============================================
 
+interface SistemaProduct {
+  productId: string;
+  productName: string;
+  quantity: number;
+  notes?: string;
+}
+
 export const createSistema = functions
   .region("southamerica-east1")
-  .https.onCall(async (data: { name: string; description?: string; productIds?: string[] }, context) => {
+  .https.onCall(async (data: { 
+    name: string; 
+    description?: string; 
+    icon?: string;
+    ambienteIds?: string[];
+    defaultProducts?: SistemaProduct[];
+  }, context) => {
     const db = getFirestore();
     if (!context.auth) throw new functions.https.HttpsError("unauthenticated", "Login necessário.");
     
@@ -150,11 +163,13 @@ export const createSistema = functions
     const docData: Record<string, any> = {
       tenantId,
       name: data.name.trim(),
-      productIds: data.productIds || [],
+      ambienteIds: data.ambienteIds || [],
+      defaultProducts: data.defaultProducts || [],
       createdAt: now,
       updatedAt: now,
     };
     if (data.description) docData.description = data.description;
+    if (data.icon) docData.icon = data.icon;
 
     const docRef = await db.collection('sistemas').add(docData);
     return { success: true, sistemaId: docRef.id, message: "Sistema criado com sucesso." };
@@ -162,7 +177,14 @@ export const createSistema = functions
 
 export const updateSistema = functions
   .region("southamerica-east1")
-  .https.onCall(async (data: { sistemaId: string; name?: string; description?: string; productIds?: string[] }, context) => {
+  .https.onCall(async (data: { 
+    sistemaId: string; 
+    name?: string; 
+    description?: string; 
+    icon?: string;
+    ambienteIds?: string[];
+    defaultProducts?: SistemaProduct[];
+  }, context) => {
     const db = getFirestore();
     if (!context.auth) throw new functions.https.HttpsError("unauthenticated", "Login necessário.");
     
@@ -180,7 +202,9 @@ export const updateSistema = functions
     const safeUpdate: Record<string, any> = { updatedAt: Timestamp.now() };
     if (updateData.name !== undefined) safeUpdate.name = updateData.name;
     if (updateData.description !== undefined) safeUpdate.description = updateData.description;
-    if (updateData.productIds !== undefined) safeUpdate.productIds = updateData.productIds;
+    if (updateData.icon !== undefined) safeUpdate.icon = updateData.icon;
+    if (updateData.ambienteIds !== undefined) safeUpdate.ambienteIds = updateData.ambienteIds;
+    if (updateData.defaultProducts !== undefined) safeUpdate.defaultProducts = updateData.defaultProducts;
 
     await docRef.update(safeUpdate);
     return { success: true, message: "Sistema atualizado com sucesso." };

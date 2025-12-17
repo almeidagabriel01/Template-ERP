@@ -395,6 +395,19 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
           productIds: s.products.map(p => p.productId)
         })) : [];
 
+        // Strip image data to stay under Firestore 1MB limit
+        const productsForUpdate = selectedProducts.map(p => ({
+          productId: p.productId,
+          productName: p.productName,
+          quantity: typeof p.quantity === 'number' && !isNaN(p.quantity) ? Math.max(1, p.quantity) : 1,
+          unitPrice: typeof p.unitPrice === 'number' && !isNaN(p.unitPrice) ? p.unitPrice : 0,
+          total: typeof p.total === 'number' && !isNaN(p.total) ? p.total : 0,
+          manufacturer: p.manufacturer,
+          category: p.category,
+          systemInstanceId: p.systemInstanceId,
+          isExtra: p.isExtra,
+        }));
+
         await ProposalService.updateProposal(proposalId, {
           title: formData.title,
           clientId: selectedClientId,
@@ -405,7 +418,7 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
           validUntil: formData.validUntil || undefined,
           customNotes: formData.customNotes || undefined,
           discount: formData.discount || 0,
-          products: selectedProducts,
+          products: productsForUpdate,
           sistemas: sistemasPayload,
         });
         toast.success("Proposta atualizada com sucesso!");
@@ -449,6 +462,26 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
           }))
           : undefined;
 
+        // Sanitize products to ensure no NaN and strip image data to stay under Firestore 1MB limit
+        // Images will be loaded from products collection when generating PDF
+        const sanitizedProducts = selectedProducts.map(p => ({
+          productId: p.productId,
+          productName: p.productName,
+          // Don't save full images to Firestore - they cause document size to exceed 1MB
+          // productImage and productImages are omitted intentionally
+          quantity: typeof p.quantity === 'number' && !isNaN(p.quantity) ? Math.max(1, p.quantity) : 1,
+          unitPrice: typeof p.unitPrice === 'number' && !isNaN(p.unitPrice) ? p.unitPrice : 0,
+          total: typeof p.total === 'number' && !isNaN(p.total) ? p.total : 0,
+          manufacturer: p.manufacturer,
+          category: p.category,
+          systemInstanceId: p.systemInstanceId,
+          isExtra: p.isExtra,
+        }));
+
+        // Calculate safe total value
+        const safeTotal = calculateTotal();
+        const totalValue = typeof safeTotal === 'number' && !isNaN(safeTotal) ? safeTotal : 0;
+
         const result = await createProposal({
           title: formData.title!,
           clientId: clientId!,
@@ -457,11 +490,11 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
           clientPhone: formData.clientPhone || undefined,
           clientAddress: formData.clientAddress || undefined,
           validUntil: formData.validUntil || undefined,
-          totalValue: calculateTotal(),
+          totalValue: totalValue,
           discount: formData.discount || 0,
           notes: formData.customNotes,
           customNotes: formData.customNotes,
-          products: selectedProducts,
+          products: sanitizedProducts,
           sistemas: selectedSistemas.length > 0 ? selectedSistemas.map(s => ({
             sistemaId: s.sistemaId,
             sistemaName: s.sistemaName,
@@ -569,7 +602,18 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
                 selectedProducts.map((product, idx) => (
                   <div key={`${product.productId}-${idx}`} className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
                     <div className="flex items-center gap-3">
-                      <Package className="w-4 h-4 text-muted-foreground" />
+                      {product.productImage || product.productImages?.[0] ? (
+                        <div className="w-8 h-8 rounded border bg-white overflow-hidden flex-shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={product.productImages?.[0] || product.productImage}
+                            alt=""
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <Package className="w-4 h-4 text-muted-foreground" />
+                      )}
                       <div>
                         <div className="font-medium text-sm">{product.productName}</div>
                         <div className="text-xs text-muted-foreground">
@@ -860,7 +904,18 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
                                 className={`flex items-center justify-between p-3 rounded-lg border ${product.isExtra ? "bg-blue-50/50 border-blue-100" : "bg-muted/30"}`}
                               >
                                 <div className="flex items-center gap-3">
-                                  <Package className="w-4 h-4 text-muted-foreground" />
+                                  {product.productImage || product.productImages?.[0] ? (
+                                    <div className="w-8 h-8 rounded border bg-white overflow-hidden flex-shrink-0">
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img
+                                        src={product.productImages?.[0] || product.productImage}
+                                        alt=""
+                                        className="w-full h-full object-contain"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <Package className="w-4 h-4 text-muted-foreground" />
+                                  )}
                                   <div>
                                     <div className="flex items-center gap-2">
                                       <h5 className="font-medium text-sm">
@@ -875,9 +930,8 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
                                         </Badge>
                                       )}
                                     </div>
-                                    <p className="text-xs text-muted-foreground">
-                                      R$ {product.unitPrice.toFixed(2)} x{" "}
-                                      {product.quantity}
+                                    <p className="text-xs text-muted-foreground line-clamp-2">
+                                      {product.productDescription || "Sem descrição"}
                                     </p>
                                   </div>
                                 </div>
@@ -1174,6 +1228,19 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
                             }`}
                           onClick={() => toggleProduct(product)}
                         >
+                          {/* Product Image */}
+                          {(product.images?.[0] || product.image) && (
+                            <div className="flex justify-center mb-3">
+                              <div className="w-16 h-16 rounded-lg border bg-white overflow-hidden">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={product.images?.[0] || product.image || ""}
+                                  alt=""
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+                            </div>
+                          )}
                           <div className="flex justify-between items-start mb-2">
                             <div className="flex flex-col">
                               <h4 className="font-medium mr-2">
