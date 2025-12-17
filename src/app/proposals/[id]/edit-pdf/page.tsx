@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UpgradeRequired } from "@/components/ui/upgrade-required";
@@ -70,7 +71,7 @@ export default function EditPdfPage() {
     handleGeneratePdf,
   } = useEditPdfPage();
 
-  const router = React.useMemo(() => require("next/navigation").useRouter(), []);
+  const router = useRouter();
 
   // Premium color based on tenant theme
   const premiumColor = tenant?.primaryColor
