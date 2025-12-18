@@ -12,20 +12,14 @@ import {
   FormItem,
   FormStatic,
 } from "@/components/ui/form-components";
-import {
-  User,
-  FileText,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar
-} from "lucide-react";
+import { User, FileText, Mail, Phone, MapPin, Calendar } from "lucide-react";
 
 interface ProposalClientSectionProps {
   formData: Partial<Proposal>;
   selectedClientId?: string;
   isReadOnly?: boolean;
   noContainer?: boolean; // When true, renders without FormSection wrapper
+  errors?: Record<string, string>;
   onFormChange: (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => void;
@@ -44,6 +38,7 @@ export function ProposalClientSection({
   selectedClientId,
   isReadOnly,
   noContainer = false,
+  errors = {},
   onFormChange,
   onClientChange,
 }: ProposalClientSectionProps) {
@@ -78,7 +73,12 @@ export function ProposalClientSection({
   const content = (
     <>
       <FormGroup>
-        <FormItem label="Título da Proposta" htmlFor="title" required>
+        <FormItem
+          label="Título da Proposta"
+          htmlFor="title"
+          required
+          error={errors.title}
+        >
           <Input
             id="title"
             name="title"
@@ -87,19 +87,26 @@ export function ProposalClientSection({
             placeholder="Ex: Automação Residencial - Casa Silva"
             icon={<FileText className="w-4 h-4" />}
             required
+            className={errors.title ? "border-destructive" : ""}
           />
         </FormItem>
-        <FormItem label="Cliente" required>
+        <FormItem label="Cliente" required error={errors.clientName}>
           <ClientSelect
             value={formData.clientName || ""}
             clientId={selectedClientId}
             onChange={onClientChange}
+            error={!!errors.clientName}
           />
         </FormItem>
       </FormGroup>
 
       <FormGroup cols={3}>
-        <FormItem label="Email" htmlFor="clientEmail">
+        <FormItem
+          label="Email"
+          htmlFor="clientEmail"
+          required
+          error={errors.clientEmail}
+        >
           <Input
             id="clientEmail"
             name="clientEmail"
@@ -108,25 +115,36 @@ export function ProposalClientSection({
             onChange={onFormChange}
             placeholder="email@exemplo.com"
             icon={<Mail className="w-4 h-4" />}
+            className={errors.clientEmail ? "border-destructive" : ""}
           />
         </FormItem>
-        <FormItem label="Telefone" htmlFor="clientPhone">
+        <FormItem
+          label="Telefone"
+          htmlFor="clientPhone"
+          required
+          error={errors.clientPhone}
+        >
           <PhoneInput
             id="clientPhone"
             name="clientPhone"
             value={formData.clientPhone || ""}
             onChange={onFormChange}
             placeholder="(11) 99999-9999"
+            className={errors.clientPhone ? "border-destructive" : ""}
           />
         </FormItem>
-        <FormItem label="Válida até" htmlFor="validUntil">
+        <FormItem
+          label="Válida até"
+          htmlFor="validUntil"
+          required
+          error={errors.validUntil}
+        >
           <DateInput
             id="validUntil"
             name="validUntil"
-            value={
-              formData.validUntil ? formData.validUntil.split("T")[0] : ""
-            }
+            value={formData.validUntil ? formData.validUntil.split("T")[0] : ""}
             onChange={onFormChange}
+            className={errors.validUntil ? "border-destructive" : ""}
           />
         </FormItem>
       </FormGroup>

@@ -10,7 +10,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, ArrowLeft, Sun, Moon, User as UserIcon, Building2, Upload, CheckCircle, Mail, Lock } from "lucide-react";
+import {
+  Loader2,
+  ArrowLeft,
+  Sun,
+  Moon,
+  User as UserIcon,
+  Building2,
+  Upload,
+  CheckCircle,
+  Mail,
+  Lock,
+} from "lucide-react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { AppSkeleton } from "@/components/layout/app-skeleton";
@@ -22,7 +33,11 @@ import { CustomersSkeleton } from "@/app/customers/_components/customers-skeleto
 import { useLoginForm } from "./_hooks/useLoginForm";
 import { CredentialFields } from "./_components/form-fields";
 import { FullPageLoading } from "@/components/ui/full-page-loading";
-import { StepWizard, StepCard, StepNavigation } from "@/components/ui/step-wizard";
+import {
+  StepWizard,
+  StepCard,
+  StepNavigation,
+} from "@/components/ui/step-wizard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -46,6 +61,7 @@ function LoginContent() {
     setCompanyNiche,
     error,
     setError,
+    errors, // New
     isLoggingIn,
     isRegistering,
     mode,
@@ -59,26 +75,115 @@ function LoginContent() {
     handleLogoUpload,
   } = useLoginForm();
 
-  // Show custom spinner during active login/registration/forgot actions
-  if (isLoggingIn || isRegistering) {
-    return (
-      <FullPageLoading
-        message={isLoggingIn ? "Autenticando..." : "Criando sua conta..."}
-        description="Por favor, aguarde um momento."
-      />
-    );
-  }
+  // Estado para erros de validação do cadastro
+  const [registerErrors, setRegisterErrors] = useState<Record<string, string>>(
+    {}
+  );
+
+  // Validação do Step 1 do cadastro
+  const validateRegisterStep1 = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    let isValid = true;
+
+    if (!name || name.trim().length < 2) {
+      newErrors.name = "Nome deve ter pelo menos 2 caracteres";
+      isValid = false;
+    }
+
+    if (!email || !email.trim()) {
+      newErrors.email = "Email é obrigatório";
+      isValid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = "Email inválido";
+      isValid = false;
+    }
+
+    if (!password || password.length < 6) {
+      newErrors.password = "Senha deve ter pelo menos 6 caracteres";
+      isValid = false;
+    }
+
+    setRegisterErrors(newErrors);
+    return isValid;
+  };
+
+  // Validação do Step 2 do cadastro
+  const validateRegisterStep2 = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    let isValid = true;
+
+    if (!companyName || companyName.trim().length < 2) {
+      newErrors.companyName = "Nome da empresa é obrigatório";
+      isValid = false;
+    }
+
+    setRegisterErrors(newErrors);
+    return isValid;
+  };
+
+  // Limpar erros quando valores mudam
+  useEffect(() => {
+    if (name && name.trim().length >= 2 && registerErrors.name) {
+      setRegisterErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.name;
+        return newErrors;
+      });
+    }
+  }, [name]);
+
+  useEffect(() => {
+    if (
+      email &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
+      registerErrors.email
+    ) {
+      setRegisterErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.email;
+        return newErrors;
+      });
+    }
+  }, [email]);
+
+  useEffect(() => {
+    if (password && password.length >= 6 && registerErrors.password) {
+      setRegisterErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.password;
+        return newErrors;
+      });
+    }
+  }, [password]);
+
+  useEffect(() => {
+    if (
+      companyName &&
+      companyName.trim().length >= 2 &&
+      registerErrors.companyName
+    ) {
+      setRegisterErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.companyName;
+        return newErrors;
+      });
+    }
+  }, [companyName]);
 
   // Show skeleton loading during initial auth check or page load
-  if (isLoading || user) {
+  if ((isLoading && !isLoggingIn && !isRegistering) || user) {
     // Determine which skeleton to show based on likely destination
     let content = <DashboardSkeleton />;
     let showSidebar = true;
 
-    if (user?.role === 'superadmin') {
+    if (user?.role === "superadmin") {
       content = <AdminSkeleton />;
       showSidebar = false;
-    } else if (user?.role === 'free' || user?.role === 'user' || user?.role === 'member') {
+    } else if (
+      user?.role === "free" ||
+      user?.role === "user" ||
+      user?.role === "member"
+    ) {
       const perms = user.permissions || {};
       if (perms.dashboard && perms.dashboard.canView === false) {
         if (perms.proposals?.canView) content = <ProposalsSkeleton />;
@@ -88,11 +193,7 @@ function LoginContent() {
       }
     }
 
-    return (
-      <AppSkeleton showSidebar={showSidebar}>
-        {content}
-      </AppSkeleton>
-    );
+    return <AppSkeleton showSidebar={showSidebar}>{content}</AppSkeleton>;
   }
 
   const steps = [
@@ -117,7 +218,9 @@ function LoginContent() {
         <ThemeToggle />
       </div>
 
-      <div className={`w-full ${mode === "register" ? "max-w-xl" : "max-w-md"}`}>
+      <div
+        className={`w-full ${mode === "register" ? "max-w-xl" : "max-w-md"}`}
+      >
         {/* Back Link */}
         <div className="flex justify-center mb-6">
           <Link
@@ -133,22 +236,44 @@ function LoginContent() {
           // ======================= REGISTER MODE (WIZARD) =======================
           <div className="space-y-6">
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold tracking-tight">Criar nova conta</h1>
-              <p className="text-muted-foreground mt-1">Configure seu acesso e sua empresa</p>
+              <h1 className="text-2xl font-bold tracking-tight">
+                Criar nova conta
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Configure seu acesso e sua empresa
+              </p>
             </div>
 
-            <StepWizard steps={steps} onComplete={() => { }} indicatorContainerClassName="max-w-xs w-full">
+            <StepWizard
+              steps={steps}
+              onComplete={() => {}}
+              indicatorContainerClassName="max-w-xs w-full"
+            >
               {/* STEP 1: ACCOUNT INFO */}
               <StepCard>
                 <div className="space-y-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="reg-name">Seu Nome</Label>
-                    <Input
-                      id="reg-name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Nome completo"
-                    />
+                    <Label
+                      htmlFor="reg-name"
+                      className="flex items-center gap-1"
+                    >
+                      Seu Nome <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="reg-name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Nome completo"
+                        className={`pl-9 ${registerErrors.name ? "border-destructive" : ""}`}
+                      />
+                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                    </div>
+                    {registerErrors.name && (
+                      <p className="text-sm text-destructive">
+                        {registerErrors.name}
+                      </p>
+                    )}
                   </div>
                   <CredentialFields
                     email={email}
@@ -157,10 +282,12 @@ function LoginContent() {
                     onPasswordChange={setPassword}
                     mode="register"
                     error={error}
+                    errors={registerErrors}
                   />
                   <StepNavigation
                     showPrev={false}
                     nextLabel="Continuar"
+                    onBeforeNext={validateRegisterStep1}
                   />
                   <div className="text-center pt-4">
                     <button
@@ -180,13 +307,28 @@ function LoginContent() {
                   <form onSubmit={handleRegister}>
                     <div className="space-y-4">
                       <div className="grid gap-2">
-                        <Label htmlFor="companyName">Nome da Empresa</Label>
-                        <Input
-                          id="companyName"
-                          value={companyName}
-                          onChange={(e) => setCompanyName(e.target.value)}
-                          placeholder="Minha Empresa"
-                        />
+                        <Label
+                          htmlFor="companyName"
+                          className="flex items-center gap-1"
+                        >
+                          Nome da Empresa{" "}
+                          <span className="text-destructive">*</span>
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            id="companyName"
+                            value={companyName}
+                            onChange={(e) => setCompanyName(e.target.value)}
+                            placeholder="Minha Empresa"
+                            className={`pl-9 ${registerErrors.companyName ? "border-destructive" : ""}`}
+                          />
+                          <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                        </div>
+                        {registerErrors.companyName && (
+                          <p className="text-sm text-destructive">
+                            {registerErrors.companyName}
+                          </p>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
@@ -195,13 +337,17 @@ function LoginContent() {
                           <Select
                             id="niche"
                             value={companyNiche}
-                            onChange={(e) => setCompanyNiche(e.target.value as TenantNiche)}
+                            onChange={(e) =>
+                              setCompanyNiche(e.target.value as TenantNiche)
+                            }
                           >
-                            {(Object.keys(NICHE_LABELS) as TenantNiche[]).map((key) => (
-                              <option key={key} value={key}>
-                                {NICHE_LABELS[key]}
-                              </option>
-                            ))}
+                            {(Object.keys(NICHE_LABELS) as TenantNiche[]).map(
+                              (key) => (
+                                <option key={key} value={key}>
+                                  {NICHE_LABELS[key]}
+                                </option>
+                              )
+                            )}
                           </Select>
                         </div>
 
@@ -263,7 +409,11 @@ function LoginContent() {
                       </div>
                     </div>
 
-                    {error && <p className="text-sm text-destructive font-medium mt-2">{error}</p>}
+                    {error && (
+                      <p className="text-sm text-destructive font-medium mt-2">
+                        {error}
+                      </p>
+                    )}
 
                     <StepNavigation
                       onSubmit={handleRegister}
@@ -289,9 +439,12 @@ function LoginContent() {
                 {resetSent ? (
                   <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 flex flex-col items-center text-center gap-2 animate-in fade-in zoom-in-95">
                     <CheckCircle className="w-10 h-10 text-green-500" />
-                    <h3 className="font-semibold text-green-600">Email Enviado!</h3>
+                    <h3 className="font-semibold text-green-600">
+                      Email Enviado!
+                    </h3>
                     <p className="text-sm text-muted-foreground">
-                      Verifique sua caixa de entrada (e spam) para redefinir sua senha.
+                      Verifique sua caixa de entrada (e spam) para redefinir sua
+                      senha.
                     </p>
                   </div>
                 ) : (
@@ -307,9 +460,13 @@ function LoginContent() {
                         required
                         className="pl-9"
                       />
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                     </div>
-                    {error && <p className="text-sm text-destructive font-medium">{error}</p>}
+                    {error && (
+                      <p className="text-sm text-destructive font-medium">
+                        {error}
+                      </p>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -352,6 +509,7 @@ function LoginContent() {
                   onPasswordChange={setPassword}
                   mode="login"
                   error={error}
+                  errors={errors}
                 />
                 <div className="flex justify-end">
                   <button
@@ -372,7 +530,14 @@ function LoginContent() {
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20"
                   disabled={isLoggingIn}
                 >
-                  Entrar
+                  {isLoggingIn ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Entrando...
+                    </>
+                  ) : (
+                    "Entrar"
+                  )}
                 </Button>
                 <div className="text-center text-sm text-muted-foreground">
                   Não tem uma conta?{" "}

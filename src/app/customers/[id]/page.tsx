@@ -4,40 +4,88 @@ import * as React from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ClientService, Client } from "@/services/client-service";
 import { usePagePermission } from "@/hooks/usePagePermission";
+import { useFormValidation } from "@/hooks/useFormValidation";
+import { customerSchema } from "@/lib/validations";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import {
   FormContainer,
   FormHeader,
-  FormSection,
   FormGroup,
   FormItem,
   FormStatic,
-  FormActions,
 } from "@/components/ui/form-components";
+import {
+  StepWizard,
+  StepNavigation,
+  StepCard,
+} from "@/components/ui/step-wizard";
 import {
   User,
   Mail,
   Phone,
   MapPin,
   FileText,
-  Save,
   Loader2,
   AlertCircle,
+  CheckCircle,
 } from "lucide-react";
 
 const sourceLabels: Record<string, { label: string; color: string }> = {
-  manual: { label: "Cadastro Manual", color: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
-  proposal: { label: "Via Proposta", color: "bg-green-500/10 text-green-600 border-green-500/20" },
-  financial: { label: "Via Financeiro", color: "bg-purple-500/10 text-purple-600 border-purple-500/20" },
+  manual: {
+    label: "Cadastro Manual",
+    color: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+  },
+  proposal: {
+    label: "Via Proposta",
+    color: "bg-green-500/10 text-green-600 border-green-500/20",
+  },
+  financial: {
+    label: "Via Financeiro",
+    color: "bg-purple-500/10 text-purple-600 border-purple-500/20",
+  },
 };
+
+const customerSteps = [
+  {
+    id: "info",
+    title: "Informações",
+    description: "Dados e contato",
+    icon: User,
+  },
+  {
+    id: "address",
+    title: "Endereço",
+    description: "Localização",
+    icon: MapPin,
+  },
+  {
+    id: "notes",
+    title: "Finalizar",
+    description: "Observações",
+    icon: CheckCircle,
+  },
+];
 
 export default function EditCustomerPage() {
   const router = useRouter();
   const params = useParams();
   const clientId = params.id as string;
-  const { canEdit, canView, isLoading: permLoading } = usePagePermission("clients");
+  const {
+    canEdit,
+    canView,
+    isLoading: permLoading,
+  } = usePagePermission("clients");
+  const {
+    errors,
+    validateField,
+    validateForm,
+    clearFieldError,
+    setFieldError,
+  } = useFormValidation({
+    schema: customerSchema,
+  });
 
   React.useEffect(() => {
     if (!permLoading && !canView) {
@@ -88,13 +136,47 @@ export default function EditCustomerPage() {
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear error when user starts typing
+    if (errors[name as keyof typeof errors]) {
+      clearFieldError(name as keyof typeof formData);
+    }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleBlur = (
+    e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    validateField(name as keyof typeof formData, value, formData);
+  };
+
+  // Step 1 validation: Name, Email and Phone are required
+  const validateStep1 = (): boolean => {
+    let isValid = true;
 
     if (!formData.name.trim()) {
-      alert("O nome do cliente é obrigatório!");
+      setFieldError("name", "Nome é obrigatório");
+      isValid = false;
+    }
+    if (!formData.email.trim()) {
+      setFieldError("email", "Email é obrigatório");
+      isValid = false;
+    }
+    if (!formData.phone.trim()) {
+      setFieldError("phone", "Telefone é obrigatório");
+      isValid = false;
+    }
+
+    return isValid;
+  };
+
+  const handleSubmit = async () => {
+    // Validate form before submit
+    if (!validateForm(formData)) {
+      return;
+    }
+
+    if (!formData.name.trim()) {
+      setFieldError("name", "O nome do cliente é obrigatório!");
       return;
     }
 
@@ -109,8 +191,8 @@ export default function EditCustomerPage() {
         notes: formData.notes || undefined,
       });
 
-      alert("Cliente atualizado com sucesso!");
       router.push("/customers");
+      router.refresh();
     } catch (error) {
       console.error("Error updating client:", error);
       alert("Erro ao atualizar cliente");
@@ -119,7 +201,7 @@ export default function EditCustomerPage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || permLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="flex flex-col items-center gap-3">
@@ -147,7 +229,7 @@ export default function EditCustomerPage() {
           </div>
           <button
             onClick={() => router.push("/customers")}
-            className="h-11 px-6 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+            className="h-11 px-6 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors cursor-pointer"
           >
             Voltar para Clientes
           </button>
@@ -158,88 +240,208 @@ export default function EditCustomerPage() {
 
   const sourceInfo = sourceLabels[client.source] || sourceLabels.manual;
 
-  return (
-    <FormContainer className="max-w-3xl">
-      <FormHeader
-        title={canEdit ? "Editar Cliente" : "Detalhes do Cliente"}
-        subtitle={
-          canEdit
-            ? `Atualize as informações de "${formData.name}"`
-            : `Visualizando dados de "${formData.name}"`
-        }
-        icon={User}
-        onBack={() => router.push("/customers")}
-        badge={
-          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${sourceInfo.color}`}>
-            {sourceInfo.label}
-          </span>
-        }
-      />
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic Info */}
-        <FormSection
-          title="Informações Básicas"
-          description="Dados principais de identificação"
+  // Read-only view for users without edit permission
+  if (!canEdit) {
+    return (
+      <FormContainer className="max-w-3xl">
+        <FormHeader
+          title="Detalhes do Cliente"
+          subtitle={`Visualizando dados de "${formData.name}"`}
           icon={User}
-        >
-          {canEdit ? (
-            <>
-              <FormItem label="Nome Completo" htmlFor="name" required>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="Nome completo ou razão social"
-                  icon={<User className="w-4 h-4" />}
-                  required
-                />
-              </FormItem>
+          onBack={() => router.push("/customers")}
+          badge={
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-medium border ${sourceInfo.color}`}
+            >
+              {sourceInfo.label}
+            </span>
+          }
+        />
 
-              <FormGroup>
-                <FormItem label="Email" htmlFor="email">
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="email@exemplo.com"
-                    icon={<Mail className="w-4 h-4" />}
-                  />
-                </FormItem>
+        <StepWizard steps={customerSteps} allowClickAhead>
+          {/* Step 1: Basic Info */}
+          <StepCard>
+            <div className="space-y-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center">
+                  <User className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">
+                    Informações do Cliente
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Dados principais e formas de contato
+                  </p>
+                </div>
+              </div>
 
-                <FormItem label="Telefone" htmlFor="phone">
-                  <Input
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    placeholder="(11) 99999-9999"
-                    icon={<Phone className="w-4 h-4" />}
-                  />
-                </FormItem>
-              </FormGroup>
-            </>
-          ) : (
-            <>
               <FormStatic label="Nome Completo" value={formData.name} />
               <FormGroup>
                 <FormStatic label="Email" value={formData.email} />
                 <FormStatic label="Telefone" value={formData.phone} />
               </FormGroup>
-            </>
-          )}
-        </FormSection>
+            </div>
+            <StepNavigation />
+          </StepCard>
 
-        {/* Address */}
-        <FormSection
-          title="Localização"
-          description="Endereço para entregas e correspondências"
-          icon={MapPin}
-        >
-          {canEdit ? (
+          {/* Step 2: Address */}
+          <StepCard>
+            <div className="space-y-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/15 to-purple-500/5 flex items-center justify-center">
+                  <MapPin className="w-6 h-6 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">Endereço</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Localização para entregas e correspondências
+                  </p>
+                </div>
+              </div>
+
+              <FormStatic label="Endereço Completo" value={formData.address} />
+            </div>
+            <StepNavigation />
+          </StepCard>
+
+          {/* Step 3: Notes */}
+          <StepCard>
+            <div className="space-y-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/15 to-amber-500/5 flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">Observações</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Notas e informações adicionais
+                  </p>
+                </div>
+              </div>
+
+              <FormStatic label="Observações" value={formData.notes} />
+            </div>
+            <StepNavigation
+              onSubmit={() => router.push("/customers")}
+              submitLabel="Voltar"
+            />
+          </StepCard>
+        </StepWizard>
+      </FormContainer>
+    );
+  }
+
+  return (
+    <FormContainer className="max-w-3xl">
+      <FormHeader
+        title="Editar Cliente"
+        subtitle={`Atualize as informações de "${formData.name}"`}
+        icon={User}
+        onBack={() => router.push("/customers")}
+        badge={
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-medium border ${sourceInfo.color}`}
+          >
+            {sourceInfo.label}
+          </span>
+        }
+      />
+
+      <StepWizard steps={customerSteps} allowClickAhead>
+        {/* Step 1: Basic Info + Contact */}
+        <StepCard>
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center">
+                <User className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">
+                  Informações do Cliente
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Dados principais e formas de contato
+                </p>
+              </div>
+            </div>
+
+            <FormItem
+              label="Nome Completo"
+              htmlFor="name"
+              required
+              error={errors.name}
+            >
+              <Input
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                placeholder="Nome completo ou razão social"
+                icon={<User className="w-4 h-4" />}
+                className={errors.name ? "border-destructive" : ""}
+                required
+              />
+            </FormItem>
+
+            <FormGroup>
+              <FormItem
+                label="Email"
+                htmlFor="email"
+                required
+                error={errors.email}
+              >
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="email@exemplo.com"
+                  icon={<Mail className="w-4 h-4" />}
+                  className={errors.email ? "border-destructive" : ""}
+                  required
+                />
+              </FormItem>
+
+              <FormItem
+                label="Telefone"
+                htmlFor="phone"
+                required
+                error={errors.phone}
+              >
+                <PhoneInput
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="(11) 99999-9999"
+                  className={errors.phone ? "border-destructive" : ""}
+                />
+              </FormItem>
+            </FormGroup>
+          </div>
+          <StepNavigation onBeforeNext={validateStep1} />
+        </StepCard>
+
+        {/* Step 2: Address */}
+        <StepCard>
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/15 to-purple-500/5 flex items-center justify-center">
+                <MapPin className="w-6 h-6 text-purple-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Endereço</h3>
+                <p className="text-sm text-muted-foreground">
+                  Localização para entregas e correspondências
+                </p>
+              </div>
+            </div>
+
             <FormItem label="Endereço Completo" htmlFor="address">
               <Input
                 id="address"
@@ -250,44 +452,73 @@ export default function EditCustomerPage() {
                 icon={<MapPin className="w-4 h-4" />}
               />
             </FormItem>
-          ) : (
-            <FormStatic label="Endereço" value={formData.address} />
-          )}
-        </FormSection>
+          </div>
+          <StepNavigation />
+        </StepCard>
 
-        {/* Notes */}
-        <FormSection
-          title="Observações"
-          description="Anotações e informações adicionais"
-          icon={FileText}
-          collapsible
-          defaultOpen={!!formData.notes}
-        >
-          {canEdit ? (
-            <FormItem label="Notas" htmlFor="notes">
+        {/* Step 3: Notes & Submit */}
+        <StepCard>
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/15 to-amber-500/5 flex items-center justify-center">
+                <FileText className="w-6 h-6 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Finalizar Edição</h3>
+                <p className="text-sm text-muted-foreground">
+                  Observações e confirmação
+                </p>
+              </div>
+            </div>
+
+            <FormItem label="Observações" htmlFor="notes" hint="Opcional">
               <Textarea
                 id="notes"
                 name="notes"
                 value={formData.notes}
                 onChange={handleChange}
-                placeholder="Informações relevantes sobre o cliente..."
-                className="min-h-[100px]"
+                placeholder="Informações relevantes sobre o cliente, preferências, detalhes importantes..."
+                className="min-h-[120px]"
               />
             </FormItem>
-          ) : (
-            <FormStatic label="Notas" value={formData.notes} />
-          )}
-        </FormSection>
 
-        {/* Actions */}
-        <FormActions
-          onCancel={() => router.push("/customers")}
-          isSubmitting={isSaving}
-          isReadOnly={!canEdit}
-          submitLabel="Salvar Alterações"
-          submitIcon={<Save className="w-4 h-4" />}
-        />
-      </form>
+            {/* Summary card */}
+            <div className="p-5 rounded-xl bg-gradient-to-br from-muted/50 to-muted/20 border border-border/50 space-y-4">
+              <h4 className="font-semibold text-foreground">
+                Resumo do Cliente
+              </h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Nome:</span>
+                  <p className="font-medium truncate">{formData.name || "—"}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Email:</span>
+                  <p className="font-medium truncate">
+                    {formData.email || "—"}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Telefone:</span>
+                  <p className="font-medium">{formData.phone || "—"}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Endereço:</span>
+                  <p className="font-medium truncate">
+                    {formData.address || "—"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <StepNavigation
+            onSubmit={handleSubmit}
+            isSubmitting={isSaving}
+            submitLabel="Salvar Alterações"
+          />
+        </StepCard>
+      </StepWizard>
     </FormContainer>
   );
 }

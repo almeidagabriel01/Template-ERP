@@ -1,9 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { Upload } from "lucide-react";
+import { Upload, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { TenantNiche, NICHE_LABELS } from "@/types";
 
 interface RegisterFormFieldsProps {
@@ -50,7 +51,6 @@ export function RegisterFormFields({
             placeholder="Seu nome completo"
             value={name}
             onChange={(e) => onNameChange(e.target.value)}
-            required
             className="bg-background border-input text-foreground"
           />
         </div>
@@ -72,7 +72,6 @@ export function RegisterFormFields({
             placeholder="Minha Empresa"
             value={companyName}
             onChange={(e) => onCompanyNameChange(e.target.value)}
-            required
             className="bg-background border-input text-foreground"
           />
         </div>
@@ -173,6 +172,7 @@ interface CredentialFieldsProps {
   onPasswordChange: (value: string) => void;
   mode: "login" | "register";
   error?: string;
+  errors?: Record<string, string>;
 }
 
 export function CredentialFields({
@@ -182,38 +182,136 @@ export function CredentialFields({
   onPasswordChange,
   mode,
   error,
+  errors = {},
 }: CredentialFieldsProps) {
+  const [showPassword, setShowPassword] = useState(false);
+  const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  // Validate email on blur
+  const validateEmail = () => {
+    if (!email.trim()) {
+      setLocalErrors((prev) => ({ ...prev, email: "Email é obrigatório" }));
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setLocalErrors((prev) => ({ ...prev, email: "Email inválido" }));
+    } else {
+      setLocalErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.email;
+        return newErrors;
+      });
+    }
+    setTouched((prev) => ({ ...prev, email: true }));
+  };
+
+  // Validate password on blur
+  const validatePassword = () => {
+    if (!password) {
+      setLocalErrors((prev) => ({ ...prev, password: "Senha é obrigatória" }));
+    } else if (password.length < 6) {
+      setLocalErrors((prev) => ({
+        ...prev,
+        password: "Senha deve ter pelo menos 6 caracteres",
+      }));
+    } else {
+      setLocalErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.password;
+        return newErrors;
+      });
+    }
+    setTouched((prev) => ({ ...prev, password: true }));
+  };
+
+  // Clear email error when valid
+  useEffect(() => {
+    if (touched.email && email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setLocalErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.email;
+        return newErrors;
+      });
+    }
+  }, [email, touched.email]);
+
+  // Clear password error when valid
+  useEffect(() => {
+    if (touched.password && password) {
+      if (password.length >= 6) {
+        setLocalErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.password;
+          return newErrors;
+        });
+      }
+    }
+  }, [password, touched.password, mode]);
+
+  const emailError = errors.email || localErrors.email;
+  const passwordError = errors.password || localErrors.password;
+
   return (
     <>
       <div className="grid gap-2">
-        <Label htmlFor="email" className="text-foreground">
-          Email
+        <Label
+          htmlFor="email"
+          className="text-foreground flex items-center gap-1"
+        >
+          Email <span className="text-destructive">*</span>
         </Label>
-        <Input
-          id="email"
-          type="email"
-          placeholder="seu@email.com"
-          value={email}
-          onChange={(e) => onEmailChange(e.target.value)}
-          required
-          className="bg-background border-input text-foreground"
-        />
+        <div className="relative">
+          <Input
+            id="email"
+            type="email"
+            placeholder="seu@email.com"
+            value={email}
+            onChange={(e) => onEmailChange(e.target.value)}
+            onBlur={validateEmail}
+            className={`pl-9 bg-background border-input text-foreground ${
+              emailError ? "border-destructive" : ""
+            }`}
+          />
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        </div>
+        {emailError && <p className="text-sm text-destructive">{emailError}</p>}
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="password" className="text-foreground">
-          Senha
+        <Label
+          htmlFor="password"
+          className="text-foreground flex items-center gap-1"
+        >
+          Senha <span className="text-destructive">*</span>
         </Label>
-        <Input
-          id="password"
-          type="password"
-          placeholder={
-            mode === "register" ? "Mínimo 6 caracteres" : "Sua senha"
-          }
-          value={password}
-          onChange={(e) => onPasswordChange(e.target.value)}
-          required
-          className="bg-background border-input text-foreground"
-        />
+        <div className="relative">
+          <Input
+            id="password"
+            type={showPassword ? "text" : "password"}
+            placeholder={
+              mode === "register" ? "Mínimo 6 caracteres" : "Sua senha"
+            }
+            value={password}
+            onChange={(e) => onPasswordChange(e.target.value)}
+            onBlur={validatePassword}
+            className={`pl-9 pr-10 bg-background border-input text-foreground ${
+              passwordError ? "border-destructive" : ""
+            }`}
+          />
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          >
+            {showPassword ? (
+              <EyeOff className="w-4 h-4" />
+            ) : (
+              <Eye className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+        {passwordError && (
+          <p className="text-sm text-destructive">{passwordError}</p>
+        )}
       </div>
       {error && <p className="text-sm text-destructive font-medium">{error}</p>}
     </>

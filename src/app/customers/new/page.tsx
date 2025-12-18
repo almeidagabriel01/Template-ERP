@@ -6,6 +6,8 @@ import { useTenant } from "@/providers/tenant-provider";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { useClientActions } from "@/hooks/useClientActions";
 import { usePagePermission } from "@/hooks/usePagePermission";
+import { useFormValidation } from "@/hooks/useFormValidation";
+import { customerSchema } from "@/lib/validations";
 import { LimitReachedModal } from "@/components/ui/limit-reached-modal";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -58,6 +60,15 @@ export default function NewCustomerPage() {
   const { canCreateClient, getClientCount, features } = usePlanLimits();
   const { canCreate, isLoading: permLoading } = usePagePermission("clients");
   const { createClient, isLoading: isCreating } = useClientActions();
+  const {
+    errors,
+    validateField,
+    validateForm,
+    clearFieldError,
+    setFieldError,
+  } = useFormValidation({
+    schema: customerSchema,
+  });
 
   React.useEffect(() => {
     if (!permLoading && !canCreate) {
@@ -81,9 +92,45 @@ export default function NewCustomerPage() {
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear error when user starts typing
+    if (errors[name as keyof typeof errors]) {
+      clearFieldError(name as keyof typeof formData);
+    }
+  };
+
+  const handleBlur = (
+    e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    validateField(name as keyof typeof formData, value, formData);
+  };
+
+  // Step 1 validation: Name, Email and Phone are required
+  const validateStep1 = (): boolean => {
+    let isValid = true;
+
+    if (!formData.name.trim()) {
+      setFieldError("name", "Nome é obrigatório");
+      isValid = false;
+    }
+    if (!formData.email.trim()) {
+      setFieldError("email", "Email é obrigatório");
+      isValid = false;
+    }
+    if (!formData.phone.trim()) {
+      setFieldError("phone", "Telefone é obrigatório");
+      isValid = false;
+    }
+
+    return isValid;
   };
 
   const handleSubmit = async () => {
+    // Validate form before submit
+    if (!validateForm(formData)) {
+      return;
+    }
+
     const canCreateNew = await canCreateClient();
     if (!canCreateNew) {
       const count = await getClientCount();
@@ -94,11 +141,6 @@ export default function NewCustomerPage() {
 
     if (!tenant) {
       alert("Erro: Nenhuma empresa selecionada!");
-      return;
-    }
-
-    if (!formData.name.trim()) {
-      alert("O nome do cliente é obrigatório!");
       return;
     }
 
@@ -149,48 +191,74 @@ export default function NewCustomerPage() {
                 <User className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold">Informações do Cliente</h3>
-                <p className="text-sm text-muted-foreground">Dados principais e formas de contato</p>
+                <h3 className="text-lg font-semibold">
+                  Informações do Cliente
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Dados principais e formas de contato
+                </p>
               </div>
             </div>
 
-            <FormItem label="Nome Completo" htmlFor="name" required>
+            <FormItem
+              label="Nome Completo"
+              htmlFor="name"
+              required
+              error={errors.name}
+            >
               <Input
                 id="name"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 placeholder="Nome completo ou razão social"
                 icon={<User className="w-4 h-4" />}
+                className={errors.name ? "border-destructive" : ""}
                 required
               />
             </FormItem>
 
             <FormGroup>
-              <FormItem label="Email" htmlFor="email">
+              <FormItem
+                label="Email"
+                htmlFor="email"
+                required
+                error={errors.email}
+              >
                 <Input
                   id="email"
                   name="email"
                   type="email"
                   value={formData.email}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   placeholder="email@exemplo.com"
                   icon={<Mail className="w-4 h-4" />}
+                  className={errors.email ? "border-destructive" : ""}
+                  required
                 />
               </FormItem>
 
-              <FormItem label="Telefone" htmlFor="phone">
+              <FormItem
+                label="Telefone"
+                htmlFor="phone"
+                required
+                error={errors.phone}
+              >
                 <PhoneInput
                   id="phone"
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   placeholder="(11) 99999-9999"
+                  className={errors.phone ? "border-destructive" : ""}
                 />
               </FormItem>
             </FormGroup>
           </div>
-          <StepNavigation />
+          <StepNavigation onBeforeNext={validateStep1} />
         </StepCard>
 
         {/* Step 2: Address */}
@@ -202,7 +270,9 @@ export default function NewCustomerPage() {
               </div>
               <div>
                 <h3 className="text-lg font-semibold">Endereço</h3>
-                <p className="text-sm text-muted-foreground">Localização para entregas e correspondências</p>
+                <p className="text-sm text-muted-foreground">
+                  Localização para entregas e correspondências
+                </p>
               </div>
             </div>
 
@@ -216,12 +286,6 @@ export default function NewCustomerPage() {
                 icon={<MapPin className="w-4 h-4" />}
               />
             </FormItem>
-
-            <div className="p-4 rounded-xl bg-muted/30 border border-border/30">
-              <p className="text-sm text-muted-foreground">
-                <strong>Dica:</strong> Inclua o endereço completo com CEP para facilitar entregas e logística.
-              </p>
-            </div>
           </div>
           <StepNavigation />
         </StepCard>
@@ -235,7 +299,9 @@ export default function NewCustomerPage() {
               </div>
               <div>
                 <h3 className="text-lg font-semibold">Finalizar Cadastro</h3>
-                <p className="text-sm text-muted-foreground">Observações e confirmação</p>
+                <p className="text-sm text-muted-foreground">
+                  Observações e confirmação
+                </p>
               </div>
             </div>
 
@@ -252,7 +318,9 @@ export default function NewCustomerPage() {
 
             {/* Summary card */}
             <div className="p-5 rounded-xl bg-gradient-to-br from-muted/50 to-muted/20 border border-border/50 space-y-4">
-              <h4 className="font-semibold text-foreground">Resumo do Cliente</h4>
+              <h4 className="font-semibold text-foreground">
+                Resumo do Cliente
+              </h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">Nome:</span>
@@ -260,7 +328,9 @@ export default function NewCustomerPage() {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Email:</span>
-                  <p className="font-medium truncate">{formData.email || "—"}</p>
+                  <p className="font-medium truncate">
+                    {formData.email || "—"}
+                  </p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Telefone:</span>
@@ -268,7 +338,9 @@ export default function NewCustomerPage() {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Endereço:</span>
-                  <p className="font-medium truncate">{formData.address || "—"}</p>
+                  <p className="font-medium truncate">
+                    {formData.address || "—"}
+                  </p>
                 </div>
               </div>
             </div>

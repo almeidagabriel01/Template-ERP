@@ -78,13 +78,13 @@ export function TenantsTable({
           </CardDescription>
         </div>
         <div className="flex items-center gap-2">
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <div className="w-full sm:w-64">
             <Input
               placeholder="Buscar empresa ou email..."
-              className="pl-8 h-9 text-sm"
+              className="h-9 text-sm"
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
+              icon={<Search className="w-4 h-4" />}
             />
           </div>
           <Select

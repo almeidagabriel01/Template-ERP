@@ -41,19 +41,47 @@ interface SimpleProposalFormProps {
 
 // Steps for automation niche
 const stepsAutomation = [
-  { id: "client", title: "Cliente", description: "Dados do cliente", icon: User },
+  {
+    id: "client",
+    title: "Cliente",
+    description: "Dados do cliente",
+    icon: User,
+  },
   { id: "systems", title: "Sistemas", description: "Automação", icon: Cpu },
-  { id: "summary", title: "Resumo", description: "Finalizar", icon: CheckCircle },
+  {
+    id: "summary",
+    title: "Resumo",
+    description: "Finalizar",
+    icon: CheckCircle,
+  },
 ];
 
 // Steps for non-automation niche
 const stepsDefault = [
-  { id: "client", title: "Cliente", description: "Dados do cliente", icon: User },
-  { id: "products", title: "Produtos", description: "Selecionar itens", icon: Package },
-  { id: "summary", title: "Resumo", description: "Finalizar", icon: CheckCircle },
+  {
+    id: "client",
+    title: "Cliente",
+    description: "Dados do cliente",
+    icon: User,
+  },
+  {
+    id: "products",
+    title: "Produtos",
+    description: "Selecionar itens",
+    icon: Package,
+  },
+  {
+    id: "summary",
+    title: "Resumo",
+    description: "Finalizar",
+    icon: CheckCircle,
+  },
 ];
 
-export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimpleProposalFormProps) {
+export function SimpleProposalForm({
+  proposalId,
+  isReadOnly = false,
+}: SimpleProposalFormProps) {
   // Use the extracted hook for all form state and logic
   const {
     isLoading,
@@ -90,15 +118,165 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
   const [selectorKey, setSelectorKey] = React.useState(0);
 
   // Estados para gerenciamento de ambiente/sistema
-  const [isAmbienteManagerOpen, setIsAmbienteManagerOpen] = React.useState(false);
+  const [isAmbienteManagerOpen, setIsAmbienteManagerOpen] =
+    React.useState(false);
   const [isSistemaManagerOpen, setIsSistemaManagerOpen] = React.useState(false);
-  const [isSistemaTemplateOpen, setIsSistemaTemplateOpen] = React.useState(false);
-  const [editingSistema, setEditingSistema] = React.useState<Sistema | null>(null);
-  const [managerFilterAmbienteId, setManagerFilterAmbienteId] = React.useState<string | undefined>(undefined);
+  const [isSistemaTemplateOpen, setIsSistemaTemplateOpen] =
+    React.useState(false);
+  const [editingSistema, setEditingSistema] = React.useState<Sistema | null>(
+    null
+  );
+  const [managerFilterAmbienteId, setManagerFilterAmbienteId] = React.useState<
+    string | undefined
+  >(undefined);
   const [openedFromManager, setOpenedFromManager] = React.useState(false);
 
   // Estado para edição de seleção
-  const [editingSelectionIndex, setEditingSelectionIndex] = React.useState<number | null>(null);
+  const [editingSelectionIndex, setEditingSelectionIndex] = React.useState<
+    number | null
+  >(null);
+
+  // Estado para erros de validação
+  const [errors, setErrors] = React.useState<Record<string, string>>({});
+
+  // Função para setar erro de um campo
+  const setFieldError = (field: string, message: string) => {
+    setErrors((prev) => ({ ...prev, [field]: message }));
+  };
+
+  // Função para limpar erro de um campo
+  const clearFieldError = (field: string) => {
+    setErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[field];
+      return newErrors;
+    });
+  };
+
+  // Limpar erros automaticamente quando os campos mudam
+  React.useEffect(() => {
+    if (formData.title && formData.title.trim().length >= 3 && errors.title) {
+      clearFieldError("title");
+    }
+  }, [formData.title]);
+
+  React.useEffect(() => {
+    if (
+      formData.clientName &&
+      formData.clientName.trim() &&
+      errors.clientName
+    ) {
+      clearFieldError("clientName");
+    }
+  }, [formData.clientName]);
+
+  React.useEffect(() => {
+    if (
+      formData.clientEmail &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.clientEmail) &&
+      errors.clientEmail
+    ) {
+      clearFieldError("clientEmail");
+    }
+  }, [formData.clientEmail]);
+
+  React.useEffect(() => {
+    if (
+      formData.clientPhone &&
+      formData.clientPhone.replace(/\D/g, "").length >= 10 &&
+      errors.clientPhone
+    ) {
+      clearFieldError("clientPhone");
+    }
+  }, [formData.clientPhone]);
+
+  React.useEffect(() => {
+    if (formData.validUntil && errors.validUntil) {
+      const [year, month, day] = formData.validUntil.split("-").map(Number);
+      const selectedDate = new Date(year, month - 1, day);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      selectedDate.setHours(0, 0, 0, 0);
+      if (selectedDate > today) {
+        clearFieldError("validUntil");
+      }
+    }
+  }, [formData.validUntil]);
+
+  React.useEffect(() => {
+    if (selectedSistemas.length > 0 && errors.sistemas) {
+      clearFieldError("sistemas");
+    }
+  }, [selectedSistemas]);
+
+  // Validação do Step 1 (Cliente)
+  const validateStep1 = (): boolean => {
+    let isValid = true;
+
+    if (!formData.title || formData.title.trim().length < 3) {
+      setFieldError("title", "Título deve ter pelo menos 3 caracteres");
+      isValid = false;
+    } else {
+      clearFieldError("title");
+    }
+
+    if (!formData.clientName || !formData.clientName.trim()) {
+      setFieldError("clientName", "Cliente é obrigatório");
+      isValid = false;
+    } else {
+      clearFieldError("clientName");
+    }
+
+    if (!formData.clientEmail || !formData.clientEmail.trim()) {
+      setFieldError("clientEmail", "Email é obrigatório");
+      isValid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.clientEmail)) {
+      setFieldError("clientEmail", "Email inválido");
+      isValid = false;
+    } else {
+      clearFieldError("clientEmail");
+    }
+
+    if (
+      !formData.clientPhone ||
+      formData.clientPhone.replace(/\D/g, "").length < 10
+    ) {
+      setFieldError("clientPhone", "Telefone deve ter pelo menos 10 dígitos");
+      isValid = false;
+    } else {
+      clearFieldError("clientPhone");
+    }
+
+    if (!formData.validUntil) {
+      setFieldError("validUntil", "Validade é obrigatória");
+      isValid = false;
+    } else {
+      // Validate date > today
+      const [year, month, day] = formData.validUntil.split("-").map(Number);
+      const selectedDate = new Date(year, month - 1, day);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      selectedDate.setHours(0, 0, 0, 0);
+      if (selectedDate <= today) {
+        setFieldError("validUntil", "Validade deve ser maior que hoje");
+        isValid = false;
+      } else {
+        clearFieldError("validUntil");
+      }
+    }
+
+    return isValid;
+  };
+
+  // Validação do Step 2 (Sistemas - apenas para nicho de automação)
+  const validateStep2 = (): boolean => {
+    if (isAutomacaoNiche && selectedSistemas.length === 0) {
+      setFieldError("sistemas", "Selecione pelo menos 1 sistema de automação");
+      return false;
+    }
+    clearFieldError("sistemas");
+    return true;
+  };
 
   // Handle client change
   const handleClientChange = (data: {
@@ -176,7 +354,8 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
 
     // Check for duplicates
     const exists = selectedSistemas.some(
-      (s) => s.sistemaId === sistema.sistemaId && s.ambienteId === sistema.ambienteId
+      (s) =>
+        s.sistemaId === sistema.sistemaId && s.ambienteId === sistema.ambienteId
     );
 
     if (exists) {
@@ -195,7 +374,8 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
       return {
         productId: sp.productId,
         productName: sp.productName,
-        productImage: existingProduct?.images?.[0] || existingProduct?.image || "",
+        productImage:
+          existingProduct?.images?.[0] || existingProduct?.image || "",
         productImages: existingProduct?.images || [],
         productDescription: existingProduct?.description || "",
         quantity: sp.quantity,
@@ -222,7 +402,10 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
   };
 
   // Handle removing system
-  const handleRemoveSystem = (sistemaIndex: number, systemInstanceId: string) => {
+  const handleRemoveSystem = (
+    sistemaIndex: number,
+    systemInstanceId: string
+  ) => {
     setSelectedSistemas((prev) => prev.filter((_, i) => i !== sistemaIndex));
     setFormData((prev) => ({
       ...prev,
@@ -274,7 +457,8 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
         return {
           productId: sp.productId,
           productName: sp.productName,
-          productImage: existingProduct?.images?.[0] || existingProduct?.image || "",
+          productImage:
+            existingProduct?.images?.[0] || existingProduct?.image || "",
           productImages: existingProduct?.images || [],
           productDescription: existingProduct?.description || "",
           quantity: sp.quantity,
@@ -297,7 +481,7 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
   };
 
   const handleFormSubmit = async () => {
-    const fakeEvent = { preventDefault: () => { } } as React.FormEvent;
+    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
     await handleSubmit(fakeEvent);
   };
 
@@ -350,7 +534,9 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
               </div>
               <div>
                 <h3 className="text-lg font-semibold">Dados do Cliente</h3>
-                <p className="text-sm text-muted-foreground">Informações do cliente e identificação</p>
+                <p className="text-sm text-muted-foreground">
+                  Informações do cliente e identificação
+                </p>
               </div>
             </div>
 
@@ -359,10 +545,11 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
               selectedClientId={selectedClientId}
               onFormChange={handleChange}
               onClientChange={handleClientChange}
+              errors={errors}
               noContainer
             />
           </div>
-          <StepNavigation />
+          <StepNavigation onBeforeNext={validateStep1} />
         </StepCard>
 
         {/* Step 2: Systems or Products */}
@@ -375,8 +562,12 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
                     <Cpu className="w-6 h-6 text-purple-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold">Sistemas de Automação</h3>
-                    <p className="text-sm text-muted-foreground">Adicione os sistemas da proposta</p>
+                    <h3 className="text-lg font-semibold">
+                      Sistemas de Automação
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Adicione os sistemas da proposta
+                    </p>
                   </div>
                 </div>
 
@@ -402,7 +593,9 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold">Produtos</h3>
-                    <p className="text-sm text-muted-foreground">Selecione os produtos da proposta</p>
+                    <p className="text-sm text-muted-foreground">
+                      Selecione os produtos da proposta
+                    </p>
                   </div>
                 </div>
 
@@ -418,7 +611,10 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
               </>
             )}
           </div>
-          <StepNavigation />
+          {errors.sistemas && (
+            <p className="text-sm text-destructive mt-2">{errors.sistemas}</p>
+          )}
+          <StepNavigation onBeforeNext={validateStep2} />
         </StepCard>
 
         {/* Step 3: Summary */}
@@ -430,7 +626,9 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
               </div>
               <div>
                 <h3 className="text-lg font-semibold">Resumo da Proposta</h3>
-                <p className="text-sm text-muted-foreground">Revise os dados antes de finalizar</p>
+                <p className="text-sm text-muted-foreground">
+                  Revise os dados antes de finalizar
+                </p>
               </div>
             </div>
 
@@ -465,12 +663,13 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
           <DialogHeader>
             <DialogTitle>Editar Seleção</DialogTitle>
           </DialogHeader>
-          {editingSelectionIndex !== null && selectedSistemas[editingSelectionIndex] && (
-            <SistemaSelector
-              value={selectedSistemas[editingSelectionIndex]}
-              onChange={handleEditSystemSelection}
-            />
-          )}
+          {editingSelectionIndex !== null &&
+            selectedSistemas[editingSelectionIndex] && (
+              <SistemaSelector
+                value={selectedSistemas[editingSelectionIndex]}
+                onChange={handleEditSystemSelection}
+              />
+            )}
         </DialogContent>
       </Dialog>
 
@@ -507,7 +706,9 @@ export function SimpleProposalForm({ proposalId, isReadOnly = false }: SimplePro
         editingSistema={editingSistema}
         preselectedAmbienteId={managerFilterAmbienteId || ""}
         onSave={() => setSelectorKey((prev) => prev + 1)}
-        onBack={openedFromManager ? () => setIsSistemaManagerOpen(true) : undefined}
+        onBack={
+          openedFromManager ? () => setIsSistemaManagerOpen(true) : undefined
+        }
       />
 
       {/* Limit Reached Modal */}

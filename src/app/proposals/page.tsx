@@ -13,14 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Proposal, ProposalStatus } from "@/services/proposal-service";
 import { useTenant } from "@/providers/tenant-provider";
-import {
-  Plus,
-  FileText,
-  Copy,
-  Trash2,
-  Eye,
-  Search,
-} from "lucide-react";
+import { Plus, FileText, Copy, Trash2, Eye, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ProposalsSkeleton } from "./_components/proposals-skeleton";
 
@@ -54,7 +47,9 @@ export default function ProposalsPage() {
       (proposal) =>
         proposal.title.toLowerCase().includes(term) ||
         proposal.clientName?.toLowerCase().includes(term) ||
-        statusConfig[proposal.status as ProposalStatus]?.label.toLowerCase().includes(term)
+        statusConfig[proposal.status as ProposalStatus]?.label
+          .toLowerCase()
+          .includes(term)
     );
   }, [proposals, searchTerm]);
 
@@ -94,9 +89,10 @@ export default function ProposalsPage() {
       if (!original) return;
 
       // Import createProposal hook dynamically
-      const { getFunctions, httpsCallable } = await import("firebase/functions");
-      const functions = getFunctions(undefined, 'southamerica-east1');
-      const createProposalFn = httpsCallable(functions, 'createProposal');
+      const { getFunctions, httpsCallable } =
+        await import("firebase/functions");
+      const functions = getFunctions(undefined, "southamerica-east1");
+      const createProposalFn = httpsCallable(functions, "createProposal");
 
       const result = await createProposalFn({
         title: `${original.title} (Cópia)`,
@@ -161,13 +157,12 @@ export default function ProposalsPage() {
 
       {/* Search */}
       {proposals.length > 0 && (
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <div className="max-w-md">
           <Input
             placeholder="Buscar por título, cliente ou status..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
+            icon={<Search className="w-4 h-4" />}
           />
         </div>
       )}
@@ -219,8 +214,10 @@ export default function ProposalsPage() {
 
           {/* Rows */}
           {filteredProposals.map((proposal) => {
-            const statusKey = (proposal.status || 'draft').toLowerCase() as ProposalStatus;
-            const status = statusConfig[statusKey] || statusConfig['draft'];
+            const statusKey = (
+              proposal.status || "draft"
+            ).toLowerCase() as ProposalStatus;
+            const status = statusConfig[statusKey] || statusConfig["draft"];
             const productCount = proposal.products?.length || 0;
             const total =
               proposal.products?.reduce((sum, p) => sum + p.total, 0) || 0;

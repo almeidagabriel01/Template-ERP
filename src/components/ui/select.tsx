@@ -5,6 +5,7 @@ import { ChevronDown } from "lucide-react";
 export type SelectProps = React.SelectHTMLAttributes<HTMLSelectElement> & {
   wrapperClassName?: string;
   blurOnChange?: boolean;
+  selectClassName?: string;
 };
 
 const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
@@ -12,6 +13,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     {
       className,
       wrapperClassName,
+      selectClassName,
       children,
       onChange,
       blurOnChange = true,
@@ -31,11 +33,12 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         <select
           className={cn(
             "flex h-12 w-full appearance-none rounded-xl border-2 border-border/60 px-4 py-3 pr-12 text-sm",
-            "shadow-sm transition-all duration-300 ease-out cursor-pointer",
+            "shadow-sm transition-[border-color,box-shadow] duration-200 ease-out cursor-pointer",
             "hover:border-primary/40 hover:shadow-md",
             "focus:outline-none focus:border-primary focus:shadow-lg focus:shadow-primary/10",
             "focus:ring-4 focus:ring-primary/10",
-            "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border/60 disabled:hover:shadow-sm"
+            "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border/60 disabled:hover:shadow-sm",
+            selectClassName
           )}
           ref={ref}
           onChange={handleChange}
