@@ -128,7 +128,7 @@ const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(
           inputMode="numeric"
           className={cn(
             "flex h-12 w-full rounded-xl border-2 border-border/60 bg-card pl-11 pr-4 py-3 text-sm",
-            "shadow-sm transition-all duration-300 ease-out",
+            "shadow-sm transition-[border-color,box-shadow] duration-200 ease-out",
             "placeholder:text-muted-foreground/60",
             "hover:border-primary/40 hover:shadow-md",
             "focus:outline-none focus:border-primary focus:shadow-lg focus:shadow-primary/10",

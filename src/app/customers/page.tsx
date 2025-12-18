@@ -9,15 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Client, ClientService } from "@/services/client-service";
 import { useClientActions } from "@/hooks/useClientActions";
 import { useTenant } from "@/providers/tenant-provider";
-import {
-  Plus,
-  Users,
-  Trash2,
-  Edit,
-  Search,
-  Mail,
-  Phone,
-} from "lucide-react";
+import { Plus, Users, Trash2, Edit, Search, Mail, Phone } from "lucide-react";
 import { CustomersSkeleton } from "./_components/customers-skeleton";
 
 const sourceConfig: Record<
@@ -120,13 +112,12 @@ export default function CustomersPage() {
 
       {/* Search */}
       {clients.length > 0 && (
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <div className="max-w-md">
           <Input
             placeholder="Buscar por nome, email ou telefone..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
+            icon={<Search className="w-4 h-4" />}
           />
         </div>
       )}

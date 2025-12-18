@@ -91,9 +91,10 @@ body {
     "calt" 1;
 }
 
-/* Animation Keyframes */
+/* Animation Keyframes - GPU Optimized */
 @keyframes gradient-text {
-  0%, 100% {
+  0%,
+  100% {
     background-position: 0% center;
   }
   50% {
@@ -110,64 +111,105 @@ body {
   }
 }
 
+/* GPU-accelerated shimmer using transform3d */
 @keyframes shimmer {
   0% {
-    transform: translateX(-100%);
+    transform: translate3d(-100%, 0, 0);
   }
   100% {
-    transform: translateX(100%);
+    transform: translate3d(100%, 0, 0);
   }
 }
 
+/* GPU-accelerated float particle using transform3d */
 @keyframes float-particle {
-  0%, 100% {
-    transform: translateY(0) translateX(0);
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
     opacity: 0.6;
   }
   25% {
-    transform: translateY(-20px) translateX(10px);
+    transform: translate3d(10px, -20px, 0);
     opacity: 0.8;
   }
   50% {
-    transform: translateY(-10px) translateX(-10px);
+    transform: translate3d(-10px, -10px, 0);
     opacity: 0.4;
   }
   75% {
-    transform: translateY(-30px) translateX(5px);
+    transform: translate3d(5px, -30px, 0);
     opacity: 0.7;
   }
 }
 
+/* GPU-accelerated pulse using transform3d */
 @keyframes pulse-slow {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.3;
-    transform: scale(1);
+    transform: scale3d(1, 1, 1);
   }
   50% {
     opacity: 0.5;
-    transform: scale(1.1);
+    transform: scale3d(1.1, 1.1, 1);
+  }
+}
+
+/* Smooth spin animation - GPU optimized */
+@keyframes smooth-spin {
+  from {
+    transform: rotate3d(0, 0, 1, 0deg);
+  }
+  to {
+    transform: rotate3d(0, 0, 1, 360deg);
   }
 }
 
 /* Animation Utilities */
 .animate-gradient-text {
   animation: gradient-text 3s ease infinite;
+  will-change: background-position;
 }
 
 .animate-gradient-border {
   animation: gradient-border 3s linear infinite;
+  will-change: background-position;
 }
 
 .animate-shimmer {
   animation: shimmer 2s infinite;
+  will-change: transform;
 }
 
 .animate-float-particle {
   animation: float-particle 15s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
 .animate-pulse-slow {
   animation: pulse-slow 4s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+/* GPU Performance Utilities */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Force GPU layer for smooth transitions */
+.smooth-transition {
+  transform: translateZ(0);
+  will-change: transform, opacity;
+}
+
+/* Optimized transition - only animates transform and opacity (GPU-friendly) */
+.transition-gpu {
+  transition-property: transform, opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+  will-change: transform, opacity;
 }
 
 .animation-delay-2000 {
@@ -297,7 +339,8 @@ body {
   }
 }
 
-::view-transition-old(root), ::view-transition-new(root) {
-    animation: none;
-    mix-blend-mode: normal;
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
 }

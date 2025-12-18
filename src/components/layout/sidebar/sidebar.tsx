@@ -54,8 +54,11 @@ export function Sidebar({ onExpandChange }: SidebarProps) {
       <aside
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        style={{ width: isExpanded ? EXPANDED_WIDTH : COLLAPSED_WIDTH }}
-        className="fixed mt-1 left-0 top-0 h-screen bg-sidebar flex flex-col z-50 transition-all duration-300 ease-in-out"
+        style={{
+          width: isExpanded ? EXPANDED_WIDTH : COLLAPSED_WIDTH,
+          transform: "translateZ(0)",
+        }}
+        className="fixed mt-1 left-0 top-0 h-screen bg-sidebar flex flex-col z-50 transition-[width] duration-300 ease-out will-change-[width]"
       >
         <div className="absolute inset-0 bg-sidebar overflow-hidden flex flex-col">
           {/* Header / Logo area */}

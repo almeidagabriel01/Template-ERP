@@ -2,11 +2,14 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 import { ProductService, Product } from "@/services/product-service";
 import { useTenant } from "@/providers/tenant-provider";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { useProductActions } from "@/hooks/useProductActions";
 import { uploadImage, deleteImage, isStorageUrl } from "@/services/storage-service";
+import { useFormValidation, FormErrors } from "@/hooks/useFormValidation";
+import { productSchema } from "@/lib/validations";
 
 // Maximum file size: 5MB per image
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -36,7 +39,10 @@ interface UseProductFormReturn {
   currentProductCount: number;
   maxProducts: number;
   maxImagesPerProduct: number;
+  errors: FormErrors<ProductFormData>;
+  setFieldError: (name: string, message: string) => void;
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+  handleBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   handleAddImage: (file: File | null) => void;
   handleRemoveImage: (index: number) => void;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
@@ -54,6 +60,9 @@ export function useProductForm(
   const [showLimitModal, setShowLimitModal] = React.useState(false);
   const [showImageLimitModal, setShowImageLimitModal] = React.useState(false);
   const [currentProductCount, setCurrentProductCount] = React.useState(0);
+  const { errors, validateForm, clearFieldError, validateField, setFieldError } = useFormValidation({
+    schema: productSchema,
+  });
 
   const [formData, setFormData] = React.useState<ProductFormData>({
     name: initialData?.name || "",
@@ -113,6 +122,21 @@ export function useProductForm(
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear error when user starts typing
+    if (errors[name as keyof typeof errors]) {
+      clearFieldError(name as keyof typeof errors);
+    }
+  };
+
+  const handleBlur = (
+    e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    // Only validate fields that are in the schema
+    const schemaFields = ['name', 'description', 'price', 'manufacturer', 'category', 'sku', 'stock', 'status'];
+    if (schemaFields.includes(name)) {
+      validateField(name as keyof typeof errors, value, formData as unknown as Record<string, unknown>);
+    }
   };
 
   const handleAddImage = (file: File | null) => {
@@ -183,7 +207,23 @@ export function useProductForm(
     }
 
     if (!tenant) {
-      alert("Erro: Nenhuma empresa selecionada!");
+      toast.error("Erro: Nenhuma empresa selecionada!");
+      return;
+    }
+
+    // Validate form before submit - only validate fields that are in the schema
+    const schemaData = {
+      name: formData.name,
+      description: formData.description,
+      price: formData.price,
+      manufacturer: formData.manufacturer,
+      category: formData.category,
+      sku: formData.sku,
+      stock: formData.stock,
+      status: formData.status as "active" | "inactive",
+    };
+    if (!validateForm(schemaData)) {
+      toast.error("Preencha todos os campos obrigatórios!");
       return;
     }
 
@@ -272,7 +312,10 @@ export function useProductForm(
     currentProductCount,
     maxProducts: features?.maxProducts ?? 0,
     maxImagesPerProduct: features?.maxImagesPerProduct ?? 2,
+    errors,
+    setFieldError: setFieldError as (name: string, message: string) => void,
     handleChange,
+    handleBlur,
     handleAddImage,
     handleRemoveImage,
     handleSubmit,

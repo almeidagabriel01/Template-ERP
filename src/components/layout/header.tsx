@@ -1,12 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  Bell,
-  User as UserIcon,
-  LogOut,
-  ArrowLeft,
-} from "lucide-react";
+import { Bell, User as UserIcon, LogOut, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CommandPalette } from "@/components/ui/command-palette";
 import { useAuth } from "@/providers/auth-provider";
@@ -76,8 +71,11 @@ export function Header({ sidebarWidth = 72 }: HeaderProps) {
 
   return (
     <header
-      style={{ left: sidebarWidth }}
-      className="fixed top-1 right-1 h-16 bg-background/80 backdrop-blur-md border-b border-border z-40 px-6 flex items-center justify-between transition-all duration-300 ease-in-out rounded-tl-[2rem] rounded-tr-[2rem]"
+      style={{
+        left: sidebarWidth,
+        transform: "translateZ(0)",
+      }}
+      className="fixed top-1 right-1 h-16 bg-background/80 backdrop-blur-md border-b border-border z-40 px-6 flex items-center justify-between transition-[left] duration-300 ease-out will-change-[left] rounded-tl-[2rem] rounded-tr-[2rem]"
     >
       <div className="flex items-center gap-4">
         {/* Super Admin Viewing Banner */}

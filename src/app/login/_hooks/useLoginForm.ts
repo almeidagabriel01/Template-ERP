@@ -34,6 +34,8 @@ interface UseLoginFormReturn {
   // State
   error: string;
   setError: (value: string) => void;
+  errors: Record<string, string>; // New: specific field errors
+  setErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   isLoggingIn: boolean;
   isRegistering: boolean;
   mode: AuthMode;
@@ -63,7 +65,10 @@ export function useLoginForm(): UseLoginFormReturn {
   const [companyLogo, setCompanyLogo] = React.useState("");
   const [companyNiche, setCompanyNiche] = React.useState<TenantNiche>("automacao_residencial");
 
+
+
   const [error, setError] = React.useState("");
+  const [errors, setErrors] = React.useState<Record<string, string>>({}); // New: specific field errors
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
   const [isRegistering, setIsRegistering] = React.useState(false);
   type AuthMode = "login" | "register" | "forgot";
@@ -140,6 +145,30 @@ export function useLoginForm(): UseLoginFormReturn {
   const handleLogin = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setError("");
+    setErrors({});
+    
+    // Manual validation
+    const newErrors: Record<string, string> = {};
+    let isValid = true;
+
+    if (!email.trim()) {
+      newErrors.email = "Email é obrigatório";
+      isValid = false;
+    }
+
+    if (!password) {
+      newErrors.password = "Senha é obrigatória";
+      isValid = false;
+    } else if (password.length < 6) {
+      newErrors.password = "A senha deve ter pelo menos 6 caracteres";
+      isValid = false;
+    }
+
+    if (!isValid) {
+      setErrors(newErrors);
+      return;
+    }
+
     setIsLoggingIn(true);
 
     const success = await login(email, password);
@@ -148,6 +177,27 @@ export function useLoginForm(): UseLoginFormReturn {
       setIsLoggingIn(false);
     }
   };
+
+  // Clear login errors on change
+  React.useEffect(() => {
+    if (errors.email && email.trim()) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.email;
+        return newErrors;
+      });
+    }
+  }, [email, errors.email]);
+
+  React.useEffect(() => {
+    if (errors.password && password) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.password;
+        return newErrors;
+      });
+    }
+  }, [password, errors.password]);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -235,6 +285,7 @@ export function useLoginForm(): UseLoginFormReturn {
     companyLogo, setCompanyLogo,
     companyNiche, setCompanyNiche,
     error, setError,
+    errors, setErrors,
     isLoggingIn,
     isRegistering,
     mode, setMode,
