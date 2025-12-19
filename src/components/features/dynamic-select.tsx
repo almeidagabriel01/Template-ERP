@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Option, OptionService } from "@/services/option-service";
 import { useTenant } from "@/providers/tenant-provider";
+import { toast } from "react-toastify";
 
 interface DynamicSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   storageKey: string; // Now acts as the 'type' in Firestore (e.g. 'product_categories')
@@ -133,8 +134,10 @@ export function DynamicSelect({
     try {
       await OptionService.deleteOption(deletingId);
       setOptions((prev) => prev.filter((o) => o.id !== deletingId));
+      toast.success("Opção excluída com sucesso!");
     } catch (error) {
       console.error("Failed to delete", error);
+      toast.error("Erro ao excluir opção. Tente novamente.");
     } finally {
       setIsDeleting(false);
       setDeleteConfirmOpen(false);
