@@ -424,7 +424,7 @@ export function ProductFormNew({
                 value={formData.status}
                 onChange={handleChange}
               >
-                <option value="active">✓ Ativo - Visível no catálogo</option>
+                <option value="active">Ativo - Visível no catálogo</option>
                 <option value="inactive">Inativo - Oculto do catálogo</option>
               </Select>
             </FormItem>

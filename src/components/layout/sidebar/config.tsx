@@ -1,13 +1,10 @@
 import {
   LayoutDashboard,
-  Settings,
   Package,
   Users,
   FileText,
   Wallet,
-  User,
-  CreditCard,
-  UsersRound,
+  Shield,
 } from "lucide-react";
 
 // ============================================
@@ -50,7 +47,7 @@ export const menuItems: MenuItem[] = [
     pageId: "proposals",
   },
   {
-    icon: UsersRound,
+    icon: Users,
     label: "Clientes",
     href: "/customers",
     pageId: "clients",
@@ -63,24 +60,11 @@ export const menuItems: MenuItem[] = [
     requiresFinancial: true,
   },
   {
-    icon: Settings,
-    label: "Configurações",
-    href: "/settings",
-    pageId: "settings",
-    children: [
-      {
-        icon: Users,
-        label: "Equipe",
-        href: "/settings/team",
-        masterOnly: true,
-      },
-      {
-        icon: CreditCard,
-        label: "Plano",
-        href: "/settings/billing",
-        masterOnly: true,
-      },
-    ],
+    icon: Shield,
+    label: "Equipe",
+    href: "/settings/team",
+    pageId: "team",
+    masterOnly: true,
   },
 ];
 

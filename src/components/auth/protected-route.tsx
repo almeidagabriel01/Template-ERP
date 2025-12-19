@@ -27,6 +27,7 @@ import { AdminOverviewSkeleton } from "@/app/admin/overview/_components/admin-ov
 import { ProductsSkeleton } from "@/app/products/_components/products-skeleton";
 import { ProposalsSkeleton } from "@/app/proposals/_components/proposals-skeleton";
 import { CustomersSkeleton } from "@/app/customers/_components/customers-skeleton";
+import { AddonsSkeleton } from "@/app/profile/addons/_components/addons-skeleton";
 
 // Routes that handle their own auth logic
 const SELF_HANDLED_ROUTES = ["/login", "/subscribe", "/checkout-success", "/"];
@@ -101,7 +102,9 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     // Try to determine best skeleton from pathname first, then cache
     let skeletonType = "dashboard";
 
-    if (pathname?.startsWith("/profile")) {
+    if (pathname?.startsWith("/profile/addons")) {
+      skeletonType = "addons";
+    } else if (pathname?.startsWith("/profile")) {
       skeletonType = "profile";
     } else if (pathname?.startsWith("/financial")) {
       skeletonType = "financial";
@@ -149,6 +152,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
       switch (skeletonType) {
         case "dashboard": return <DashboardSkeleton />;
         case "profile": return <ProfileSkeleton />;
+        case "addons": return <AddonsSkeleton />;
         case "financial": return <FinancialSkeleton />;
         case "team": return <TeamSkeleton />;
         case "admin": return <AdminSkeleton />;

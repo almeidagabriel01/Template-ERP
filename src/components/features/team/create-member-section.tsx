@@ -243,12 +243,16 @@ export function CreateMemberSection({ onSuccess }: CreateMemberSectionProps) {
                   >
                     <Input
                       id="member-name"
+                      name="member_name_new"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Ex: Maria Silva"
                       icon={<User className="w-4 h-4" />}
                       required
                       minLength={2}
+                      autoComplete="off"
+                      data-1p-ignore
+                      data-lpignore="true"
                       className={errors.name ? "border-destructive" : ""}
                     />
                   </FormItem>
@@ -261,12 +265,16 @@ export function CreateMemberSection({ onSuccess }: CreateMemberSectionProps) {
                   >
                     <Input
                       id="member-email"
+                      name="member_email_new"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="maria@empresa.com"
                       icon={<Mail className="w-4 h-4" />}
                       required
+                      autoComplete="off"
+                      data-1p-ignore
+                      data-lpignore="true"
                       className={errors.email ? "border-destructive" : ""}
                     />
                   </FormItem>
@@ -282,6 +290,7 @@ export function CreateMemberSection({ onSuccess }: CreateMemberSectionProps) {
                   <div className="relative">
                     <Input
                       id="member-password"
+                      name="member_password_new"
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -289,6 +298,9 @@ export function CreateMemberSection({ onSuccess }: CreateMemberSectionProps) {
                       icon={<Lock className="w-4 h-4" />}
                       required
                       minLength={6}
+                      autoComplete="new-password"
+                      data-1p-ignore
+                      data-lpignore="true"
                       className={
                         errors.password
                           ? "border-destructive pr-10"
@@ -341,11 +353,10 @@ export function CreateMemberSection({ onSuccess }: CreateMemberSectionProps) {
                       onClick={() => handleRoleSelect(role.id)}
                       className={`
                                                 relative p-5 rounded-xl border-2 text-left transition-all duration-300 group cursor-pointer
-                                                ${
-                                                  isSelected
-                                                    ? `${config.borderColor} ${config.lightBg} shadow-lg`
-                                                    : "border-border/50 bg-card hover:border-border hover:shadow-md"
-                                                }
+                                                ${isSelected
+                          ? `${config.borderColor} ${config.lightBg} shadow-lg`
+                          : "border-border/50 bg-card hover:border-border hover:shadow-md"
+                        }
                                             `}
                     >
                       {/* Selected indicator */}
@@ -360,11 +371,10 @@ export function CreateMemberSection({ onSuccess }: CreateMemberSectionProps) {
                       <div
                         className={`
                                                 w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-all
-                                                ${
-                                                  isSelected
-                                                    ? `bg-linear-to-br ${config.color} text-white shadow-lg`
-                                                    : `${config.lightBg} ${config.textColor} group-hover:scale-110`
-                                                }
+                                                ${isSelected
+                            ? `bg-linear-to-br ${config.color} text-white shadow-lg`
+                            : `${config.lightBg} ${config.textColor} group-hover:scale-110`
+                          }
                                             `}
                       >
                         <RoleIcon className="w-6 h-6" />
