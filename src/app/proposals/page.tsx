@@ -5,9 +5,6 @@ import Link from "next/link";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Proposal, ProposalStatus } from "@/services/proposal-service";
@@ -15,6 +12,18 @@ import { useTenant } from "@/providers/tenant-provider";
 import { Plus, FileText, Copy, Trash2, Eye, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ProposalsSkeleton } from "./_components/proposals-skeleton";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const statusConfig: Record<
   ProposalStatus,
@@ -36,6 +45,8 @@ export default function ProposalsPage() {
   const [proposals, setProposals] = React.useState<Proposal[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [deleteId, setDeleteId] = React.useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   // Filter proposals based on search term
   const filteredProposals = React.useMemo(() => {
@@ -69,16 +80,21 @@ export default function ProposalsPage() {
     fetchProposals();
   }, [tenant]);
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir esta proposta?")) {
-      try {
-        await ProposalService.deleteProposal(id);
-        setProposals((prev) => prev.filter((p) => p.id !== id));
-        alert("Proposta excluída com sucesso.");
-      } catch (error) {
-        console.error(error);
-        alert("Erro ao excluir proposta");
-      }
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!deleteId) return;
+
+    setIsDeleting(true);
+    try {
+      await ProposalService.deleteProposal(deleteId);
+      setProposals((prev) => prev.filter((p) => p.id !== deleteId));
+      // alert("Proposta excluída com sucesso."); // Feedback via UI update
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao excluir proposta");
+    } finally {
+      setIsDeleting(false);
+      setDeleteId(null);
     }
   };
 
@@ -109,7 +125,7 @@ export default function ProposalsPage() {
         status: "draft",
       });
 
-      if ((result.data as any)?.success) {
+      if ((result.data as { success: boolean })?.success) {
         // Reload proposals
         if (tenant) {
           const data = await ProposalService.getProposals(tenant.id);
@@ -148,7 +164,7 @@ export default function ProposalsPage() {
           <Link href="/proposals/new">
             <Button size="lg" className="gap-2">
               <Plus className="w-5 h-5" />
-              Nova Proposta
+              Novo Proposta
             </Button>
           </Link>
         )}
@@ -279,15 +295,47 @@ export default function ProposalsPage() {
                       </Button>
                     )}
                     {canDelete && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDelete(proposal.id)}
-                        title="Excluir"
+                      <AlertDialog
+                        open={deleteId === proposal.id}
+                        onOpenChange={(open: boolean) => {
+                          if (!isDeleting) {
+                            if (!open) setDeleteId(null);
+                          }
+                        }}
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => setDeleteId(proposal.id)}
+                            title="Excluir"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Excluir Proposta</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja excluir a proposta{" "}
+                              <strong>{proposal.title}</strong>? Esta ação não pode
+                              ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={handleDelete}
+                              className="bg-destructive hover:bg-destructive/90 gap-2"
+                              disabled={isDeleting}
+                            >
+                              {isDeleting && <Spinner className="w-4 h-4 text-white" />}
+                              {isDeleting ? "Excluindo..." : "Excluir"}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     )}
                   </div>
                 </CardContent>

@@ -18,7 +18,7 @@ import { useUpdatePermissions } from "@/hooks/useUpdatePermissions";
 import { TeamSkeleton } from "./_components/team-skeleton";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Loader2, Shield, UserPlus, X } from "lucide-react";
+import { Users, Shield, UserPlus, X } from "lucide-react";
 import { toast } from "react-toastify";
 import {
   TeamMember,
@@ -45,6 +45,7 @@ export default function TeamPage() {
   const [members, setMembers] = React.useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isCreatingMember, setIsCreatingMember] = React.useState(false);
+  const [updatingKey, setUpdatingKey] = React.useState<string | null>(null);
 
   // Use Cloud Function hook for updating permissions
   const { updateSinglePermission, isLoading: savingPermissions } =
@@ -120,31 +121,38 @@ export default function TeamPage() {
       newPerms.canDelete = false;
     }
 
-    // Call Cloud Function via hook
-    const result = await updateSinglePermission(
-      memberId,
-      pageId,
-      key as "canView" | "canEdit" | "canCreate" | "canDelete",
-      value,
-      member.permissions
-    );
+    const keyId = `${memberId}-${pageId}-${key}`;
+    setUpdatingKey(keyId);
 
-    // Update local state only on success
-    if (result?.success) {
-      setMembers((prev) =>
-        prev.map((m) => {
-          if (m.id === memberId) {
-            return {
-              ...m,
-              permissions: {
-                ...m.permissions,
-                [pageId]: newPerms,
-              },
-            };
-          }
-          return m;
-        })
+    try {
+      // Call Cloud Function via hook
+      const result = await updateSinglePermission(
+        memberId,
+        pageId,
+        key as "canView" | "canEdit" | "canCreate" | "canDelete",
+        value,
+        member.permissions
       );
+
+      // Update local state only on success
+      if (result?.success) {
+        setMembers((prev) =>
+          prev.map((m) => {
+            if (m.id === memberId) {
+              return {
+                ...m,
+                permissions: {
+                  ...m.permissions,
+                  [pageId]: newPerms,
+                },
+              };
+            }
+            return m;
+          })
+        );
+      }
+    } finally {
+      setUpdatingKey(null);
     }
   };
 
@@ -224,6 +232,7 @@ export default function TeamPage() {
                 member={member}
                 onUpdatePermission={updatePermission}
                 saving={savingPermissions}
+                updatingKey={updatingKey}
                 onRefresh={fetchMembers}
               />
             ))}

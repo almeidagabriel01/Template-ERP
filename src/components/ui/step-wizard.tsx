@@ -4,6 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { LucideIcon } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 
 // ============================================
 // STEP WIZARD CONTEXT
@@ -182,15 +183,15 @@ function StepIndicator({
                   "relative w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ease-out",
                   "border-2 shadow-sm",
                   isCompleted &&
-                    "bg-gradient-to-br from-primary to-primary/80 border-primary text-primary-foreground shadow-lg shadow-primary/20",
+                  "bg-gradient-to-br from-primary to-primary/80 border-primary text-primary-foreground shadow-lg shadow-primary/20",
                   isCurrent &&
-                    "bg-gradient-to-br from-primary to-primary/80 border-primary text-primary-foreground shadow-xl shadow-primary/30 scale-110",
+                  "bg-gradient-to-br from-primary to-primary/80 border-primary text-primary-foreground shadow-xl shadow-primary/30 scale-110",
                   isPending &&
-                    !allowClickAhead &&
-                    "bg-primary/5 border-primary/30 text-primary/50",
+                  !allowClickAhead &&
+                  "bg-primary/5 border-primary/30 text-primary/50",
                   isPending &&
-                    allowClickAhead &&
-                    "bg-primary/5 border-primary/30 text-primary/50 hover:border-primary/50 hover:shadow-md hover:bg-primary/10"
+                  allowClickAhead &&
+                  "bg-primary/5 border-primary/30 text-primary/50 hover:border-primary/50 hover:shadow-md hover:bg-primary/10"
                 )}
               >
                 {isCompleted ? (
@@ -342,25 +343,7 @@ export function StepNavigation({
         >
           {isSubmitting ? (
             <>
-              <svg
-                className="w-4 h-4 animate-spin"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                />
-              </svg>
+              <Spinner className="w-4 h-4 text-white" />
               Salvando...
             </>
           ) : (
@@ -386,25 +369,7 @@ export function StepNavigation({
         >
           {isValidating ? (
             <>
-              <svg
-                className="w-4 h-4 animate-spin"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                />
-              </svg>
+              <Spinner className="w-4 h-4 text-white" />
               Validando...
             </>
           ) : (

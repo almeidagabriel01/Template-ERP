@@ -11,6 +11,7 @@ import { ProposalService } from "@/services/proposal-service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +34,7 @@ export default function ProductsPage() {
   const { deleteProduct } = useProductActions();
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // effective loading is tenant loading OR internal data loading
   const isPageLoading = tenantLoading || loading;
@@ -61,8 +63,11 @@ export default function ProductsPage() {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
     if (!deleteId || !tenant) return;
+
+    setIsDeleting(true);
     try {
       // Check if product is used in any proposal
       const isUsed = await ProposalService.isProductUsedInProposal(
@@ -73,6 +78,7 @@ export default function ProductsPage() {
         alert(
           "Não é possível excluir este produto pois ele está vinculado a uma ou mais propostas."
         );
+        setIsDeleting(false);
         setDeleteId(null);
         return;
       }
@@ -86,6 +92,8 @@ export default function ProductsPage() {
     } catch (error) {
       console.error("Error deleting product:", error);
       // alert("Erro ao excluir produto. Tente novamente."); // Hook handles error
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -240,9 +248,11 @@ export default function ProductsPage() {
                   {canDelete && (
                     <AlertDialog
                       open={deleteId === product.id}
-                      onOpenChange={(open: boolean) =>
-                        !open && setDeleteId(null)
-                      }
+                      onOpenChange={(open: boolean) => {
+                        if (!isDeleting) {
+                          if (!open) setDeleteId(null);
+                        }
+                      }}
                     >
                       <AlertDialogTrigger asChild>
                         <Button
@@ -265,12 +275,14 @@ export default function ProductsPage() {
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={handleDelete}
-                            className="bg-destructive hover:bg-destructive/90"
+                            className="bg-destructive hover:bg-destructive/90 gap-2"
+                            disabled={isDeleting}
                           >
-                            Excluir
+                            {isDeleting && <Spinner className="w-4 h-4 text-white" />}
+                            {isDeleting ? "Excluindo..." : "Excluir"}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>

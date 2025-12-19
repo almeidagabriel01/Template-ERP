@@ -12,6 +12,7 @@ import { useClientActions } from "@/hooks/useClientActions";
 import { useTenant } from "@/providers/tenant-provider";
 import { Plus, Users, Trash2, Edit, Search, Mail, Phone } from "lucide-react";
 import { CustomersSkeleton } from "./_components/customers-skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,6 +49,7 @@ export default function CustomersPage() {
   const { deleteClient } = useClientActions();
   const [searchTerm, setSearchTerm] = React.useState("");
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   React.useEffect(() => {
     const fetchClients = async () => {
@@ -64,8 +66,11 @@ export default function CustomersPage() {
     fetchClients();
   }, [tenant]);
 
-  const handleDelete = async () => {
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
     if (!deleteId || !tenant) return;
+
+    setIsDeleting(true);
     try {
       // Check if client is used in any proposal
       const isUsed = await ProposalService.isClientUsedInProposal(
@@ -76,6 +81,7 @@ export default function CustomersPage() {
         alert(
           "Não é possível excluir este cliente pois ele está vinculado a uma ou mais propostas."
         );
+        setIsDeleting(false);
         setDeleteId(null);
         return;
       }
@@ -87,6 +93,8 @@ export default function CustomersPage() {
       setDeleteId(null);
     } catch (error) {
       console.error("Error deleting client:", error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -251,9 +259,11 @@ export default function CustomersPage() {
                     {canDelete && (
                       <AlertDialog
                         open={deleteId === client.id}
-                        onOpenChange={(open: boolean) =>
-                          !open && setDeleteId(null)
-                        }
+                        onOpenChange={(open: boolean) => {
+                          if (!isDeleting && !open) {
+                            setDeleteId(null);
+                          }
+                        }}
                       >
                         <AlertDialogTrigger asChild>
                           <Button
@@ -276,12 +286,14 @@ export default function CustomersPage() {
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
                             <AlertDialogAction
                               onClick={handleDelete}
-                              className="bg-destructive hover:bg-destructive/90"
+                              className="bg-destructive hover:bg-destructive/90 gap-2"
+                              disabled={isDeleting}
                             >
-                              Excluir
+                              {isDeleting && <Spinner className="w-4 h-4 text-white" />}
+                              {isDeleting ? "Excluindo..." : "Excluir"}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
