@@ -342,7 +342,10 @@ export function DynamicSelect({
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmDelete}
+              onClick={(e) => {
+                e.preventDefault();
+                confirmDelete();
+              }}
               disabled={isDeleting}
               className="bg-destructive hover:bg-destructive/90"
             >
