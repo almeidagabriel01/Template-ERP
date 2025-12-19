@@ -1,6 +1,8 @@
 {
   "projects": {
-    "default": "erp-softcode"
+    "default": "erp-softcode",
+    "dev": "erp-softcode",
+    "prod": "erp-softcode-prod"
   },
   "targets": {},
   "etags": {}
