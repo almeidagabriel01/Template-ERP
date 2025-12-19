@@ -1,65 +1,100 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React from "react";
+
+import {
+  useLandingPage,
+  LandingNavbar,
+  LandingHero,
+  LandingFeatures,
+  LandingPricing,
+  LandingCTA,
+  LandingFooter,
+  LandingFAQ,
+} from "@/components/landing";
+
+import { DashboardSkeleton } from "@/app/dashboard/_components/dashboard-skeleton";
+import { ProfileSkeleton } from "@/app/profile/_components/profile-skeleton";
+import { FinancialSkeleton } from "@/app/financial/_components/financial-skeleton";
+import { TeamSkeleton } from "@/app/settings/team/_components/team-skeleton";
+import { AdminSkeleton } from "@/app/admin/_components/admin-skeleton";
+import { ProductsSkeleton } from "@/app/products/_components/products-skeleton";
+import { ProposalsSkeleton } from "@/app/proposals/_components/proposals-skeleton";
+import { CustomersSkeleton } from "@/app/customers/_components/customers-skeleton";
+import { AppSkeleton } from "@/components/layout/app-skeleton";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+
+export default function LandingPage() {
+  const {
+    isCheckingAuth,
+    currentUser,
+    billingInterval,
+    setBillingInterval,
+    plans,
+    initialSkeleton,
+    handleSignOut,
+  } = useLandingPage();
+
+  // Show loading while checking auth
+  if (isCheckingAuth) {
+    // Determine content based on skeleton type
+    const skeletonType = initialSkeleton || "list";
+
+    const renderSkeleton = () => {
+      switch (skeletonType) {
+        case "dashboard": return <DashboardSkeleton />;
+        case "profile": return <ProfileSkeleton />;
+        case "financial": return <FinancialSkeleton />;
+        case "team": return <TeamSkeleton />;
+        case "admin": return <AdminSkeleton />;
+        case "products": return <ProductsSkeleton />;
+        case "proposals": return <ProposalsSkeleton />;
+        case "clients": return <CustomersSkeleton />;
+        default:
+          return (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="h-8 w-48 bg-muted animate-pulse rounded-md mb-2" />
+                  <div className="h-4 w-64 bg-muted animate-pulse rounded-md" />
+                </div>
+                <div className="h-10 w-32 bg-muted animate-pulse rounded-md" />
+              </div>
+              <TableSkeleton rowCount={8} columnCount={5} />
+            </div>
+          );
+      }
+    };
+
+    return (
+      <AppSkeleton>
+        {renderSkeleton()}
+      </AppSkeleton>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="min-h-screen bg-background text-foreground">
+      <LandingNavbar
+        currentUser={currentUser}
+        onSignOut={handleSignOut}
+      />
+
+      <LandingHero />
+
+      <LandingFeatures />
+
+      <LandingPricing
+        plans={plans}
+        billingInterval={billingInterval}
+        setBillingInterval={setBillingInterval}
+      />
+
+      <LandingFAQ />
+
+      <LandingCTA />
+
+      <LandingFooter />
     </div>
   );
 }
