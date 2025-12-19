@@ -292,7 +292,7 @@ service cloud.firestore {
     
     match /proposals/{proposalId} {
       // READ: Users can read proposals from their own tenant
-      allow read: if isAuthenticated() && resource.data.tenantId == getUserData().tenantId;
+      allow read: if isAuthenticated() && resource.data.tenantId == getUserTenantId();
       
       // WRITE: ❌ NEVER from frontend
       // Proposals are managed via Cloud Functions
@@ -305,7 +305,7 @@ service cloud.firestore {
     
     match /clients/{clientId} {
       // READ: Users can read clients from their own tenant
-      allow read: if isAuthenticated() && resource.data.tenantId == getUserData().tenantId;
+      allow read: if isAuthenticated() && resource.data.tenantId == getUserTenantId();
       
       // WRITE: ❌ NEVER from frontend
       // Clients are managed via Cloud Functions
@@ -318,7 +318,7 @@ service cloud.firestore {
     
     match /products/{productId} {
       // READ: Users can read products from their own tenant
-      allow read: if isAuthenticated() && resource.data.tenantId == getUserData().tenantId;
+      allow read: if isAuthenticated() && resource.data.tenantId == getUserTenantId();
       
       // WRITE: ❌ NEVER from frontend
       // Products are managed via Cloud Functions
