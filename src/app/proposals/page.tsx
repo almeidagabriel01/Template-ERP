@@ -1,0 +1,351 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import {
+  Card,
+  CardContent,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Proposal, ProposalStatus } from "@/services/proposal-service";
+import { useTenant } from "@/providers/tenant-provider";
+import { Plus, FileText, Copy, Trash2, Eye, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ProposalsSkeleton } from "./_components/proposals-skeleton";
+import { Spinner } from "@/components/ui/spinner";
+import { toast } from "react-toastify";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
+const statusConfig: Record<
+  ProposalStatus,
+  { label: string; variant: "default" | "success" | "warning" | "destructive" }
+> = {
+  draft: { label: "Rascunho", variant: "default" },
+  sent: { label: "Enviada", variant: "warning" },
+  approved: { label: "Aprovada", variant: "success" },
+  rejected: { label: "Rejeitada", variant: "destructive" },
+};
+
+import { ProposalService } from "@/services/proposal-service";
+
+import { usePagePermission } from "@/hooks/usePagePermission";
+
+export default function ProposalsPage() {
+  const { tenant, isLoading: tenantLoading } = useTenant();
+  const { canCreate, canEdit, canDelete } = usePagePermission("proposals");
+  const [proposals, setProposals] = React.useState<Proposal[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [deleteId, setDeleteId] = React.useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+
+  // Filter proposals based on search term
+  const filteredProposals = React.useMemo(() => {
+    if (!searchTerm.trim()) return proposals;
+
+    const term = searchTerm.toLowerCase();
+    return proposals.filter(
+      (proposal) =>
+        proposal.title.toLowerCase().includes(term) ||
+        proposal.clientName?.toLowerCase().includes(term) ||
+        statusConfig[proposal.status as ProposalStatus]?.label
+          .toLowerCase()
+          .includes(term)
+    );
+  }, [proposals, searchTerm]);
+
+  const isPageLoading = tenantLoading || isLoading;
+
+  React.useEffect(() => {
+    const fetchProposals = async () => {
+      if (tenant) {
+        try {
+          const data = await ProposalService.getProposals(tenant.id);
+          setProposals(data);
+        } catch (error) {
+          console.error("Failed to fetch proposals", error);
+        }
+      }
+      setIsLoading(false);
+    };
+    fetchProposals();
+  }, [tenant]);
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!deleteId) return;
+
+    setIsDeleting(true);
+    try {
+      await ProposalService.deleteProposal(deleteId);
+      setProposals((prev) => prev.filter((p) => p.id !== deleteId));
+      toast.success("Proposta excluída com sucesso.");
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao excluir proposta");
+    } finally {
+      setIsDeleting(false);
+      setDeleteId(null);
+    }
+  };
+
+
+  const handleDuplicate = async (id: string) => {
+    try {
+      const original = proposals.find((p) => p.id === id);
+      if (!original) return;
+
+      // Import createProposal hook dynamically
+      const { getFunctions, httpsCallable } =
+        await import("firebase/functions");
+      const functions = getFunctions(undefined, "southamerica-east1");
+      const createProposalFn = httpsCallable(functions, "createProposal");
+
+      const result = await createProposalFn({
+        title: `${original.title} (Cópia)`,
+        clientId: original.clientId || "",
+        clientName: original.clientName,
+        clientEmail: original.clientEmail,
+        clientPhone: original.clientPhone,
+        clientAddress: original.clientAddress,
+        validUntil: original.validUntil,
+        totalValue: 0, // Will be recalculated
+        discount: original.discount || 0,
+        products: original.products || [],
+        sistemas: original.sistemas || [],
+        customNotes: original.customNotes,
+        status: "draft",
+      });
+
+      if ((result.data as { success: boolean })?.success) {
+        // Reload proposals
+        if (tenant) {
+          const data = await ProposalService.getProposals(tenant.id);
+          setProposals(data);
+        }
+        toast.success("Proposta duplicada com sucesso!");
+      }
+    } catch (error) {
+      console.error("Error duplicating proposal:", error);
+      toast.error("Erro ao duplicar proposta");
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  if (isPageLoading) {
+    return <ProposalsSkeleton />;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Propostas</h1>
+          <p className="text-muted-foreground mt-1">
+            Gerencie suas propostas comerciais
+          </p>
+        </div>
+        {canCreate && (
+          <Link href="/proposals/new">
+            <Button size="lg" className="gap-2">
+              <Plus className="w-5 h-5" />
+              Novo Proposta
+            </Button>
+          </Link>
+        )}
+      </div>
+
+      {/* Search */}
+      {proposals.length > 0 && (
+        <div className="max-w-md">
+          <Input
+            placeholder="Buscar por título, cliente ou status..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            icon={<Search className="w-4 h-4" />}
+          />
+        </div>
+      )}
+
+      {proposals.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+              <FileText className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">
+              Nenhuma proposta encontrada
+            </h3>
+            <p className="text-muted-foreground text-center mb-6 max-w-md">
+              Crie sua primeira proposta comercial e comece a fechar negócios!
+            </p>
+            {canCreate && (
+              <Link href="/proposals/new">
+                <Button className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Criar Primeira Proposta
+                </Button>
+              </Link>
+            )}
+          </CardContent>
+        </Card>
+      ) : filteredProposals.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Search className="w-12 h-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">
+              Nenhum resultado encontrado
+            </h3>
+            <p className="text-muted-foreground text-center">
+              Tente buscar por outro termo.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {/* Header */}
+          <div className="grid grid-cols-5 gap-4 px-4 py-2 text-sm font-medium text-muted-foreground">
+            <div>Título</div>
+            <div className="text-center">Cliente</div>
+            <div className="text-center">Criado em</div>
+            <div className="text-center">Validade</div>
+            <div className="text-right">Ações</div>
+          </div>
+
+          {/* Rows */}
+          {filteredProposals.map((proposal) => {
+            const productCount = proposal.products?.length || 0;
+            const total =
+              proposal.products?.reduce((sum, p) => sum + p.total, 0) || 0;
+            return (
+              <Card
+                key={proposal.id}
+                className="hover:bg-muted/50 transition-colors"
+              >
+                <CardContent className="grid grid-cols-5 gap-4 items-center py-4 px-4">
+                  <div>
+                    <Link
+                      href={`/proposals/${proposal.id}/view`}
+                      className="font-medium hover:underline"
+                    >
+                      {proposal.title}
+                    </Link>
+                    {productCount > 0 && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {productCount} produto(s) • R$ {total.toFixed(2)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-sm text-muted-foreground truncate text-center">
+                    {proposal.clientName}
+                  </div>
+                  <div className="text-sm text-muted-foreground text-center">
+                    {formatDate(proposal.createdAt)}
+                  </div>
+                  <div className="text-sm text-muted-foreground text-center">
+                    {formatDate(proposal.validUntil)}
+                  </div>
+                  <div className="flex items-center justify-end gap-1">
+                    <Link href={`/proposals/${proposal.id}/view`}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        title="Ver PDF"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    </Link>
+                    {canEdit && (
+                      <Link href={`/proposals/${proposal.id}`}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Editar"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </Button>
+                      </Link>
+                    )}
+                    {canCreate && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleDuplicate(proposal.id)}
+                        title="Duplicar"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {canDelete && (
+                      <AlertDialog
+                        open={deleteId === proposal.id}
+                        onOpenChange={(open: boolean) => {
+                          if (!isDeleting) {
+                            if (!open) setDeleteId(null);
+                          }
+                        }}
+                      >
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => setDeleteId(proposal.id)}
+                            title="Excluir"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Excluir Proposta</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja excluir a proposta{" "}
+                              <strong>{proposal.title}</strong>? Esta ação não pode
+                              ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={handleDelete}
+                              className="bg-destructive hover:bg-destructive/90 gap-2"
+                              disabled={isDeleting}
+                            >
+                              {isDeleting && <Spinner className="w-4 h-4 text-white" />}
+                              {isDeleting ? "Excluindo..." : "Excluir"}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
