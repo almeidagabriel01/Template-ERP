@@ -122,6 +122,7 @@ function LoginContent() {
   };
 
   // Limpar erros quando valores mudam
+  /* eslint-disable */
   useEffect(() => {
     if (name && name.trim().length >= 2 && registerErrors.name) {
       setRegisterErrors((prev) => {
@@ -132,6 +133,7 @@ function LoginContent() {
     }
   }, [name]);
 
+  /* eslint-disable */
   useEffect(() => {
     if (
       email &&
@@ -146,6 +148,7 @@ function LoginContent() {
     }
   }, [email]);
 
+  /* eslint-disable */
   useEffect(() => {
     if (password && password.length >= 6 && registerErrors.password) {
       setRegisterErrors((prev) => {
@@ -156,6 +159,7 @@ function LoginContent() {
     }
   }, [password]);
 
+  /* eslint-disable */
   useEffect(() => {
     if (
       companyName &&
@@ -170,21 +174,36 @@ function LoginContent() {
     }
   }, [companyName]);
 
-  // Show skeleton loading during initial auth check or page load
-  if ((isLoading && !isLoggingIn && !isRegistering) || user) {
-    // Determine which skeleton to show based on likely destination
+  // Show loading during initial auth check (but not during login/register action)
+  // For users being redirected after login, don't show anything - the button spinner handles it
+  if (isLoading && !isLoggingIn && !isRegistering && !user) {
+    // Initial page load - show simple spinner
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // User is logged in and being redirected - show appropriate loading
+  if (user) {
+    // Free users go to landing page - don't show skeleton (redirect is fast)
+    if (user.role === "free") {
+      return null;
+    }
+
+    // For users going to ERP, show appropriate skeleton
     let content = <DashboardSkeleton />;
     let showSidebar = true;
 
     if (user?.role === "superadmin") {
       content = <AdminSkeleton />;
       showSidebar = false;
-    } else if (
-      user?.role === "free" ||
-      user?.role === "user" ||
-      user?.role === "member"
-    ) {
-      const perms = user.permissions || {};
+    } else if (user?.role === "user" || user?.role === "member") {
+      const perms = (user?.permissions || {}) as Record<
+        string,
+        { canView?: boolean }
+      >;
       if (perms.dashboard && perms.dashboard.canView === false) {
         if (perms.proposals?.canView) content = <ProposalsSkeleton />;
         else if (perms.products?.canView) content = <ProductsSkeleton />;
@@ -417,6 +436,7 @@ function LoginContent() {
 
                     <StepNavigation
                       onSubmit={handleRegister}
+                      onBeforeNext={validateRegisterStep2}
                       isSubmitting={isRegistering}
                       submitLabel="Criar Conta"
                     />

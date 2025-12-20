@@ -16,9 +16,9 @@ interface TenantContextType {
 const TenantContext = React.createContext<TenantContextType>({
   tenant: null,
   isLoading: true,
-  refreshTenant: () => {},
-  clearViewingTenant: () => {},
-  setViewingTenant: () => {},
+  refreshTenant: () => { },
+  clearViewingTenant: () => { },
+  setViewingTenant: () => { },
 });
 
 export function TenantProvider({ children }: { children: React.ReactNode }) {
@@ -78,6 +78,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     }
 
     setIsLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, refreshTrigger]);
 
   React.useEffect(() => {

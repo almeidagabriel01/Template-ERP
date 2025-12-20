@@ -15,13 +15,13 @@ export type User = {
   id: string;
   email: string;
   name: string;
-  role: "admin" | "user" | "superadmin" | "free";
+  role: "admin" | "user" | "superadmin" | "free" | "member";
   tenantId?: string; // Optional for free users
   planId?: string;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   masterId?: string; // For members, points to the master user
-  permissions?: Record<string, any>; // Member permissions
+  permissions?: Record<string, { canView?: boolean; canCreate?: boolean; canEdit?: boolean; canDelete?: boolean }>; // Member permissions
 };
 
 interface AuthContextType {
@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const permsRef = collection(db, "users", firebaseUser.uid, "permissions");
             const permsSnap = await getDocs(permsRef);
 
-            const loadedPerms: Record<string, any> = {};
+            const loadedPerms: Record<string, { canView?: boolean; canCreate?: boolean; canEdit?: boolean; canDelete?: boolean }> = {};
             permsSnap.forEach(doc => {
               loadedPerms[doc.id] = doc.data();
             });
@@ -118,8 +118,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (firebaseUser) {
         const userData = await fetchUserData(firebaseUser);
         setUser(userData);
+
+        // Set session cookie for middleware authentication
+        // This allows the middleware to know the user is authenticated
+        const token = await firebaseUser.getIdToken();
+        document.cookie = `firebase-auth-token=${token}; path=/; max-age=3600; SameSite=Lax`;
+        if (userData?.role) {
+          document.cookie = `user-role=${userData.role}; path=/; max-age=3600; SameSite=Lax`;
+        }
       } else {
         setUser(null);
+        // Clear session cookies on logout
+        document.cookie = "firebase-auth-token=; path=/; max-age=0";
+        document.cookie = "user-role=; path=/; max-age=0";
       }
       setIsLoading(false);
     });

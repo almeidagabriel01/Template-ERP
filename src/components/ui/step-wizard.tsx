@@ -183,15 +183,15 @@ function StepIndicator({
                   "relative w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ease-out",
                   "border-2 shadow-sm",
                   isCompleted &&
-                  "bg-gradient-to-br from-primary to-primary/80 border-primary text-primary-foreground shadow-lg shadow-primary/20",
+                    "bg-gradient-to-br from-primary to-primary/80 border-primary text-primary-foreground shadow-lg shadow-primary/20",
                   isCurrent &&
-                  "bg-gradient-to-br from-primary to-primary/80 border-primary text-primary-foreground shadow-xl shadow-primary/30 scale-110",
+                    "bg-gradient-to-br from-primary to-primary/80 border-primary text-primary-foreground shadow-xl shadow-primary/30 scale-110",
                   isPending &&
-                  !allowClickAhead &&
-                  "bg-primary/5 border-primary/30 text-primary/50",
+                    !allowClickAhead &&
+                    "bg-primary/5 border-primary/30 text-primary/50",
                   isPending &&
-                  allowClickAhead &&
-                  "bg-primary/5 border-primary/30 text-primary/50 hover:border-primary/50 hover:shadow-md hover:bg-primary/10"
+                    allowClickAhead &&
+                    "bg-primary/5 border-primary/30 text-primary/50 hover:border-primary/50 hover:shadow-md hover:bg-primary/10"
                 )}
               >
                 {isCompleted ? (
@@ -310,6 +310,24 @@ export function StepNavigation({
     nextStep();
   };
 
+  const handleSubmit = async () => {
+    if (onBeforeNext) {
+      setIsValidating(true);
+      try {
+        const canProceed = await onBeforeNext();
+        if (!canProceed) {
+          setIsValidating(false);
+          return;
+        }
+      } catch {
+        setIsValidating(false);
+        return;
+      }
+      setIsValidating(false);
+    }
+    onSubmit?.();
+  };
+
   return (
     <div className="flex items-center justify-between pt-8 border-border/30">
       {/* Previous Button */}
@@ -330,8 +348,8 @@ export function StepNavigation({
       {isLastStep ? (
         <button
           type="button"
-          onClick={onSubmit}
-          disabled={isSubmitting}
+          onClick={handleSubmit}
+          disabled={isSubmitting || isValidating}
           className={cn(
             "h-12 px-8 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer",
             "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground",
@@ -341,10 +359,10 @@ export function StepNavigation({
             "flex items-center gap-2"
           )}
         >
-          {isSubmitting ? (
+          {isSubmitting || isValidating ? (
             <>
               <Spinner className="w-4 h-4 text-white" />
-              Salvando...
+              {isValidating ? "Validando..." : "Salvando..."}
             </>
           ) : (
             <>

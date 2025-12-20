@@ -1,7 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { TransactionService, Transaction } from "@/services/transaction-service";
+import {
+  TransactionService,
+  Transaction,
+} from "@/services/transaction-service";
 import { ProposalService, Proposal } from "@/services/proposal-service";
 import { ClientService, Client } from "@/services/client-service";
 import { useTenant } from "@/providers/tenant-provider";
@@ -27,7 +30,7 @@ interface DashboardData {
   proposals: Proposal[];
   clients: Client[];
   financialSummary: FinancialSummary;
-  
+
   // Computed
   chartData: BarChartDataItem[];
   proposalStats: ProposalStats;
@@ -37,7 +40,7 @@ interface DashboardData {
   recentTransactions: Transaction[];
   recentProposals: Proposal[];
   balance: number;
-  
+
   // Loading state
   isLoading: boolean;
 }
@@ -64,30 +67,41 @@ const initialState: DashboardData = {
 };
 
 export function useDashboardData(): DashboardData {
-  const { tenant } = useTenant();
+  const { tenant, isLoading: isTenantLoading } = useTenant();
   const [rawData, setRawData] = React.useState({
     transactions: [] as Transaction[],
     proposals: [] as Proposal[],
     clients: [] as Client[],
     financialSummary: initialState.financialSummary,
   });
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [isDataLoading, setIsDataLoading] = React.useState(true);
 
   // Fetch all data once
   React.useEffect(() => {
-    if (!tenant) return;
+    // If tenant is still loading, wait
+    if (isTenantLoading) {
+      return;
+    }
+
+    // If tenant finished loading but is null (e.g., superadmin without tenant)
+    // set loading to false and return empty data
+    if (!tenant) {
+      setIsDataLoading(false);
+      return;
+    }
 
     let cancelled = false;
 
     const fetchData = async () => {
-      setIsLoading(true);
+      setIsDataLoading(true);
       try {
-        const [transactions, proposals, clients, financialSummary] = await Promise.all([
-          TransactionService.getTransactions(tenant.id),
-          ProposalService.getProposals(tenant.id),
-          ClientService.getClients(tenant.id),
-          TransactionService.getSummary(tenant.id),
-        ]);
+        const [transactions, proposals, clients, financialSummary] =
+          await Promise.all([
+            TransactionService.getTransactions(tenant.id),
+            ProposalService.getProposals(tenant.id),
+            ClientService.getClients(tenant.id),
+            TransactionService.getSummary(tenant.id),
+          ]);
 
         if (!cancelled) {
           setRawData({ transactions, proposals, clients, financialSummary });
@@ -96,14 +110,16 @@ export function useDashboardData(): DashboardData {
         console.error("Error fetching dashboard data:", error);
       } finally {
         if (!cancelled) {
-          setIsLoading(false);
+          setIsDataLoading(false);
         }
       }
     };
 
     fetchData();
-    return () => { cancelled = true; };
-  }, [tenant]);
+    return () => {
+      cancelled = true;
+    };
+  }, [tenant, isTenantLoading]);
 
   // Compute all derived values
   const computed = React.useMemo(() => {
@@ -111,12 +127,16 @@ export function useDashboardData(): DashboardData {
     const now = new Date();
 
     // Chart data - last 6 months
-    const months: { [key: string]: { receitas: number; despesas: number; name: string } } = {};
+    const months: {
+      [key: string]: { receitas: number; despesas: number; name: string };
+    } = {};
     for (let i = 5; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
       months[key] = {
-        name: date.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""),
+        name: date
+          .toLocaleDateString("pt-BR", { month: "short" })
+          .replace(".", ""),
         receitas: 0,
         despesas: 0,
       };
@@ -134,23 +154,32 @@ export function useDashboardData(): DashboardData {
 
     // Proposal stats
     const approved = proposals.filter((p) => p.status === "approved").length;
-    const pending = proposals.filter((p) => p.status === "sent" || p.status === "draft").length;
+    const pending = proposals.filter(
+      (p) => p.status === "sent" || p.status === "draft"
+    ).length;
     const total = proposals.length;
     const conversionRate = total > 0 ? Math.round((approved / total) * 100) : 0;
 
     // Alerts
-    const overdueTransactions = transactions.filter((t) => t.status === "overdue");
+    const overdueTransactions = transactions.filter(
+      (t) => t.status === "overdue"
+    );
     const upcomingDue = transactions.filter((t) => {
       if (t.status !== "pending" || !t.dueDate) return false;
       const dueDate = new Date(t.dueDate);
-      const diffDays = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      const diffDays = Math.ceil(
+        (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      );
       return diffDays >= 0 && diffDays <= 7;
     });
 
     // New clients this month
     const newClientsThisMonth = clients.filter((c) => {
       const created = new Date(c.createdAt);
-      return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+      return (
+        created.getMonth() === now.getMonth() &&
+        created.getFullYear() === now.getFullYear()
+      );
     }).length;
 
     return {
@@ -168,6 +197,6 @@ export function useDashboardData(): DashboardData {
   return {
     ...rawData,
     ...computed,
-    isLoading,
+    isLoading: isDataLoading || isTenantLoading,
   };
 }
