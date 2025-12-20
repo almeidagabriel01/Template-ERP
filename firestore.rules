@@ -70,11 +70,12 @@ service cloud.firestore {
     
     match /users/{userId} {
       // READ: Own profile or if you are the Master of this user
+      // Using resource.data.get() with default to avoid null errors for non-existent docs
       allow read: if isOwner(userId) 
-                  || (isAuthenticated() && resource.data.masterId == request.auth.uid);
+                  || (isAuthenticated() && resource.data.get('masterId', '') == request.auth.uid);
       
-      // CREATE: Blocked. Auth triggers or Cloud Functions handling.
-      allow create: if false;
+      // CREATE: Allowed for self-registration (user creating their own document)
+      allow create: if isOwner(userId);
       
       // UPDATE: Owner can update profile info, but NOT sensitive roles/ids.
       allow update: if isOwner(userId)
@@ -85,6 +86,12 @@ service cloud.firestore {
                                  
       // DELETE: Blocked. Must use admin function to cleanup Auth + Firestore.
       allow delete: if false;
+      
+      // PERMISSIONS SUBCOLLECTION: User can read their own permissions
+      match /permissions/{permissionId} {
+        allow read: if isOwner(userId);
+        allow write: if false; // Only Cloud Functions can manage permissions
+      }
     }
     
     // ============================================
@@ -166,8 +173,15 @@ service cloud.firestore {
     
     // TENANTS (New Tenant Info)
     match /tenants/{tenantId} {
-      allow read: if isAuthenticated() && getUserData().tenantId == tenantId;
-      allow write: if false;
+      // Allow read if: user's tenantId matches, OR tenant ID matches the UID pattern (fallback for new users)
+      allow read: if isAuthenticated() && (
+        tenantId == 'tenant_' + request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         getUserData().tenantId == tenantId)
+      );
+      // CREATE: Allowed during self-registration (tenant ID must match user's UID pattern)
+      allow create: if isAuthenticated() && tenantId == 'tenant_' + request.auth.uid;
+      allow update, delete: if false;
     }
     
     // PLANS (Public/Reference)

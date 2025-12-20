@@ -197,11 +197,17 @@ export function useLandingPage() {
             }
             setCurrentUser({ id: user.uid, ...userData });
           } else {
+            // User document not found in Firestore - treat as free user with basic auth data
+            // This allows users to stay logged in and be prompted to complete registration or subscribe
             console.warn(
-              "User document not found in Firestore, signing out..."
+              "User document not found in Firestore, treating as free user"
             );
-            await signOut(auth);
-            setCurrentUser(null);
+            setCurrentUser({ 
+              id: user.uid, 
+              email: user.email || "",
+              role: "free",
+              name: user.displayName || user.email?.split("@")[0] || "User"
+            });
           }
         } catch (error) {
           console.error("Error fetching user data:", error);
