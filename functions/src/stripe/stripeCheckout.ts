@@ -69,13 +69,31 @@ export const stripeCheckout = functions
       const userRef = db.collection("users").doc(userId);
       const userSnap = await userRef.get();
 
-      if (!userSnap.exists) {
-        throw new functions.https.HttpsError("not-found", "User not found");
-      }
+      let userData: FirebaseFirestore.DocumentData;
+      let customerId: string | undefined;
+      let existingSubscriptionId: string | undefined;
 
-      const userData = userSnap.data()!;
-      let customerId = userData.stripeCustomerId;
-      const existingSubscriptionId = userData.stripeSubscriptionId;
+      if (!userSnap.exists) {
+        // User document doesn't exist - create a basic one
+        // This can happen if auth account exists but Firestore doc was never created
+        console.log(`User document not found for ${userId}, creating basic document`);
+        
+        const newUserData = {
+          email: userEmail || "",
+          role: "free",
+          createdAt: new Date().toISOString(),
+          tenantId: `tenant_${userId}`,
+        };
+        
+        await userRef.set(newUserData);
+        userData = newUserData;
+        customerId = undefined;
+        existingSubscriptionId = undefined;
+      } else {
+        userData = userSnap.data()!;
+        customerId = userData.stripeCustomerId;
+        existingSubscriptionId = userData.stripeSubscriptionId;
+      }
 
       // If user has existing subscription, update it with proration
       if (existingSubscriptionId) {
@@ -179,10 +197,24 @@ export const stripeCheckout = functions
 
       return { url: session.url || undefined };
     } catch (error) {
-      console.error("Error creating checkout session:", error);
+      // Detailed error logging for debugging
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      const stripeError = (error as { type?: string; code?: string; param?: string })?.type;
+      
+      console.error("Error creating checkout session:", {
+        message: errorMessage,
+        stack: errorStack,
+        stripeErrorType: stripeError,
+        userId,
+        planTier,
+        hasUserEmail: !!userEmail,
+        billingInterval: validInterval,
+      });
+      
       throw new functions.https.HttpsError(
         "internal",
-        "Failed to create checkout session"
+        `Failed to create checkout session: ${errorMessage}`
       );
     }
   });

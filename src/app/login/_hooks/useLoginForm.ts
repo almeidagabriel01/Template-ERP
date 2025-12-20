@@ -267,8 +267,8 @@ export function useLoginForm(): UseLoginFormReturn {
       return;
     }
 
-    if (!companyName.trim()) {
-      setError("Por favor, informe o nome da empresa.");
+    if (!companyName.trim() || companyName.trim().length < 2) {
+      setErrors(prev => ({ ...prev, companyName: "Nome da empresa é obrigatório" }));
       return;
     }
 
@@ -304,6 +304,10 @@ export function useLoginForm(): UseLoginFormReturn {
         tenantId: tenantId,
         createdAt: new Date().toISOString(),
       });
+
+      // Small delay to ensure Firestore writes propagate before redirect
+      // This helps prevent race conditions when the checkout page loads
+      await new Promise(resolve => setTimeout(resolve, 500));
     } catch (err: unknown) {
       const error = err as { code?: string };
       console.error("Registration error:", err);
