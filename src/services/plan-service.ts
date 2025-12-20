@@ -1,10 +1,12 @@
 import { db } from "@/lib/firebase";
 import { collection, getDocs, doc, getDoc, setDoc } from "firebase/firestore";
-import { UserPlan, PlanFeatures } from "@/types";
+import { UserPlan } from "@/types";
 
 const COLLECTION_NAME = "plans";
 
-// Default plans - these will be seeded if the collection is empty
+// Default plans - FALLBACK ONLY when Stripe is unavailable
+// IMPORTANT: In production, prices come from Stripe via StripeService.getPlans()
+// These values are only used as a last resort if Stripe API fails
 export const DEFAULT_PLANS: Omit<UserPlan, "id">[] = [
   {
     name: "Starter",
@@ -13,7 +15,7 @@ export const DEFAULT_PLANS: Omit<UserPlan, "id">[] = [
     price: 79,
     pricing: {
       monthly: 79,
-      yearly: 804,  // ~15% desconto (R$ 67/mês)
+      yearly: 804, // ~15% desconto (R$ 67/mês)
     },
     order: 1,
     features: {
@@ -37,7 +39,7 @@ export const DEFAULT_PLANS: Omit<UserPlan, "id">[] = [
     price: 149,
     pricing: {
       monthly: 149,
-      yearly: 1524,  // ~15% desconto (R$ 127/mês)
+      yearly: 1524, // ~15% desconto (R$ 127/mês)
     },
     order: 2,
     highlighted: true,
@@ -62,7 +64,7 @@ export const DEFAULT_PLANS: Omit<UserPlan, "id">[] = [
     price: 299,
     pricing: {
       monthly: 299,
-      yearly: 3048,  // ~15% desconto (R$ 254/mês)
+      yearly: 3048, // ~15% desconto (R$ 254/mês)
     },
     order: 3,
     features: {
@@ -87,29 +89,32 @@ export const PlanService = {
    */
   getPlans: async (): Promise<UserPlan[]> => {
     try {
-      // Try to fetch from API first (which syncs with Stripe)
-      const response = await fetch('/api/plans');
-      if (response.ok) {
-        const plans = await response.json();
-        if (plans && plans.length > 0) return plans;
+      // Try to fetch from Cloud Function first (which syncs with Stripe)
+      const { StripeService } = await import("./stripe-service");
+      const plans = await StripeService.getPlans();
+      if (plans && plans.length > 0) {
+        return plans as UserPlan[];
       }
     } catch (error) {
-      console.warn("Failed to fetch plans from API, falling back to Firestore/Defaults", error);
+      console.warn(
+        "Failed to fetch plans from Cloud Function, falling back to Firestore/Defaults",
+        error
+      );
     }
 
     const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
-    
+
     // If no plans exist, seed with defaults
     if (querySnapshot.empty) {
       await PlanService.seedDefaultPlans();
       // Return defaults directly to avoid recursion loop if API fails
-      return DEFAULT_PLANS.map(p => ({...p, id: p.tier} as UserPlan));
+      return DEFAULT_PLANS.map((p) => ({ ...p, id: p.tier }) as UserPlan);
     }
-    
+
     const plans = querySnapshot.docs.map((doc) => {
       const data = doc.data() as UserPlan;
-      const defaultPlan = DEFAULT_PLANS.find(p => p.tier === data.tier);
-      
+      const defaultPlan = DEFAULT_PLANS.find((p) => p.tier === data.tier);
+
       return {
         ...data,
         id: doc.id,
@@ -125,7 +130,7 @@ export const PlanService = {
         },
       };
     }) as UserPlan[];
-    
+
     // Sort by order
     return plans.sort((a, b) => a.order - b.order);
   },
@@ -139,11 +144,11 @@ export const PlanService = {
 
     if (docSnap.exists()) {
       const data = docSnap.data() as UserPlan;
-      const defaultPlan = DEFAULT_PLANS.find(p => p.tier === data.tier);
-      
-      return { 
+      const defaultPlan = DEFAULT_PLANS.find((p) => p.tier === data.tier);
+
+      return {
         ...data,
-        id: docSnap.id, 
+        id: docSnap.id,
         // Fallback to default pricing
         pricing: data.pricing || defaultPlan?.pricing,
         // Merge features with defaults to ensure new fields exist
