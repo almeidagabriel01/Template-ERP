@@ -1,111 +1,96 @@
 "use client";
 
+import { useTheme } from "next-themes";
+import { useMemo, useEffect, useState } from "react";
 import { HeroParallax } from "@/components/ui/hero-parallax";
 
-const products = [
-    {
-        title: "Dashboard",
-        link: "#features",
-        thumbnail:
-            "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop",
-    },
-    {
-        title: "Propostas",
-        link: "#features",
-        thumbnail:
-            "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=600&fit=crop",
-    },
-    {
-        title: "Relatórios",
-        link: "#features",
-        thumbnail:
-            "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop",
-    },
-    {
-        title: "Clientes",
-        link: "#features",
-        thumbnail:
-            "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=600&fit=crop",
-    },
-    {
-        title: "Produtos",
-        link: "#features",
-        thumbnail:
-            "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=600&fit=crop",
-    },
-    {
-        title: "Financeiro",
-        link: "#features",
-        thumbnail:
-            "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=600&fit=crop",
-    },
-    {
-        title: "Configurações",
-        link: "#features",
-        thumbnail:
-            "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&h=600&fit=crop",
-    },
-    {
-        title: "Multi-tenant",
-        link: "#features",
-        thumbnail:
-            "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800&h=600&fit=crop",
-    },
-    {
-        title: "PDF Export",
-        link: "#features",
-        thumbnail:
-            "https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=800&h=600&fit=crop",
-    },
-    {
-        title: "Themes",
-        link: "#features",
-        thumbnail:
-            "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&h=600&fit=crop",
-    },
-    {
-        title: "Analytics",
-        link: "#features",
-        thumbnail:
-            "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop",
-    },
-    {
-        title: "API",
-        link: "#features",
-        thumbnail:
-            "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&h=600&fit=crop",
-    },
-    {
-        title: "Integrações",
-        link: "#features",
-        thumbnail:
-            "https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&h=600&fit=crop",
-    },
-    {
-        title: "Suporte",
-        link: "#features",
-        thumbnail:
-            "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=800&h=600&fit=crop",
-    },
-    {
-        title: "Mobile",
-        link: "#features",
-        thumbnail:
-            "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=800&h=600&fit=crop",
-    },
+// Imagens base que existem em ambas as pastas
+const baseProducts = [
+  {
+    title: "Dashboard",
+    darkImage: "dashboard-dark.png",
+    lightImage: "dashboard-light.png",
+  },
+  {
+    title: "Propostas",
+    darkImage: "proposals-dark.png",
+    lightImage: "proposals.png",
+  },
+  {
+    title: "Clientes",
+    darkImage: "clients-dark.png",
+    lightImage: "clients.png",
+  },
+  {
+    title: "Produtos",
+    darkImage: "products-dark.png",
+    lightImage: "products.png",
+  },
+  {
+    title: "Financeiro",
+    darkImage: "financials-dark.png",
+    lightImage: "financial.png",
+  },
+  { title: "Perfil", darkImage: "profile-dark.png", lightImage: "profile.png" },
+  { title: "Equipe", darkImage: "team-dark.png", lightImage: "team.png" },
+  {
+    title: "Editar PDF",
+    darkImage: "edit-pdf-dark.png",
+    lightImage: "edit-pdf.png",
+  },
+  {
+    title: "Visualizar PDF",
+    darkImage: "view-pdf-dark.png",
+    lightImage: "view-pdf.png",
+  },
+  {
+    title: "Carteiras",
+    darkImage: "wallets-dark.png",
+    lightImage: "wallets-light.png",
+  },
 ];
 
+// Gerar produtos para uma pasta específica
+function getProducts(folder: "dark" | "light") {
+  const allProducts = [...baseProducts, ...baseProducts.slice(0, 5)];
+
+  return allProducts.map((product) => ({
+    title: product.title,
+    link: "#features",
+    thumbnail: `/hero/${folder}/${folder === "dark" ? product.darkImage : product.lightImage}`,
+  }));
+}
+
+// Produtos padrão para SSR (evita hydration mismatch)
+const defaultProducts = getProducts("dark");
+
 export function LandingHero() {
-    return (
-        <HeroParallax
-            products={products}
-            title={
-                <>
-                    O ERP completo para <br />{" "}
-                    <span className="text-primary">sua empresa</span>
-                </>
-            }
-            subtitle="Gerencie propostas, clientes, produtos e finanças em um só lugar. Simplifique sua operação e aumente sua produtividade com nossa plataforma intuitiva e moderna."
-        />
-    );
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // Só ativa após montar no cliente para evitar hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Quando tema light -> mostrar imagens dark (contraste)
+  // Quando tema dark -> mostrar imagens light (contraste)
+  const products = useMemo(() => {
+    if (!mounted) return defaultProducts;
+    const folder = resolvedTheme === "dark" ? "light" : "dark";
+    return getProducts(folder);
+  }, [resolvedTheme, mounted]);
+
+  return (
+    <HeroParallax
+      products={products}
+      title={
+        <>
+          O ERP completo para <br />{" "}
+          <span className="text-primary">sua empresa</span>
+        </>
+      }
+      subtitle="Gerencie propostas, clientes, produtos e finanças em um só lugar. Simplifique sua operação e aumente sua produtividade com nossa plataforma intuitiva e moderna."
+    />
+  );
 }

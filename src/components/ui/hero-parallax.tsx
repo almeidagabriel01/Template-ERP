@@ -144,26 +144,19 @@ export const ProductCard = ({
       style={{
         x: translate,
       }}
-      whileHover={{
-        y: -20,
-      }}
       key={product.title}
-      className="group/product h-96 w-[30rem] relative shrink-0"
+      className="h-72 w-[28rem] relative shrink-0"
     >
-      <a href={product.link} className="block group-hover/product:shadow-2xl">
+      <div className="block h-full w-full">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={product.thumbnail}
           height="600"
-          width="600"
-          className="object-cover object-left-top absolute h-full w-full inset-0 rounded-xl"
+          width="800"
+          className="object-contain absolute h-full w-full inset-0 rounded-xl bg-muted/30"
           alt={product.title}
         />
-      </a>
-      <div className="absolute inset-0 h-full w-full opacity-0 group-hover/product:opacity-80 bg-black pointer-events-none rounded-xl"></div>
-      <h2 className="absolute bottom-4 left-4 opacity-0 group-hover/product:opacity-100 text-white">
-        {product.title}
-      </h2>
+      </div>
     </motion.div>
   );
 };
