@@ -7,8 +7,10 @@ let app: App;
 
 if (getApps().length === 0) {
   app = initializeApp();
+  console.log("CreateClient: Firebase Admin Initialized (New App)");
 } else {
   app = getApps()[0];
+  console.log("CreateClient: Firebase Admin Initialized (Existing App)");
 }
 
 export const adminApp = app;
