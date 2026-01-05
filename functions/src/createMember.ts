@@ -16,13 +16,12 @@
  */
 
 import * as functions from "firebase-functions";
-import { initializeApp } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
-import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { canManageTeam } from "./authUtils";
 
 // Initialize Firebase Admin (only once)
-initializeApp();
+// Initialize Firebase Admin check moved to ./init
+import { db, auth } from "./init";
 
 // ============================================
 // TYPES
@@ -108,8 +107,8 @@ function isValidEmail(email: string): boolean {
 export const createMember = functions
   .region("southamerica-east1")
   .https.onCall(async (data: CreateMemberInput, context) => {
-    const db = getFirestore();
-    const auth = getAuth();
+    // const db = getFirestore();
+    // const auth = getAuth();
 
     // ============================================
     // STEP 1: Validate Authentication
