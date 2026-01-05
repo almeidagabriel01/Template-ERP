@@ -452,76 +452,104 @@ export const deleteCustomField = functions
 export const createOption = functions
   .region("southamerica-east1")
   .https.onCall(async (data: { fieldType: string; label: string }, context) => {
-    // const db = getFirestore();
-    if (!context.auth)
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "Login necessário."
-      );
+    console.log("createOption: Started", { data, auth: context.auth?.uid });
+    try {
+      if (!context.auth) {
+        console.warn("createOption: Unauthenticated");
+        throw new functions.https.HttpsError(
+          "unauthenticated",
+          "Login necessário."
+        );
+      }
 
-    const tenantId = await getTenantId(db, context.auth.uid);
+      const tenantId = await getTenantId(db, context.auth.uid);
 
-    if (!data.fieldType || !data.label) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "Tipo de campo e label são obrigatórios."
-      );
+      if (!data.fieldType || !data.label) {
+        console.warn("createOption: Missing fields");
+        throw new functions.https.HttpsError(
+          "invalid-argument",
+          "Tipo de campo e label são obrigatórios."
+        );
+      }
+
+      const now = Timestamp.now();
+      const docData = {
+        tenantId,
+        fieldType: data.fieldType,
+        label: data.label.trim(),
+        createdAt: now,
+      };
+
+      const docRef = await db.collection("options").add(docData);
+      console.log(`createOption: Success. ID: ${docRef.id}`);
+      return {
+        success: true,
+        optionId: docRef.id,
+        message: "Opção criada com sucesso.",
+      };
+    } catch (error) {
+      console.error("createOption: Error", error);
+      if (error instanceof functions.https.HttpsError) throw error;
+      throw new functions.https.HttpsError("internal", `Erro: ${(error as Error).message}`);
     }
-
-    const now = Timestamp.now();
-    const docData = {
-      tenantId,
-      fieldType: data.fieldType,
-      label: data.label.trim(),
-      createdAt: now,
-    };
-
-    const docRef = await db.collection("options").add(docData);
-    return {
-      success: true,
-      optionId: docRef.id,
-      message: "Opção criada com sucesso.",
-    };
   });
 
 export const updateOption = functions
   .region("southamerica-east1")
   .https.onCall(async (data: { optionId: string; label: string }, context) => {
-    // const db = getFirestore();
-    if (!context.auth)
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "Login necessário."
-      );
+    console.log("updateOption: Started", { data, auth: context.auth?.uid });
+    try {
+      if (!context.auth) {
+        console.warn("updateOption: Unauthenticated");
+        throw new functions.https.HttpsError(
+          "unauthenticated",
+          "Login necessário."
+        );
+      }
 
-    const { docRef } = await checkAuthAndDoc(
-      db,
-      context.auth.uid,
-      "options",
-      data.optionId
-    );
-    await docRef.update({ label: data.label });
-    return { success: true, message: "Opção atualizada com sucesso." };
+      const { docRef } = await checkAuthAndDoc(
+        db,
+        context.auth.uid,
+        "options",
+        data.optionId
+      );
+      await docRef.update({ label: data.label });
+      console.log(`updateOption: Success for ${data.optionId}`);
+      return { success: true, message: "Opção atualizada com sucesso." };
+    } catch (error) {
+      console.error("updateOption: Error", error);
+      if (error instanceof functions.https.HttpsError) throw error;
+      throw new functions.https.HttpsError("internal", `Erro: ${(error as Error).message}`);
+    }
   });
 
 export const deleteOption = functions
   .region("southamerica-east1")
   .https.onCall(async (data: { optionId: string }, context) => {
-    // const db = getFirestore();
-    if (!context.auth)
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "Login necessário."
-      );
+    console.log("deleteOption: Started", { data, auth: context.auth?.uid });
+    try {
+      if (!context.auth) {
+        console.warn("deleteOption: Unauthenticated");
+        throw new functions.https.HttpsError(
+          "unauthenticated",
+          "Login necessário."
+        );
+      }
 
-    const { docRef } = await checkAuthAndDoc(
-      db,
-      context.auth.uid,
-      "options",
-      data.optionId
-    );
-    await docRef.delete();
-    return { success: true, message: "Opção excluída com sucesso." };
+      const { docRef } = await checkAuthAndDoc(
+        db,
+        context.auth.uid,
+        "options",
+        data.optionId
+      );
+      await docRef.delete();
+      console.log(`deleteOption: Success for ${data.optionId}`);
+      return { success: true, message: "Opção excluída com sucesso." };
+    } catch (error) {
+       console.error("deleteOption: Error", error);
+       if (error instanceof functions.https.HttpsError) throw error;
+       throw new functions.https.HttpsError("internal", `Erro: ${(error as Error).message}`);
+    }
   });
 
 // ============================================
