@@ -16,7 +16,8 @@ export default function NewProposalPage() {
         }
     }, [isLoading, canCreate, router]);
 
-    if (isLoading) {
+    // Show loading while checking permissions OR while redirecting (no permission)
+    if (isLoading || !canCreate) {
         return <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin" /></div>;
     }
     return <SimpleProposalForm />

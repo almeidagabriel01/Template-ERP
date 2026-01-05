@@ -4,14 +4,14 @@
 
 // A4 dimensions at 96 DPI
 export const PAGE_HEIGHT_PX = 1080;
-export const CONTENT_MARGIN_Y = 96; // 48px top + 48px bottom
+export const CONTENT_MARGIN_Y = 140; // Increased margin for safety (70px top + 70px bottom)
 export const SAFE_HEIGHT = PAGE_HEIGHT_PX - CONTENT_MARGIN_Y;
 
 // Estimated heights for different content types
 export const ESTIMATED_HEIGHTS = {
   HEADER: 150,
   SECTION_PADDING: 24,
-  LINE_HEIGHT: 24,
+  LINE_HEIGHT: 28, // Increased line height estimation
   IMAGE_DEFAULT: 300,
   PRODUCT_HEADER: 80,
   PRODUCT_ROW: 250,
@@ -48,12 +48,19 @@ export function calculateSectionHeight(section: any): number {
   let height = ESTIMATED_HEIGHTS.SECTION_PADDING;
   
   if (section.type === "text") {
-    const lines = section.content.split("\n").length;
-    height += lines * ESTIMATED_HEIGHTS.LINE_HEIGHT;
-    if (section.styles.marginTop) {
+    // Improved estimation considering word wrapping
+    const charCount = section.content?.length || 0;
+    const charsPerLine = 90; // Conservative estimate for A4 width
+    const estimatedWrapLines = Math.ceil(charCount / charsPerLine);
+    const explicitLines = (section.content || "").split("\n").length;
+    const totalLines = Math.max(estimatedWrapLines, explicitLines);
+
+    height += totalLines * ESTIMATED_HEIGHTS.LINE_HEIGHT;
+    
+    if (section.styles?.marginTop) {
       height += parseInt(section.styles.marginTop as string) || 0;
     }
-    if (section.styles.marginBottom) {
+    if (section.styles?.marginBottom) {
       height += parseInt(section.styles.marginBottom as string) || 0;
     }
   } else if (section.type === "image") {

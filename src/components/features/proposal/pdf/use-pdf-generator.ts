@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { ProposalPdfSettings } from "@/types";
 import { Proposal } from "@/services/proposal-service";
+import { functions } from "@/lib/firebase";
+import { httpsCallable } from "firebase/functions";
+import { toast } from "react-toastify";
+import type { jsPDF } from "jspdf";
+import { PAGE_WIDTH_PX, PAGE_HEIGHT_PX } from "@/utils/pdf-layout";
 
 interface UsePdfGeneratorProps {
   proposal: Partial<Proposal>;
@@ -20,208 +25,214 @@ export function usePdfGenerator({
   const [isGenerating, setIsGenerating] = useState(false);
 
   /**
-   * Preloads all images in a container by converting them to data URLs.
-   * This fixes issues with html2canvas not properly rendering cross-origin images
-   * from Firebase Storage even with useCORS: true.
+   * Proxies all images in a container by replacing their src with base64 data
+   * fetched via Cloud Function to bypass CORS.
    */
-  const preloadImages = async (container: HTMLElement): Promise<void> => {
-    const images = container.querySelectorAll("img");
-    const imagePromises: Promise<void>[] = [];
+  const processImages = async (container: HTMLElement): Promise<void> => {
+    const images = Array.from(container.querySelectorAll("img"));
+    const proxyImageFn = httpsCallable<
+      { url: string },
+      { success: boolean; dataUrl: string }
+    >(functions, "proxyImage");
 
-    images.forEach((img) => {
-      const src = img.src;
-      if (!src || src.startsWith("data:")) return;
+    // Filter unique URLs to avoid duplicate fetches
+    const uniqueUrls = new Set(
+      images
+        .map((img) => img.src)
+        .filter((src) => src && !src.startsWith("data:"))
+    );
 
-      const promise = new Promise<void>((resolve) => {
-        // Create an image element to load the image
-        const tempImg = new Image();
-        tempImg.crossOrigin = "anonymous";
+    console.log(
+      `[PDF Debug] Found ${images.length} images, ${uniqueUrls.size} unique URLs to proxy.`
+    );
 
-        tempImg.onload = () => {
-          try {
-            // Create a canvas to convert to data URL
-            const canvas = document.createElement("canvas");
-            canvas.width = tempImg.naturalWidth;
-            canvas.height = tempImg.naturalHeight;
-            const ctx = canvas.getContext("2d");
-            if (ctx) {
-              ctx.drawImage(tempImg, 0, 0);
-              // Replace the image src with data URL
-              const dataUrl = canvas.toDataURL("image/png");
-              img.src = dataUrl;
-            }
-          } catch (e) {
-            console.warn("Failed to convert image to data URL:", src, e);
+    const urlMap = new Map<string, string>();
+
+    // Fetch all unique images in parallel
+    await Promise.all(
+      Array.from(uniqueUrls).map(async (url) => {
+        try {
+          const result = await proxyImageFn({ url });
+          if (result.data.success) {
+            console.log(`[PDF Debug] Successfully proxied: ${url}`);
+            urlMap.set(url, result.data.dataUrl);
+          } else {
+            console.error(
+              `[PDF Debug] Proxy returned unsuccessful for: ${url}`
+            );
           }
-          resolve();
-        };
+        } catch (error) {
+          console.error("[PDF Debug] Failed to proxy image:", url, error);
+          toast.error(
+            `Falha ao carregar imagem para PDF: ${url.substring(0, 30)}...`
+          );
+        }
+      })
+    );
 
-        tempImg.onerror = () => {
-          console.warn("Failed to load image:", src);
-          resolve();
-        };
-
-        tempImg.src = src;
-      });
-
-      imagePromises.push(promise);
+    // Apply base64 data to images
+    images.forEach((img) => {
+      img.loading = "eager";
+      if (urlMap.has(img.src)) {
+        console.log(
+          `[PDF Debug] Replacing src for image: ${img.src.substring(0, 30)}...`
+        );
+        img.src = urlMap.get(img.src)!;
+      } else {
+        console.warn(
+          `[PDF Debug] No proxy URL found for image: ${img.src.substring(0, 30)}...`
+        );
+      }
     });
 
-    await Promise.all(imagePromises);
-    // Give a small delay for DOM to update
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Wait for images to be "ready" in the DOM
+    await Promise.all(
+      images.map(
+        (img) =>
+          new Promise<void>((resolve) => {
+            if (img.complete) {
+              resolve();
+            } else {
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+            }
+          })
+      )
+    );
+
+    // Extra safety wait for rendering
+    await new Promise((resolve) => setTimeout(resolve, 500));
   };
 
   const handleGenerate = async () => {
     setIsGenerating(true);
 
     try {
-      // Dynamic imports to reduce bundle size
       const html2canvas = (await import("html2canvas")).default;
       const jsPDF = (await import("jspdf")).default;
 
       const pdf = new jsPDF("p", "mm", "a4");
+      // Keep jsPDF in mm, but html2canvas capture uses matching px dimensions
       const pageWidth = 210;
       const pageHeight = 297;
 
-      // Generate cover page if enabled
-      if (includeCover) {
-        const coverElement = document.getElementById("pdf-cover-page");
-        if (coverElement) {
-          // Preload all images in cover before rendering
-          await preloadImages(coverElement);
+      // Container for off-screen rendering
+      const container = document.createElement("div");
+      container.style.position = "absolute";
+      container.style.left = "-9999px";
+      container.style.top = "0";
+      container.style.width = "210mm";
+      document.body.appendChild(container);
 
-          const canvas = await html2canvas(coverElement, {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            backgroundColor: null,
-            onclone: (clonedDoc) => {
-              const allElements = clonedDoc.querySelectorAll("*");
-              allElements.forEach((el) => {
-                const element = el as HTMLElement;
-                const computedStyle = window.getComputedStyle(element);
+      let isFirstPage = true;
 
-                const hasModernColor = (value: string) => {
-                  return (
-                    value &&
-                    (value.includes("lab(") ||
-                      value.includes("oklab(") ||
-                      value.includes("lch(") ||
-                      value.includes("oklch(") ||
-                      value.includes("color("))
-                  );
-                };
+      // Wait for fonts to load
+      await document.fonts.ready;
 
-                if (hasModernColor(computedStyle.backgroundColor)) {
-                  element.style.backgroundColor = "transparent";
-                }
-                if (hasModernColor(computedStyle.color)) {
-                  element.style.color = "#000000";
-                }
-                if (hasModernColor(computedStyle.borderColor)) {
-                  element.style.borderColor = "transparent";
-                }
-                if (hasModernColor(computedStyle.boxShadow)) {
-                  element.style.boxShadow = "none";
-                }
-              });
-            },
-          });
-
-          pdf.addImage(
-            canvas.toDataURL("image/jpeg", 0.95),
-            "JPEG",
-            0,
-            0,
-            pageWidth,
-            pageHeight
-          );
-        }
-      }
-
-      // Generate content pages
-      const previewElement = document.getElementById("proposal-pdf-source");
-      if (previewElement) {
-        const originalStyle = previewElement.style.cssText;
-        previewElement.style.width = "210mm";
-        previewElement.style.fontFamily = settings.fontFamily;
-
-        // Preload all images in content before rendering
-        await preloadImages(previewElement);
-
-        const canvas = await html2canvas(previewElement, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: "#ffffff",
-          onclone: (clonedDoc) => {
-            const allElements = clonedDoc.querySelectorAll("*");
-            allElements.forEach((el) => {
-              const element = el as HTMLElement;
-              const computedStyle = window.getComputedStyle(element);
-
-              const hasModernColor = (value: string) => {
-                return (
-                  value &&
-                  (value.includes("lab(") ||
-                    value.includes("oklab(") ||
-                    value.includes("lch(") ||
-                    value.includes("oklch(") ||
-                    value.includes("color("))
-                );
-              };
-
-              if (hasModernColor(computedStyle.backgroundColor)) {
-                element.style.backgroundColor = "#ffffff";
-              }
-              if (hasModernColor(computedStyle.color)) {
-                element.style.color = "#000000";
-              }
-              if (hasModernColor(computedStyle.borderColor)) {
-                element.style.borderColor = "#cccccc";
-              }
-              if (hasModernColor(computedStyle.boxShadow)) {
-                element.style.boxShadow = "none";
-              }
+      try {
+        // 1. Handle Cover
+        if (includeCover) {
+          const coverEl = document.getElementById("pdf-cover-page");
+          if (coverEl) {
+            const clonedCover = coverEl.cloneNode(true) as HTMLElement;
+            clonedCover.style.width = `${PAGE_WIDTH_PX}px`;
+            clonedCover.style.height = `${PAGE_HEIGHT_PX}px`;
+            clonedCover.style.margin = "0";
+            clonedCover.style.padding = "0";
+            
+            container.appendChild(clonedCover);
+            await processImages(clonedCover);
+            
+            const canvas = await html2canvas(clonedCover, {
+              scale: 2,
+              useCORS: true,
+              logging: false,
+              allowTaint: true,
+              backgroundColor: "#ffffff",
+              scrollY: 0,
             });
-          },
-        });
 
-        // Restore original styles
-        previewElement.style.cssText = originalStyle;
-
-        const imgWidth = pageWidth;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        let heightLeft = imgHeight;
-        let position = 0;
-
-        // Add first content page
-        if (includeCover) pdf.addPage();
-        pdf.addImage(
-          canvas.toDataURL("image/jpeg", 0.95),
-          "JPEG",
-          0,
-          position,
-          imgWidth,
-          imgHeight
-        );
-        heightLeft -= pageHeight;
-
-        // Add remaining pages if content overflows
-        while (heightLeft > 0) {
-          position = heightLeft - imgHeight;
-          pdf.addPage();
-          pdf.addImage(
-            canvas.toDataURL("image/jpeg", 0.95),
-            "JPEG",
-            0,
-            position,
-            imgWidth,
-            imgHeight
-          );
-          heightLeft -= pageHeight;
+            if (!isFirstPage) pdf.addPage();
+            pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 210, 297);
+            isFirstPage = false;
+            
+            container.removeChild(clonedCover);
+          }
         }
+
+        // 2. Handle Content Pages
+        const sourceEl = document.getElementById("proposal-pdf-source");
+        if (sourceEl) {
+          const clonedSource = sourceEl.cloneNode(true) as HTMLElement;
+          clonedSource.style.width = `${PAGE_WIDTH_PX}px`;
+          clonedSource.style.margin = "0";
+          clonedSource.style.padding = "0";
+          
+          container.appendChild(clonedSource);
+          await processImages(clonedSource);
+
+          // Find all page containers
+          const pages = clonedSource.querySelectorAll(".pdf-page-container");
+          
+          if (pages.length > 0) {
+            for (let i = 0; i < pages.length; i++) {
+              const pageEl = pages[i] as HTMLElement;
+              pageEl.style.width = `${PAGE_WIDTH_PX}px`;
+              pageEl.style.height = `${PAGE_HEIGHT_PX}px`;
+              pageEl.style.margin = "0";
+              pageEl.style.boxShadow = "none";
+              pageEl.style.transform = "none";
+              // Ensure background is white
+              pageEl.style.backgroundColor = "#ffffff";
+
+              const canvas = await html2canvas(pageEl, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                allowTaint: true,
+                backgroundColor: "#ffffff",
+                width: PAGE_WIDTH_PX,
+                height: PAGE_HEIGHT_PX,
+                windowWidth: PAGE_WIDTH_PX,
+                windowHeight: PAGE_HEIGHT_PX,
+                scrollY: 0,
+              });
+
+              if (!isFirstPage) pdf.addPage();
+              pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 210, 297);
+              isFirstPage = false;
+            }
+          } else {
+            // Fallback: Render as single block (legacy behavior, but shouldn't happen)
+            const canvas = await html2canvas(clonedSource, {
+              scale: 2,
+              useCORS: true,
+              logging: false,
+              allowTaint: true,
+              backgroundColor: "#ffffff",
+            });
+            
+            const imgWidth = pageWidth;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            if (!isFirstPage) pdf.addPage();
+            pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+
+            while (heightLeft > 1) {
+              position = heightLeft - imgHeight;
+              pdf.addPage();
+              pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, position, imgWidth, imgHeight);
+              heightLeft -= pageHeight;
+            }
+          }
+          
+          container.removeChild(clonedSource);
+        }
+      } finally {
+        document.body.removeChild(container);
       }
 
       // Download
@@ -233,7 +244,7 @@ export function usePdfGenerator({
       setIsOpen(false);
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
-      alert("Erro ao gerar PDF. Verifique o console para mais detalhes.");
+      alert("Erro ao gerar PDF. Tente novamente.");
     } finally {
       setIsGenerating(false);
     }

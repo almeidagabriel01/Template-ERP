@@ -4,13 +4,15 @@ import { ProposalSection } from "@/types";
 import { Proposal } from "@/services/proposal-service";
 import { useTenant } from "@/providers/tenant-provider";
 import { PreviewSection } from "./preview-section";
+import { cn } from "@/lib/utils";
 
 interface ProposalPreviewProps {
   proposal: Partial<Proposal>;
   sections: ProposalSection[];
+  className?: string;
 }
 
-export function ProposalPreview({ proposal, sections }: ProposalPreviewProps) {
+export function ProposalPreview({ proposal, sections, className }: ProposalPreviewProps) {
   const { tenant } = useTenant();
 
   const formatDate = (dateString?: string) => {
@@ -23,7 +25,7 @@ export function ProposalPreview({ proposal, sections }: ProposalPreviewProps) {
   };
 
   return (
-    <div className="bg-card text-gray-900 rounded-lg shadow-lg overflow-hidden">
+    <div className={cn("bg-card text-gray-900 rounded-lg shadow-lg overflow-hidden", className)}>
       {/* A4-like document wrapper */}
       <div
         className="p-8 min-h-[800px] space-y-6"
