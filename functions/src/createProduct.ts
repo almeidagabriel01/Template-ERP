@@ -8,12 +8,8 @@
  */
 
 import * as functions from "firebase-functions";
-import { initializeApp, getApps } from "firebase-admin/app";
-import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
-
-if (getApps().length === 0) {
-  initializeApp();
-}
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { db } from "./init";
 
 interface CreateProductInput {
   name: string;
@@ -50,7 +46,7 @@ interface UserDoc {
 export const createProduct = functions
   .region("southamerica-east1")
   .https.onCall(async (data: CreateProductInput, context) => {
-    const db = getFirestore();
+    // const db = getFirestore();
 
     // 1. Authentication
     if (!context.auth) {

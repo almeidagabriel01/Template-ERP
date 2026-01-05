@@ -15,7 +15,8 @@
  */
 
 import * as functions from "firebase-functions";
-import { getFirestore, Timestamp } from "firebase-admin/firestore";
+import { Timestamp } from "firebase-admin/firestore";
+import { db } from "./init";
 
 // ============================================
 // TYPES
@@ -106,7 +107,7 @@ export const createAmbiente = functions
   .region("southamerica-east1")
   .https.onCall(
     async (data: { name: string; description?: string }, context) => {
-      const db = getFirestore();
+      // const db = getFirestore(); // Uses imported db from ./init
       if (!context.auth)
         throw new functions.https.HttpsError(
           "unauthenticated",
@@ -154,7 +155,7 @@ export const updateAmbiente = functions
       data: { ambienteId: string; name?: string; description?: string },
       context
     ) => {
-      const db = getFirestore();
+      // const db = getFirestore();
       if (!context.auth)
         throw new functions.https.HttpsError(
           "unauthenticated",
@@ -184,7 +185,7 @@ export const updateAmbiente = functions
 export const deleteAmbiente = functions
   .region("southamerica-east1")
   .https.onCall(async (data: { ambienteId: string }, context) => {
-    const db = getFirestore();
+    // const db = getFirestore();
     if (!context.auth)
       throw new functions.https.HttpsError(
         "unauthenticated",
@@ -225,7 +226,7 @@ export const createSistema = functions
       },
       context
     ) => {
-      const db = getFirestore();
+      // const db = getFirestore();
       if (!context.auth)
         throw new functions.https.HttpsError(
           "unauthenticated",
@@ -275,7 +276,7 @@ export const updateSistema = functions
       },
       context
     ) => {
-      const db = getFirestore();
+      // const db = getFirestore();
       if (!context.auth)
         throw new functions.https.HttpsError(
           "unauthenticated",
@@ -310,7 +311,7 @@ export const updateSistema = functions
 export const deleteSistema = functions
   .region("southamerica-east1")
   .https.onCall(async (data: { sistemaId: string }, context) => {
-    const db = getFirestore();
+    // const db = getFirestore();
     if (!context.auth)
       throw new functions.https.HttpsError(
         "unauthenticated",
@@ -344,7 +345,7 @@ export const createCustomField = functions
       },
       context
     ) => {
-      const db = getFirestore();
+      // const db = getFirestore();
       if (!context.auth)
         throw new functions.https.HttpsError(
           "unauthenticated",
@@ -394,7 +395,7 @@ export const updateCustomField = functions
       },
       context
     ) => {
-      const db = getFirestore();
+      // const db = getFirestore();
       if (!context.auth)
         throw new functions.https.HttpsError(
           "unauthenticated",
@@ -427,7 +428,7 @@ export const updateCustomField = functions
 export const deleteCustomField = functions
   .region("southamerica-east1")
   .https.onCall(async (data: { customFieldId: string }, context) => {
-    const db = getFirestore();
+    // const db = getFirestore();
     if (!context.auth)
       throw new functions.https.HttpsError(
         "unauthenticated",
@@ -451,7 +452,7 @@ export const deleteCustomField = functions
 export const createOption = functions
   .region("southamerica-east1")
   .https.onCall(async (data: { fieldType: string; label: string }, context) => {
-    const db = getFirestore();
+    // const db = getFirestore();
     if (!context.auth)
       throw new functions.https.HttpsError(
         "unauthenticated",
@@ -486,7 +487,7 @@ export const createOption = functions
 export const updateOption = functions
   .region("southamerica-east1")
   .https.onCall(async (data: { optionId: string; label: string }, context) => {
-    const db = getFirestore();
+    // const db = getFirestore();
     if (!context.auth)
       throw new functions.https.HttpsError(
         "unauthenticated",
@@ -506,7 +507,7 @@ export const updateOption = functions
 export const deleteOption = functions
   .region("southamerica-east1")
   .https.onCall(async (data: { optionId: string }, context) => {
-    const db = getFirestore();
+    // const db = getFirestore();
     if (!context.auth)
       throw new functions.https.HttpsError(
         "unauthenticated",
@@ -534,7 +535,7 @@ export const createProposalTemplate = functions
       data: { name: string; content?: unknown; isDefault?: boolean },
       context
     ) => {
-      const db = getFirestore();
+      // const db = getFirestore();
       if (!context.auth)
         throw new functions.https.HttpsError(
           "unauthenticated",
@@ -580,7 +581,7 @@ export const updateProposalTemplate = functions
       },
       context
     ) => {
-      const db = getFirestore();
+      // const db = getFirestore();
       if (!context.auth)
         throw new functions.https.HttpsError(
           "unauthenticated",
@@ -612,7 +613,7 @@ export const updateProposalTemplate = functions
 export const deleteProposalTemplate = functions
   .region("southamerica-east1")
   .https.onCall(async (data: { templateId: string }, context) => {
-    const db = getFirestore();
+    // const db = getFirestore();
     if (!context.auth)
       throw new functions.https.HttpsError(
         "unauthenticated",
