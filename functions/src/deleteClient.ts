@@ -3,17 +3,13 @@
  */
 
 import * as functions from "firebase-functions";
-import { initializeApp, getApps } from "firebase-admin/app";
-import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
-
-if (getApps().length === 0) {
-  initializeApp();
-}
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { db } from "./init";
 
 export const deleteClient = functions
   .region("southamerica-east1")
   .https.onCall(async (data: { clientId: string }, context) => {
-    const db = getFirestore();
+    // const db = getFirestore();
 
     if (!context.auth)
       throw new functions.https.HttpsError(

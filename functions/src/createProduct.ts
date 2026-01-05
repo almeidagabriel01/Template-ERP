@@ -8,12 +8,8 @@
  */
 
 import * as functions from "firebase-functions";
-import { initializeApp, getApps } from "firebase-admin/app";
-import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
-
-if (getApps().length === 0) {
-  initializeApp();
-}
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { db } from "./init";
 
 interface CreateProductInput {
   name: string;
@@ -50,126 +46,121 @@ interface UserDoc {
 export const createProduct = functions
   .region("southamerica-east1")
   .https.onCall(async (data: CreateProductInput, context) => {
-    const db = getFirestore();
-
-    // 1. Authentication
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "Login necessário."
-      );
-    }
-
-    const userId = context.auth.uid;
-    const input = data;
-
-    // 2. Input Validation
-    if (!input.name || input.name.trim().length < 2) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "Nome inválido."
-      );
-    }
-
-    // 3. Data Fetching
-    const userRef = db.collection("users").doc(userId);
-    const userSnap = await userRef.get();
-    if (!userSnap.exists)
-      throw new functions.https.HttpsError(
-        "not-found",
-        "Usuário não encontrado."
-      );
-
-    const userData = userSnap.data() as UserDoc;
-    const userCompanyId = userData.tenantId || userData.companyId;
-
-    if (!userCompanyId) {
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "Usuário sem tenantId/companyId vinculado."
-      );
-    }
-
-    // Resolve Master
-    let masterData: UserDoc;
-    let masterRef: FirebaseFirestore.DocumentReference;
-
-    const role = (userData.role as string)?.toUpperCase();
-    const isMaster =
-      role === "MASTER" ||
-      role === "ADMIN" ||
-      role === "WK" ||
-      (!userData.masterId && !userData.masterID && userData.subscription);
-
-    if (isMaster) {
-      masterData = userData;
-      masterRef = userRef;
-    } else {
-      const masterId =
-        userData.masterId || userData.masterID || userData.ownerId;
-      if (!masterId)
+    console.log("createProduct v2: Started", { data, auth: context.auth?.uid });
+    
+    try {
+      // 1. Authentication
+      if (!context.auth) {
+        console.warn("createProduct: Unauthenticated");
         throw new functions.https.HttpsError(
-          "failed-precondition",
-          "Erro de configuração."
-        );
-
-      const permRef = userRef.collection("permissions").doc("products");
-      const masterDocRef = db.collection("users").doc(masterId);
-
-      // Parallel Fetch
-      const [permSnap, masterSnap] = await Promise.all([
-        permRef.get(),
-        masterDocRef.get(),
-      ]);
-
-      if (!permSnap.exists || !permSnap.data()?.canCreate) {
-        throw new functions.https.HttpsError(
-          "permission-denied",
-          "Sem permissão para criar produtos."
+          "unauthenticated",
+          "Login necessário."
         );
       }
 
-      if (!masterSnap.exists)
+      const userId = context.auth.uid;
+      const input = data;
+
+      // 2. Input Validation
+      if (!input.name || input.name.trim().length < 2) {
+        throw new functions.https.HttpsError(
+          "invalid-argument",
+          "Nome inválido."
+        );
+      }
+
+      // 3. Data Fetching
+      const userRef = db.collection("users").doc(userId);
+      const userSnap = await userRef.get();
+      if (!userSnap.exists)
         throw new functions.https.HttpsError(
           "not-found",
-          "Conta principal 404."
+          "Usuário não encontrado."
         );
 
-      masterData = masterSnap.data() as UserDoc;
-      masterRef = masterDocRef;
-    }
+      const userData = userSnap.data() as UserDoc;
+      const userCompanyId = userData.tenantId || userData.companyId;
 
-    const targetCompanyId = masterData.companyId || masterData.tenantId;
+      if (!userCompanyId) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Usuário sem tenantId/companyId vinculado."
+        );
+      }
 
-    if (!targetCompanyId) {
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "Configuração de conta inválida: companyId/tenantId ausente."
-      );
-    }
+      // Resolve Master
+      let masterData: UserDoc;
+      let masterRef: FirebaseFirestore.DocumentReference;
 
-    // Remove redundant company fetch if it's re-fetched in transaction, or keep if needed for pre-check.
-    // Assuming we do transaction later.
-    // Optimization: Don't fetch companyRef here if we are going to do it in runTransaction.
-    // But we need to know if company exists? Transaction will fail if not found?
-    // Let's keep it simple and just do the Auth parallelization first.
+      const role = (userData.role as string)?.toUpperCase();
+      const isMaster =
+        role === "MASTER" ||
+        role === "ADMIN" ||
+        role === "WK" ||
+        (!userData.masterId && !userData.masterID && userData.subscription);
 
-    // 5. Plan Limit Enforcement
-    const maxProducts = masterData.subscription?.limits?.maxProducts;
-    const currentProducts = masterData.usage?.products || 0;
+      if (isMaster) {
+        masterData = userData;
+        masterRef = userRef;
+      } else {
+        const masterId =
+          userData.masterId || userData.masterID || userData.ownerId;
+        if (!masterId)
+          throw new functions.https.HttpsError(
+            "failed-precondition",
+            "Erro de configuração."
+          );
 
-    if (maxProducts !== undefined && currentProducts >= maxProducts) {
-      throw new functions.https.HttpsError(
-        "resource-exhausted",
-        "Limite de produtos atingido para o seu plano."
-      );
-    }
+        const permRef = userRef.collection("permissions").doc("products");
+        const masterDocRef = db.collection("users").doc(masterId);
 
-    // 6. Atomic Write with Usage Counter Increment
-    const now = Timestamp.now();
-    let productId: string;
+        // Parallel Fetch
+        const [permSnap, masterSnap] = await Promise.all([
+          permRef.get(),
+          masterDocRef.get(),
+        ]);
 
-    try {
+        if (!permSnap.exists || !permSnap.data()?.canCreate) {
+          throw new functions.https.HttpsError(
+            "permission-denied",
+            "Sem permissão para criar produtos."
+          );
+        }
+
+        if (!masterSnap.exists)
+          throw new functions.https.HttpsError(
+            "not-found",
+            "Conta principal 404."
+          );
+
+        masterData = masterSnap.data() as UserDoc;
+        masterRef = masterDocRef;
+      }
+
+      const targetCompanyId = masterData.companyId || masterData.tenantId;
+
+      if (!targetCompanyId) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Configuração de conta inválida: companyId/tenantId ausente."
+        );
+      }
+
+      // 5. Plan Limit Enforcement
+      const maxProducts = masterData.subscription?.limits?.maxProducts;
+      const currentProducts = masterData.usage?.products || 0;
+
+      if (maxProducts !== undefined && currentProducts >= maxProducts) {
+        throw new functions.https.HttpsError(
+          "resource-exhausted",
+          "Limite de produtos atingido para o seu plano."
+        );
+      }
+
+      // 6. Atomic Write with Usage Counter Increment
+      const now = Timestamp.now();
+      let productId: string;
+
       productId = await db.runTransaction(async (transaction) => {
         const companyRef = db.collection("companies").doc(targetCompanyId);
         const companySnap = await transaction.get(companyRef);
@@ -205,17 +196,18 @@ export const createProduct = functions
         return newProductRef.id;
       });
 
+      console.log(`createProduct: Success. ID: ${productId}`);
       return {
         success: true,
         productId,
         message: "Produto criado com sucesso!",
       };
     } catch (error) {
-      console.error("Create Product Error:", error);
-      if (error instanceof functions.https.HttpsError) throw error;
-      throw new functions.https.HttpsError(
-        "internal",
-        `Erro ao criar produto: ${(error as Error).message}`
-      );
+       console.error("createProduct: Critical Error", error);
+       if (error instanceof functions.https.HttpsError) throw error;
+       throw new functions.https.HttpsError(
+         "internal",
+         `Erro ao criar produto: ${(error as Error).message}`
+       );
     }
   });
