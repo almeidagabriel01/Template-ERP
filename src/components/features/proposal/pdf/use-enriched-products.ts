@@ -3,16 +3,16 @@ import { useState, useEffect } from "react";
 import { Proposal, ProposalProduct } from "@/services/proposal-service";
 import { ProductService } from "@/services/product-service";
 
-export function useEnrichedProducts(proposal: Proposal, tenantId?: string, options?: { filterInactive?: boolean }) {
+export function useEnrichedProducts(proposal: Proposal | null | undefined, tenantId?: string, options?: { filterInactive?: boolean }) {
   const [enrichedProducts, setEnrichedProducts] = useState<ProposalProduct[]>(
-    proposal.products || []
+    proposal?.products || []
   );
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadProductImages = async () => {
-      if (!tenantId || !proposal.products?.length) {
-        setEnrichedProducts(proposal.products || []);
+      if (!tenantId || !proposal?.products?.length) {
+        setEnrichedProducts(proposal?.products || []);
         setIsLoading(false);
         return;
       }
@@ -25,7 +25,7 @@ export function useEnrichedProducts(proposal: Proposal, tenantId?: string, optio
         const productMap = new Map(catalogProducts.map((p) => [p.id, p]));
 
         // Enrich proposal products with images from catalog
-        const enriched = (proposal.products || []).map((proposalProduct) => {
+        const enriched = (proposal?.products || []).map((proposalProduct) => {
           const catalogProduct = productMap.get(proposalProduct.productId);
           
           // If filtering is enabled and product is inactive, skip it
@@ -55,14 +55,14 @@ export function useEnrichedProducts(proposal: Proposal, tenantId?: string, optio
         setEnrichedProducts(enriched);
       } catch (error) {
         console.error("Error loading product images:", error);
-        setEnrichedProducts(proposal.products || []);
+        setEnrichedProducts(proposal?.products || []);
       } finally {
         setIsLoading(false);
       }
     };
 
     loadProductImages();
-  }, [tenantId, proposal.products, options?.filterInactive]);
+  }, [tenantId, proposal?.products, options?.filterInactive]);
 
   return { products: enrichedProducts, isLoading };
 }

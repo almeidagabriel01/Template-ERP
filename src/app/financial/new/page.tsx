@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Wallet } from "lucide-react";
 import { useTransactionForm } from "../_hooks/useTransactionForm";
@@ -17,12 +18,12 @@ import {
 } from "../_components/form-steps";
 import {
   TrendingUp,
-  TrendingDown,
   FileText,
   CreditCard,
   CheckCircle,
 } from "lucide-react";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { usePagePermission } from "@/hooks/usePagePermission";
 import { UpgradeRequired } from "@/components/ui/upgrade-required";
 
 const transactionSteps = [
@@ -55,6 +56,7 @@ const transactionSteps = [
 export default function NewTransactionPage() {
   const router = useRouter();
   const { hasFinancial, isLoading: planLoading } = usePlanLimits();
+  const { canCreate, isLoading: permLoading } = usePagePermission("financial");
   const {
     formData,
     setFormData,
@@ -68,7 +70,14 @@ export default function NewTransactionPage() {
     isLoading,
   } = useTransactionForm();
 
-  // Check plan access first
+  // Redirect if no create permission
+  useEffect(() => {
+    if (!permLoading && !canCreate) {
+      router.push("/financial");
+    }
+  }, [permLoading, canCreate, router]);
+
+  // Check plan access first - show upgrade page
   if (!planLoading && !hasFinancial) {
     return (
       <UpgradeRequired
@@ -78,7 +87,8 @@ export default function NewTransactionPage() {
     );
   }
 
-  if (isLoading || planLoading) {
+  // Show loading while checking permissions OR plan OR while redirecting (no permission)
+  if (isLoading || planLoading || permLoading || !canCreate) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="flex flex-col items-center gap-3">

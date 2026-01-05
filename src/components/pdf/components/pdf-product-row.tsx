@@ -1,9 +1,23 @@
 import React from "react";
 import { formatCurrency } from "@/utils/format-utils";
 
+interface ProductData {
+    productName: string;
+    productDescription?: string;
+    productImages?: string[];
+    productImage?: string;
+    description?: string;
+    category?: string;
+    manufacturer?: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+}
+
 interface PdfProductRowProps {
-    product: any;
+    product: ProductData;
     index: number;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     contentStyles: any;
 }
 
@@ -20,15 +34,23 @@ export function PdfProductRow({ product, index, contentStyles }: PdfProductRowPr
             <div className="flex flex-row gap-4 overflow-hidden justify-center mb-4">
                 {product.productImages && product.productImages.length > 0 ? (
                     product.productImages.map((img: string, idx: number) => (
-                        <div key={idx} className="w-48 h-48 bg-white rounded-lg border overflow-hidden flex-shrink-0">
+                        <div key={idx} className="w-48 h-48 bg-white rounded-lg border overflow-hidden shrink-0">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={img} alt={`Product ${idx}`} crossOrigin="anonymous" className="w-full h-full object-contain p-2" />
+                            <img
+                                src={img}
+                                alt={`Product ${idx}`}
+                                className="w-full h-full object-contain p-2"
+                            />
                         </div>
                     ))
-                ) : product.productImage ? (
-                    <div className="w-48 h-48 bg-white rounded-lg border overflow-hidden flex-shrink-0">
+                ) : (product.productImage || (product.productImages?.[0])) ? (
+                    <div className="w-48 h-48 bg-white rounded-lg border overflow-hidden shrink-0">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={product.productImage} alt="" crossOrigin="anonymous" className="w-full h-full object-contain p-2" />
+                        <img
+                            src={product.productImages?.[0] || product.productImage || ""}
+                            alt={product.description || ""}
+                            className="w-full h-full object-contain p-2"
+                        />
                     </div>
                 ) : null}
             </div>

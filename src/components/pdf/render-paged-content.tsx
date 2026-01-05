@@ -1,14 +1,23 @@
-import React from "react";
+﻿import React from "react";
 import { PdfSection } from "@/components/features/proposal/pdf-section-editor";
 import { formatCurrency } from "@/utils/format-utils";
+import { cn } from "@/lib/utils";
 import {
-  SAFE_HEIGHT,
   ESTIMATED_HEIGHTS,
   ContentItem,
   calculateSectionHeight,
   calculateProductHeight,
   calculateSistemaBlockHeight
 } from "@/utils/pdf-helpers";
+import {
+  PAGE_WIDTH_PX,
+  PAGE_HEIGHT_PX,
+  PADDING_X,
+  PADDING_TOP,
+  PADDING_BOTTOM,
+  FOOTER_OFFSET,
+  SAFE_HEIGHT_PX,
+} from "@/utils/pdf-layout";
 import {
   PdfSistemaBlock,
   PdfExtraProductsBlock,
@@ -29,6 +38,9 @@ interface RenderPagedContentProps {
   coverTitle: string;
   proposal: any;
   repeatHeader?: boolean;
+  pageNumberStart?: number;
+  className?: string;
+  noMargins?: boolean;
 }
 
 /**
@@ -42,7 +54,6 @@ function buildContentItems(
   const items: ContentItem[] = [];
   const hasSistemas = proposal.sistemas && proposal.sistemas.length > 0;
 
-  // Helper to add products for a sistema as a single block
   const addSistemaProducts = (sistema: any, productsForSistema: any[]) => {
     const sortedProducts = [...productsForSistema].sort((a: any, b: any) => {
       if (a.isExtra && !b.isExtra) return 1;
@@ -59,7 +70,6 @@ function buildContentItems(
     });
   };
 
-  // Helper to add regular products
   const addRegularProducts = (productsToAdd: any[]) => {
     if (productsToAdd.length > 0) {
       items.push({ type: "product-header", height: ESTIMATED_HEIGHTS.PRODUCT_HEADER });
@@ -75,15 +85,13 @@ function buildContentItems(
     }
   };
 
-  // Check for explicit product-table section
-  const productSectionIndex = sections.findIndex(s => s.type === 'product-table');
+  const productSectionIndex = sections.findIndex(s => s.type === "product-table");
 
   if (productSectionIndex !== -1) {
-    // EXPLICIT MODE
+    // Explicit mode: follow product-table placement
     sections.forEach(section => {
-      if (section.type === 'product-table') {
+      if (section.type === "product-table") {
         if (hasSistemas) {
-          // AUTOMATION MODE
           proposal.sistemas.forEach((sistema: any) => {
             const systemInstanceId = `${sistema.sistemaId}-${sistema.ambienteId}`;
             let productsForSistema = products.filter((p: any) => p.systemInstanceId === systemInstanceId);
@@ -98,7 +106,6 @@ function buildContentItems(
             }
           });
 
-          // Extra products
           const sistemaProductIds = new Set(
             proposal.sistemas.flatMap((s: any) => s.productIds || [])
           );
@@ -131,9 +138,9 @@ function buildContentItems(
       }
     });
   } else {
-    // SMART FALLBACK MODE
+    // Smart fallback: insert products near footer-like sections
     let insertIndex = -1;
-    const footerKeywords = ["garantia", "termos", "condições", "considerações", "obrigado", "agradecemos", "validade"];
+    const footerKeywords = ["garantia", "termos", "condiÃ§Ãµes", "consideraÃ§Ãµes", "obrigado", "agradecemos", "validade"];
 
     for (let i = 0; i < sections.length; i++) {
       const text = (sections[i].content || "").toLowerCase();
@@ -210,33 +217,41 @@ function buildContentItems(
 /**
  * Distributes content items across pages respecting height limits
  */
-function distributeIntoPages(items: ContentItem[]): ContentItem[][] {
+function distributeIntoPages(items: ContentItem[], repeatHeader: boolean = false): ContentItem[][] {
+  const filtered = items.filter(item => item.type !== "extra-products-header");
+
   const pages: ContentItem[][] = [];
   let currentPage: ContentItem[] = [];
+  // First page always has header
   let currentHeight = ESTIMATED_HEIGHTS.HEADER;
 
-  items.forEach((item, index) => {
+  filtered.forEach((item, index) => {
     let forceBreak = false;
 
     // Orphan Control
     if (item.type === "product-header" || (item.type === "section" && item.data?.type === "title")) {
       const nextItem = items[index + 1];
-      if (nextItem && currentHeight + item.height + nextItem.height > SAFE_HEIGHT) {
+      if (nextItem && currentHeight + item.height + nextItem.height > SAFE_HEIGHT_PX) {
         forceBreak = true;
       }
     }
 
     // Keep blocks together
     if (item.type === "sistema-block" || item.type === "extra-products-block") {
-      if (currentHeight + item.height > SAFE_HEIGHT && currentHeight > ESTIMATED_HEIGHTS.HEADER) {
+      // Only break if it really doesn't fit, but try to respect the header space if applicable
+      const startHeight = pages.length === 0 ? ESTIMATED_HEIGHTS.HEADER : (repeatHeader ? ESTIMATED_HEIGHTS.HEADER : 0);
+      if (currentHeight + item.height > SAFE_HEIGHT_PX && currentHeight > startHeight) {
         forceBreak = true;
       }
     }
 
-    if (forceBreak || currentHeight + item.height > SAFE_HEIGHT) {
-      pages.push(currentPage);
+    if (forceBreak || currentHeight + item.height > SAFE_HEIGHT_PX) {
+      if (currentPage.length > 0) {
+        pages.push(currentPage);
+      }
       currentPage = [];
-      currentHeight = 60;
+      // Subsequent pages: only reserve header space if repeatHeader is true
+      currentHeight = repeatHeader ? ESTIMATED_HEIGHTS.HEADER : 0;
     }
 
     currentPage.push(item);
@@ -261,10 +276,64 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
   coverTitle,
   proposal,
   repeatHeader,
+  className,
+  noMargins,
+  pageNumberStart = 1,
 }) => {
-  // Build and paginate content
-  const items = buildContentItems(sections, products, proposal);
-  const pages = distributeIntoPages(items);
+  const measureRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Build raw items (without relying on estimates for layout)
+  const items = React.useMemo(() => buildContentItems(sections, products, proposal), [sections, products, proposal]);
+
+  const [pages, setPages] = React.useState<ContentItem[][]>(() => distributeIntoPages(items, repeatHeader));
+
+  React.useLayoutEffect(() => {
+    if (!measureRef.current) return;
+
+    const measureContainer = measureRef.current;
+    let resizeObserver: ResizeObserver | null = null;
+
+    const updateLayout = () => {
+      if (!measureContainer) return;
+      const nodes = Array.from(measureContainer.children) as HTMLElement[];
+      const measuredHeights = nodes.map(n => n.getBoundingClientRect().height);
+
+      // Check if heights are valid (non-zero) to avoid premature layout
+      const hasValidHeights = measuredHeights.some(h => h > 0);
+      if (!hasValidHeights && items.length > 0) return;
+
+      const hydrated = items.map((item, idx) => ({
+        ...item,
+        height: measuredHeights[idx] > 0 ? measuredHeights[idx] : (item.height ?? 0)
+      }));
+
+      setPages(distributeIntoPages(hydrated, repeatHeader));
+    };
+
+    // Initial measure
+    updateLayout();
+
+    // Observe size changes (images loading, fonts, etc)
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver((entries) => {
+        // Debounce slightly or just update
+        window.requestAnimationFrame(() => {
+          updateLayout();
+        });
+      });
+
+      Array.from(measureContainer.children).forEach(child => {
+        resizeObserver?.observe(child);
+      });
+    }
+
+    // Also listen for font loading
+    document.fonts.ready.then(updateLayout);
+
+    return () => {
+      resizeObserver?.disconnect();
+    };
+  }, [items]);
 
   // Render a single item
   const renderItem = (item: ContentItem) => {
@@ -305,7 +374,7 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
             className="text-xl font-bold mb-4 pb-2 border-b-2 mt-4"
             style={contentStyles.productTitle}
           >
-            Produtos e Serviços
+            Produtos e ServiÃ§os
           </h2>
         );
 
@@ -337,22 +406,88 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
     }
   };
 
+  // Hidden measurement column (single flow) to derive real heights
+  const contentInnerWidth = PAGE_WIDTH_PX - PADDING_X * 2;
+
+  const contentTypes = new Set([
+    "section",
+    "product-header",
+    "product-row",
+    "totals",
+    "sistema-block",
+    "extra-products-block",
+  ]);
+
+  const visiblePages = pages.filter(pageItems =>
+    pageItems.some(item => contentTypes.has(item.type))
+  );
+
   return (
     <>
-      {pages.map((pageItems, pageIndex) => (
+      <div
+        ref={measureRef}
+        aria-hidden
+        style={{
+          position: "absolute",
+          left: -99999,
+          top: 0,
+          width: contentInnerWidth,
+          padding: `${PADDING_TOP}px ${PADDING_X}px ${PADDING_BOTTOM}px`,
+          visibility: "hidden",
+          pointerEvents: "none",
+        }}
+      >
+        {items.map((item, idx) => (
+          <div key={`measure-${idx}`}>
+            {renderItem(item)}
+          </div>
+        ))}
+      </div>
+
+      {visiblePages.map((pageItems, pageIndex) => (
         <div
           key={pageIndex}
-          className="pdf-page-container h-[297mm] w-[210mm] mx-auto relative bg-white shadow-sm mb-8 overflow-hidden"
-          style={{ fontFamily, ...contentStyles.container }}
+          className={cn(
+            "pdf-page-container mx-auto relative bg-white shadow-sm mb-8 overflow-hidden box-border",
+            className
+          )}
+          style={{
+            fontFamily,
+            ...contentStyles.container,
+            width: `${PAGE_WIDTH_PX}px`,
+            height: `${PAGE_HEIGHT_PX}px`,
+            marginBottom: noMargins ? 0 : undefined,
+            boxShadow: noMargins ? "none" : undefined,
+            position: "relative", // Ensure absolute children are relative to this
+          }}
           data-page-index={pageIndex + 1}
         >
-          {/* Theme Decorations */}
-          <div className="absolute inset-0 pointer-events-none">
+          {/* Theme Decorations - Constrained to this page */}
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              overflow: "hidden",
+              zIndex: 1,
+            }}
+          >
             {renderThemeDecorations()}
           </div>
 
           {/* Page Content */}
-          <div className="p-12 relative z-10 h-full flex flex-col">
+          <div
+            className="relative z-10"
+            style={{
+              padding: `${PADDING_TOP}px ${PADDING_X}px 48px`,
+              height: `${PAGE_HEIGHT_PX}px`,
+              boxSizing: "border-box",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
             {/* Header */}
             {(pageIndex === 0 || repeatHeader) && (
               <PdfPageHeader
@@ -363,8 +498,14 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
               />
             )}
 
-            {/* Items */}
-            <div className="flex-1">
+            {/* Items - Flex grow to fill available space */}
+            <div
+              style={{
+                flex: 1,
+                minHeight: 0,
+                overflow: "hidden",
+              }}
+            >
               {pageItems.map((item, idx) => (
                 <React.Fragment key={idx}>
                   {renderItem(item)}
@@ -372,9 +513,19 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
               ))}
             </div>
 
-            {/* Page Number */}
-            <div className="absolute bottom-6 right-8 text-xs text-muted-foreground z-20">
-              {pageIndex + 2}
+            {/* Page Number Footer - In normal flow */}
+            <div
+              className="text-xs text-muted-foreground"
+              style={{ 
+                display: "flex", 
+                justifyContent: "flex-end",
+                alignItems: "center",
+                height: "24px",
+                paddingTop: "8px",
+                flexShrink: 0,
+              }}
+            >
+              {pageNumberStart + pageIndex}
             </div>
           </div>
         </div>
@@ -382,3 +533,4 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
     </>
   );
 };
+

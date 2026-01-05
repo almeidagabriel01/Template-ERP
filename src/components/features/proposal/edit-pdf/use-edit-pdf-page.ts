@@ -7,6 +7,7 @@ import { useTenant } from "@/providers/tenant-provider";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { ProposalService, Proposal } from "@/services/proposal-service";
 import { ProposalDefaults } from "@/lib/proposal-defaults";
+import { PAGE_WIDTH_PX, PAGE_HEIGHT_PX } from "@/utils/pdf-layout";
 import {
   PdfSection,
   createDefaultSections,
@@ -261,8 +262,8 @@ export function useEditPdfPage() {
       container.style.position = "absolute";
       container.style.top = "-9999px";
       container.style.left = "-9999px";
-      container.style.width = "210mm";
-      container.style.height = "297mm";
+      container.style.width = `${PAGE_WIDTH_PX}px`;
+      container.style.height = `${PAGE_HEIGHT_PX}px`;
       document.body.appendChild(container);
 
       try {
@@ -273,6 +274,8 @@ export function useEditPdfPage() {
           clonedPage.style.transform = "none";
           clonedPage.style.margin = "0";
           clonedPage.style.boxShadow = "none";
+          clonedPage.style.width = `${PAGE_WIDTH_PX}px`;
+          clonedPage.style.height = `${PAGE_HEIGHT_PX}px`;
 
           container.innerHTML = "";
           container.appendChild(clonedPage);
@@ -282,10 +285,10 @@ export function useEditPdfPage() {
             useCORS: true,
             logging: false,
             backgroundColor: "#ffffff",
-            width: container.offsetWidth,
-            height: container.offsetHeight,
-            windowWidth: container.offsetWidth,
-            windowHeight: container.offsetHeight,
+            width: PAGE_WIDTH_PX,
+            height: PAGE_HEIGHT_PX,
+            windowWidth: PAGE_WIDTH_PX,
+            windowHeight: PAGE_HEIGHT_PX,
             onclone: (clonedDoc) => {
               const allElements = clonedDoc.querySelectorAll("*");
               allElements.forEach((el) => {

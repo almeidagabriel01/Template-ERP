@@ -2,6 +2,7 @@
 import React from "react";
 import { Proposal } from "@/services/proposal-service";
 import { ThemeType, adjustColor } from "@/components/features/proposal/edit-pdf/pdf-theme-utils";
+import { PAGE_HEIGHT_PX, PAGE_WIDTH_PX, PADDING_X } from "@/utils/pdf-layout";
 
 interface PdfCoverPageProps {
     theme: ThemeType;
@@ -31,9 +32,9 @@ export function PdfCoverPage({
     fontFamily,
 }: PdfCoverPageProps) {
     const coverStyle: React.CSSProperties = {
-        height: "297mm",
-        width: "210mm",
-        padding: "48px",
+        height: `${PAGE_HEIGHT_PX}px`,
+        width: `${PAGE_WIDTH_PX}px`,
+        padding: `${PADDING_X}px`,
         fontFamily,
         position: "relative",
         overflow: "hidden",

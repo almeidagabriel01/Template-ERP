@@ -76,3 +76,5 @@ export {
   transferBetweenWallets,
   adjustWalletBalance,
 } from "./walletFunctions";
+
+export { proxyImage } from "./proxyImage";

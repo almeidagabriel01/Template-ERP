@@ -110,7 +110,6 @@ export function PdfExtraProductsBlock({ products, primaryColor }: PdfExtraProduc
                                     <img
                                         src={product.productImages?.[0] || product.productImage}
                                         alt=""
-                                        crossOrigin="anonymous"
                                         className="w-full h-full object-contain p-1"
                                     />
                                 </div>

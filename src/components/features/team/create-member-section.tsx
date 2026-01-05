@@ -26,6 +26,7 @@ import {
   useCreateMember,
   getDefaultPermissions,
 } from "@/hooks/useCreateMember";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { UpgradeModal, useUpgradeModal } from "@/components/ui/upgrade-modal";
 import { ROLE_PRESETS, AVAILABLE_PAGES } from "./team-types";
 import { PermissionToggle } from "./permission-toggle";
@@ -85,6 +86,7 @@ const steps = [
 export function CreateMemberSection({ onSuccess }: CreateMemberSectionProps) {
   const { createMember, isLoading, error } = useCreateMember();
   const upgradeModal = useUpgradeModal();
+  const { hasFinancial } = usePlanLimits();
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -186,7 +188,7 @@ export function CreateMemberSection({ onSuccess }: CreateMemberSectionProps) {
 
 
   return (
-    <div className="relative rounded-2xl border-2 border-dashed border-primary/30 bg-gradient-to-br from-primary/5 via-background to-primary/5 overflow-hidden">
+    <div className="relative rounded-2xl border-2 border-dashed border-primary/30 bg-linear-to-br from-primary/5 via-background to-primary/5 overflow-hidden">
       {/* Decorative elements */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-linear-to-br from-primary/10 to-transparent rounded-full -translate-y-32 translate-x-32" />
       <div className="absolute bottom-0 left-0 w-48 h-48 bg-linear-to-tr from-primary/10 to-transparent rounded-full translate-y-24 -translate-x-24" />
@@ -424,6 +426,11 @@ export function CreateMemberSection({ onSuccess }: CreateMemberSectionProps) {
                     const pageInfo = AVAILABLE_PAGES.find(p => p.id === page);
                     const pageName = pageInfo?.name || page;
                     const isViewOnly = pageInfo?.viewOnly || false;
+
+                    // Skip Financial module if tenant doesn't have access
+                    if (page === "financial" && !hasFinancial) {
+                      return null;
+                    }
 
                     return (
                       <div
