@@ -59,6 +59,7 @@ export {
   stripeConfirm,
   stripeAddonCheckout,
   stripeAddonConfirm,
+  stripeCancelAddon,
   stripePortal,
   stripeUpdate,
   stripePreview,
@@ -76,3 +77,5 @@ export {
   transferBetweenWallets,
   adjustWalletBalance,
 } from "./walletFunctions";
+
+export { proxyImage } from "./proxyImage";

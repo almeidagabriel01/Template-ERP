@@ -18,6 +18,7 @@ import { PdfCoverPage } from "./pdf-cover-page";
 import { PdfSettingsTabs, usePdfGenerator } from "./pdf";
 import { useEnrichedProducts } from "@/components/features/proposal/pdf/use-enriched-products";
 import { ProposalPreview } from "@/components/features/proposal/proposal-preview";
+import { ProposalPdfViewer } from "@/components/pdf/proposal-pdf-viewer";
 
 interface PdfGeneratorProps {
     proposal: Partial<Proposal>;
@@ -59,16 +60,36 @@ export function PdfGenerator({ proposal, sections }: PdfGeneratorProps) {
             {/* Hidden Cover Page for PDF generation */}
             {includeCover && (
                 <div className="fixed -left-[9999px] top-0">
-                    <div id="pdf-cover-page" className="w-[210mm] h-[297mm]">
+                    <div
+                      id="pdf-cover-page"
+                      style={{ width: "794px", height: "1123px" }}
+                    >
                         <PdfCoverPage proposal={proposal} theme={coverTheme} />
                     </div>
                 </div>
             )}
 
-            {/* Hidden Preview for Filtered PDF Generation */}
-            <div className="fixed -left-[9999px] top-0">
-                 <div id="proposal-pdf-source" className="w-[210mm]">
-                      <ProposalPreview proposal={pdfProposal} sections={sections} />
+              {/* Hidden Preview for Filtered PDF Generation */}
+              <div className="fixed -left-[9999px] top-0">
+                  <div
+                    id="proposal-pdf-source"
+                    className="flex flex-col"
+                    style={{ width: "794px" }}
+                  >
+                      <ProposalPdfViewer 
+                        proposal={pdfProposal as Proposal} 
+                        tenant={tenant}
+                        showCover={false} // Cover is handled separately
+                        noMargins={true} // Ensure no margins between pages
+                        customSettings={{
+                            sections: sections as any,
+                            primaryColor: settings.primaryColor,
+                            fontFamily: settings.fontFamily,
+                            theme: coverTheme,
+                                                        pageNumberStart: includeCover ? 2 : 1,
+                        }}
+                        className="shadow-none mb-0"
+                      />
                  </div>
             </div>
 

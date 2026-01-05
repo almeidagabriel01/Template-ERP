@@ -17,6 +17,7 @@ import {
 import { TeamMember, AVAILABLE_PAGES } from "./team-types";
 import { PagePermissionRow } from "./page-permission-row";
 import { EditMemberModal, DeleteMemberDialog } from "./member-modals";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
 
 interface MemberCardProps {
     member: TeamMember;
@@ -36,6 +37,7 @@ export function MemberCard({
     const [isExpanded, setIsExpanded] = React.useState(false);
     const [showEdit, setShowEdit] = React.useState(false);
     const [showDelete, setShowDelete] = React.useState(false);
+    const { hasFinancial } = usePlanLimits();
 
     return (
         <>
@@ -47,7 +49,7 @@ export function MemberCard({
                         className="flex-1 p-2 flex items-center justify-between"
                     >
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                            <div className="w-12 h-12 rounded-full bg-linear-to-br from-primary/20 to-primary/5 flex items-center justify-center">
                                 <span className="font-bold text-primary text-lg">
                                     {member.name.charAt(0).toUpperCase()}
                                 </span>
@@ -97,17 +99,22 @@ export function MemberCard({
                         </h4>
 
                         <div className="space-y-2">
-                            {AVAILABLE_PAGES.map((page) => (
-                                <PagePermissionRow
-                                    key={page.id}
-                                    page={page}
-                                    permission={member.permissions[page.id] || { canView: false }}
-                                    onUpdate={(key, value) => onUpdatePermission(member.id, page.id, key, value)}
-                                    saving={saving}
-                                    updatingKey={updatingKey}
-                                    memberId={member.id}
-                                />
-                            ))}
+                            {AVAILABLE_PAGES.map((page) => {
+                                // Hide financial permission if tenant doesn't have it
+                                if (page.id === "financial" && !hasFinancial) return null;
+
+                                return (
+                                    <PagePermissionRow
+                                        key={page.id}
+                                        page={page}
+                                        permission={member.permissions[page.id] || { canView: false }}
+                                        onUpdate={(key, value) => onUpdatePermission(member.id, page.id, key, value)}
+                                        saving={saving}
+                                        updatingKey={updatingKey}
+                                        memberId={member.id}
+                                    />
+                                );
+                            })}
                         </div>
 
                         <p className="text-xs text-muted-foreground mt-4 flex items-center gap-1">

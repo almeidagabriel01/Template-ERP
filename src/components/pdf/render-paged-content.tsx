@@ -1,6 +1,5 @@
-import React from "react";
+﻿import React from "react";
 import { PdfSection } from "@/components/features/proposal/pdf-section-editor";
-import { formatCurrency } from "@/utils/format-utils";
 import {
   SAFE_HEIGHT,
   ESTIMATED_HEIGHTS,
@@ -18,16 +17,60 @@ import {
   PdfPageHeader,
 } from "./components";
 
+// Type definitions
+interface Product {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  isExtra?: boolean;
+  productImage?: string;
+  productImages?: string[];
+  productDescription?: string;
+  systemInstanceId?: string;
+}
+
+interface Sistema {
+  sistemaId: string;
+  sistemaName: string;
+  ambienteId: string;
+  ambienteName: string;
+  description?: string;
+  productIds?: string[];
+}
+
+interface Proposal {
+  sistemas?: Sistema[];
+  discount?: number;
+  clientName: string;
+  title?: string;
+}
+
+interface Tenant {
+  id: string;
+  name: string;
+  logoUrl?: string;
+  primaryColor?: string;
+}
+
+interface ContentStyles {
+  container: Record<string, string | number>;
+  headerTitle: Record<string, string | number>;
+  sectionText: Record<string, string | number>;
+  productTitle: Record<string, string | number>;
+}
+
 interface RenderPagedContentProps {
   sections: PdfSection[];
-  products: any[];
+  products: Product[];
   fontFamily: string;
-  contentStyles: any;
+  contentStyles: ContentStyles;
   primaryColor: string;
   renderThemeDecorations: () => React.ReactNode;
-  tenant: any;
+  tenant: Tenant | null;
   coverTitle: string;
-  proposal: any;
+  proposal: Proposal;
   repeatHeader?: boolean;
 }
 
@@ -36,15 +79,14 @@ interface RenderPagedContentProps {
  */
 function buildContentItems(
   sections: PdfSection[],
-  products: any[],
-  proposal: any
+  products: Product[],
+  proposal: Proposal
 ): ContentItem[] {
   const items: ContentItem[] = [];
   const hasSistemas = proposal.sistemas && proposal.sistemas.length > 0;
 
-  // Helper to add products for a sistema as a single block
-  const addSistemaProducts = (sistema: any, productsForSistema: any[]) => {
-    const sortedProducts = [...productsForSistema].sort((a: any, b: any) => {
+  const addSistemaProducts = (sistema: Sistema, productsForSistema: Product[]) => {
+    const sortedProducts = [...productsForSistema].sort((a: Product, b: Product) => {
       if (a.isExtra && !b.isExtra) return 1;
       if (!a.isExtra && b.isExtra) return -1;
       return 0;
@@ -59,8 +101,7 @@ function buildContentItems(
     });
   };
 
-  // Helper to add regular products
-  const addRegularProducts = (productsToAdd: any[]) => {
+  const addRegularProducts = (productsToAdd: Product[]) => {
     if (productsToAdd.length > 0) {
       items.push({ type: "product-header", height: ESTIMATED_HEIGHTS.PRODUCT_HEADER });
       productsToAdd.forEach((product, i) => {
@@ -75,22 +116,19 @@ function buildContentItems(
     }
   };
 
-  // Check for explicit product-table section
   const productSectionIndex = sections.findIndex(s => s.type === 'product-table');
 
   if (productSectionIndex !== -1) {
-    // EXPLICIT MODE
     sections.forEach(section => {
       if (section.type === 'product-table') {
         if (hasSistemas) {
-          // AUTOMATION MODE
-          proposal.sistemas.forEach((sistema: any) => {
+          proposal.sistemas!.forEach((sistema: Sistema) => {
             const systemInstanceId = `${sistema.sistemaId}-${sistema.ambienteId}`;
-            let productsForSistema = products.filter((p: any) => p.systemInstanceId === systemInstanceId);
+            let productsForSistema = products.filter((p: Product) => p.systemInstanceId === systemInstanceId);
 
-            const isLegacy = !products.some((p: any) => p.systemInstanceId);
+            const isLegacy = !products.some((p: Product) => p.systemInstanceId);
             if (productsForSistema.length === 0 && isLegacy) {
-              productsForSistema = products.filter((p: any) => sistema.productIds?.includes(p.productId));
+              productsForSistema = products.filter((p: Product) => sistema.productIds?.includes(p.productId));
             }
 
             if (productsForSistema.length > 0) {
@@ -98,11 +136,10 @@ function buildContentItems(
             }
           });
 
-          // Extra products
           const sistemaProductIds = new Set(
-            proposal.sistemas.flatMap((s: any) => s.productIds || [])
+            proposal.sistemas!.flatMap((s: Sistema) => s.productIds || [])
           );
-          const extraProducts = products.filter((p: any) => !p.systemInstanceId && !sistemaProductIds.has(p.productId));
+          const extraProducts = products.filter((p: Product) => !p.systemInstanceId && !sistemaProductIds.has(p.productId));
 
           if (extraProducts.length > 0) {
             let blockHeight = 140;
@@ -131,7 +168,6 @@ function buildContentItems(
       }
     });
   } else {
-    // SMART FALLBACK MODE
     let insertIndex = -1;
     const footerKeywords = ["garantia", "termos", "condições", "considerações", "obrigado", "agradecemos", "validade"];
 
@@ -150,13 +186,13 @@ function buildContentItems(
     for (let i = 0; i < sections.length; i++) {
       if (i === insertIndex) {
         if (hasSistemas) {
-          proposal.sistemas.forEach((sistema: any) => {
+          proposal.sistemas!.forEach((sistema: Sistema) => {
             const systemInstanceId = `${sistema.sistemaId}-${sistema.ambienteId}`;
-            let productsForSistema = products.filter((p: any) => p.systemInstanceId === systemInstanceId);
+            let productsForSistema = products.filter((p: Product) => p.systemInstanceId === systemInstanceId);
 
-            const isLegacy = !products.some((p: any) => p.systemInstanceId);
+            const isLegacy = !products.some((p: Product) => p.systemInstanceId);
             if (productsForSistema.length === 0 && isLegacy) {
-              productsForSistema = products.filter((p: any) => sistema.productIds?.includes(p.productId));
+              productsForSistema = products.filter((p: Product) => sistema.productIds?.includes(p.productId));
             }
 
             if (productsForSistema.length > 0) {
@@ -165,9 +201,9 @@ function buildContentItems(
           });
 
           const sistemaProductIds = new Set(
-            proposal.sistemas.flatMap((s: any) => s.productIds || [])
+            proposal.sistemas!.flatMap((s: Sistema) => s.productIds || [])
           );
-          const extraProducts = products.filter((p: any) => !p.systemInstanceId && !sistemaProductIds.has(p.productId));
+          const extraProducts = products.filter((p: Product) => !p.systemInstanceId && !sistemaProductIds.has(p.productId));
 
           if (extraProducts.length > 0) {
             items.push({ type: "extra-products-header", height: 60 });
@@ -189,8 +225,8 @@ function buildContentItems(
 
     if (insertIndex >= sections.length) {
       if (hasSistemas) {
-        proposal.sistemas.forEach((sistema: any) => {
-          const productsForSistema = products.filter((p: any) =>
+        proposal.sistemas!.forEach((sistema: Sistema) => {
+          const productsForSistema = products.filter((p: Product) =>
             sistema.productIds?.includes(p.productId)
           );
           if (productsForSistema.length > 0) {
@@ -208,7 +244,7 @@ function buildContentItems(
 }
 
 /**
- * Distributes content items across pages respecting height limits
+ * Distributes content items across pages
  */
 function distributeIntoPages(items: ContentItem[]): ContentItem[][] {
   const pages: ContentItem[][] = [];
@@ -218,7 +254,6 @@ function distributeIntoPages(items: ContentItem[]): ContentItem[][] {
   items.forEach((item, index) => {
     let forceBreak = false;
 
-    // Orphan Control
     if (item.type === "product-header" || (item.type === "section" && item.data?.type === "title")) {
       const nextItem = items[index + 1];
       if (nextItem && currentHeight + item.height + nextItem.height > SAFE_HEIGHT) {
@@ -226,7 +261,6 @@ function distributeIntoPages(items: ContentItem[]): ContentItem[][] {
       }
     }
 
-    // Keep blocks together
     if (item.type === "sistema-block" || item.type === "extra-products-block") {
       if (currentHeight + item.height > SAFE_HEIGHT && currentHeight > ESTIMATED_HEIGHTS.HEADER) {
         forceBreak = true;
@@ -262,11 +296,9 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
   proposal,
   repeatHeader,
 }) => {
-  // Build and paginate content
   const items = buildContentItems(sections, products, proposal);
   const pages = distributeIntoPages(items);
 
-  // Render a single item
   const renderItem = (item: ContentItem) => {
     switch (item.type) {
       case "section":
@@ -342,38 +374,74 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
       {pages.map((pageItems, pageIndex) => (
         <div
           key={pageIndex}
-          className="pdf-page-container h-[297mm] w-[210mm] mx-auto relative bg-white shadow-sm mb-8 overflow-hidden"
-          style={{ fontFamily, ...contentStyles.container }}
+          className="mx-auto bg-white shadow-sm mb-8"
+          style={{
+            fontFamily,
+            width: "210mm",
+            height: "297mm",
+            position: "relative",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+          }}
           data-page-index={pageIndex + 1}
         >
-          {/* Theme Decorations */}
-          <div className="absolute inset-0 pointer-events-none">
+          {/* Theme Decorations - Fixed to page */}
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              pointerEvents: "none",
+              zIndex: 0,
+            }}
+          >
             {renderThemeDecorations()}
           </div>
 
-          {/* Page Content */}
-          <div className="p-12 relative z-10 h-full flex flex-col">
+          {/* Content Area */}
+          <div
+            style={{
+              position: "relative",
+              zIndex: 10,
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              padding: "48px",
+              minHeight: 0,
+            }}
+          >
             {/* Header */}
             {(pageIndex === 0 || repeatHeader) && (
               <PdfPageHeader
-                tenantName={tenant?.name}
+                tenantName={tenant?.name || ""}
                 coverTitle={coverTitle}
                 clientName={proposal.clientName}
                 contentStyles={contentStyles}
               />
             )}
 
-            {/* Items */}
-            <div className="flex-1">
+            {/* Main Content - Grows to fill space */}
+            <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
               {pageItems.map((item, idx) => (
-                <React.Fragment key={idx}>
-                  {renderItem(item)}
-                </React.Fragment>
+                <React.Fragment key={idx}>{renderItem(item)}</React.Fragment>
               ))}
             </div>
 
-            {/* Page Number */}
-            <div className="absolute bottom-6 right-8 text-xs text-muted-foreground z-20">
+            {/* Footer - Always at bottom */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                alignItems: "center",
+                paddingTop: "16px",
+                fontSize: "12px",
+                color: "#6b7280",
+                flexShrink: 0,
+              }}
+            >
               {pageIndex + 2}
             </div>
           </div>

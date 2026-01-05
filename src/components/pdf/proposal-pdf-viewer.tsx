@@ -19,6 +19,9 @@ interface ProposalPdfViewerProps {
   proposal: Proposal;
   template?: ProposalTemplate | null;
   tenant: Tenant | null;
+  className?: string;
+  showCover?: boolean;
+  noMargins?: boolean;
   // Overrides for live preview
   customSettings?: {
     theme?: ThemeType;
@@ -32,6 +35,7 @@ interface ProposalPdfViewerProps {
     coverImagePosition?: string;
     sections?: PdfSection[];
     repeatHeader?: boolean;
+    pageNumberStart?: number;
   };
 }
 
@@ -40,6 +44,9 @@ export function ProposalPdfViewer({
   template,
   tenant,
   customSettings,
+  className,
+  showCover = true,
+  noMargins = false,
 }: ProposalPdfViewerProps) {
   // Use enriched products hook (filter out inactive products for PDF)
   const { products } = useEnrichedProducts(proposal, tenant?.id, { filterInactive: true });
@@ -89,19 +96,21 @@ export function ProposalPdfViewer({
 
   return (
     <>
-      <PdfCoverPage
-        theme={theme}
-        primaryColor={primaryColor}
-        coverImage={coverImage}
-        coverImageOpacity={coverImageOpacity}
-        coverImageFit={coverImageFit}
-        coverImagePosition={coverImagePosition}
-        coverLogo={coverLogo}
-        tenant={tenant}
-        coverTitle={coverTitle}
-        proposal={proposal}
-        fontFamily={fontFamily}
-      />
+      {showCover && (
+        <PdfCoverPage
+          theme={theme}
+          primaryColor={primaryColor}
+          coverImage={coverImage}
+          coverImageOpacity={coverImageOpacity}
+          coverImageFit={coverImageFit}
+          coverImagePosition={coverImagePosition}
+          coverLogo={coverLogo}
+          tenant={tenant}
+          coverTitle={coverTitle}
+          proposal={proposal}
+          fontFamily={fontFamily}
+        />
+      )}
       <RenderPagedContent
         sections={displaySections}
         products={products}

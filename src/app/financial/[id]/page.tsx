@@ -18,6 +18,8 @@ import {
 import { InstallmentsCard } from "../_components";
 import { TransactionFormData } from "../_hooks/useTransactionForm";
 import { TrendingUp, FileText, CreditCard, CheckCircle } from "lucide-react";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { UpgradeRequired } from "@/components/ui/upgrade-required";
 
 const transactionSteps = [
   {
@@ -48,6 +50,7 @@ const transactionSteps = [
 
 export default function EditTransactionPage() {
   const router = useRouter();
+  const { hasFinancial, isLoading: planLoading } = usePlanLimits();
   const {
     formData,
     setFormData,
@@ -62,7 +65,8 @@ export default function EditTransactionPage() {
     canEdit,
   } = useEditTransaction();
 
-  if (isLoading) {
+  // Show loading first - before checking plan access to avoid flash
+  if (isLoading || planLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="flex flex-col items-center gap-3">
@@ -70,6 +74,16 @@ export default function EditTransactionPage() {
           <p className="text-sm text-muted-foreground">Carregando...</p>
         </div>
       </div>
+    );
+  }
+
+  // Check plan access after loading is complete
+  if (!hasFinancial) {
+    return (
+      <UpgradeRequired
+        feature="Editar Lançamento"
+        description="O módulo Financeiro permite gerenciar suas receitas, despesas e fluxo de caixa. Faça upgrade para o plano Profissional ou Enterprise para acessar."
+      />
     );
   }
 
@@ -104,8 +118,17 @@ export default function EditTransactionPage() {
     ...formData,
     clientId: formData.clientId || "",
     isInstallment: false,
-    installmentCount: 2,
+    installmentCount: transaction?.installmentCount || 2,
   };
+
+  // Calculate total amount (sum of all installments) for display
+  const totalValueOverride =
+    transaction?.isInstallment && relatedInstallments.length > 0
+      ? relatedInstallments
+          .filter((t) => t.id !== transaction!.id)
+          .reduce((sum, t) => sum + t.amount, 0) +
+        parseFloat(formData.amount || "0")
+      : undefined;
 
   const handleFormSubmit = async () => {
     const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
@@ -127,6 +150,7 @@ export default function EditTransactionPage() {
           formData={adaptedFormData}
           onChange={() => {}}
           onClientChange={() => {}}
+          totalOverride={totalValueOverride}
         />
 
         {relatedInstallments.length > 0 && (
@@ -223,6 +247,7 @@ export default function EditTransactionPage() {
             formData={adaptedFormData}
             onChange={handleChange}
             onClientChange={handleClientChange}
+            totalOverride={totalValueOverride}
           />
           <StepNavigation
             onSubmit={handleFormSubmit}

@@ -162,7 +162,8 @@ export default function NewCustomerPage() {
     }
   };
 
-  if (permLoading) {
+  // Show loading while checking permissions OR while redirecting (no permission)
+  if (permLoading || !canCreate) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="flex flex-col items-center gap-3">

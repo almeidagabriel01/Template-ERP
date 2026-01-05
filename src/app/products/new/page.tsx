@@ -20,7 +20,8 @@ export default function NewProductPage() {
         }
     }, [isLoading, canCreate, router]);
 
-    if (isLoading) {
+    // Show loading while checking permissions OR while redirecting (no permission)
+    if (isLoading || !canCreate) {
         return (
             <div className="flex items-center justify-center min-h-[50vh]">
                 <div className="flex flex-col items-center gap-3">
@@ -43,3 +44,4 @@ export default function NewProductPage() {
         </FormContainer>
     );
 }
+

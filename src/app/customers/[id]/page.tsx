@@ -203,7 +203,8 @@ export default function EditCustomerPage() {
     }
   };
 
-  if (isLoading || permLoading) {
+  // Show loading while permissions/data loading OR while redirecting (no view permission)
+  if (isLoading || permLoading || !canView) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="flex flex-col items-center gap-3">
