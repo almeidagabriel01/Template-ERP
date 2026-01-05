@@ -50,7 +50,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     React.useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-            setIsOpen(false);
+          setIsOpen(false);
         }
       };
       document.addEventListener("mousedown", handleClickOutside);
@@ -61,28 +61,28 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
       // Update internal state check (if needed) but mainly fire external event
       if (resolvedRef.current) {
         resolvedRef.current.value = newValue;
-        
+
         // Dispatch React-compatible change event
         const event = new Event('change', { bubbles: true });
         resolvedRef.current.dispatchEvent(event);
-        
+
         // Also manually call prop if provided (for safety with controlled components)
         // Creating a synthetic-like event object
         const syntheticEvent = {
-            target: resolvedRef.current,
-            currentTarget: resolvedRef.current,
-            bubbles: true,
-            cancelable: false,
-            defaultPrevented: false,
-            eventPhase: 3,
-            isTrusted: true,
-            nativeEvent: event as Event,
-            preventDefault: () => {},
-            isDefaultPrevented: () => false,
-            stopPropagation: () => {},
-            isPropagationStopped: () => false,
-            persist: () => {},
-            type: 'change'
+          target: resolvedRef.current,
+          currentTarget: resolvedRef.current,
+          bubbles: true,
+          cancelable: false,
+          defaultPrevented: false,
+          eventPhase: 3,
+          isTrusted: true,
+          nativeEvent: event as Event,
+          preventDefault: () => { },
+          isDefaultPrevented: () => false,
+          stopPropagation: () => { },
+          isPropagationStopped: () => false,
+          persist: () => { },
+          type: 'change'
         } as unknown as React.ChangeEvent<HTMLSelectElement>;
 
         onChange?.(syntheticEvent);
@@ -93,8 +93,8 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     const selectedOption = options.find(opt => String(opt.value) === String(value));
 
     return (
-      <div 
-        className={cn("relative group w-full", wrapperClassName, className)} 
+      <div
+        className={cn("relative group w-full", wrapperClassName)}
         ref={containerRef}
       >
         {/* Helper Native Select - Hidden but functional for forms/refs */}
@@ -106,29 +106,30 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           {...props}
           tabIndex={-1}
         >
-            {children}
+          {children}
         </select>
 
         {/* Custom Trigger */}
         <div
           onClick={() => !props.disabled && setIsOpen(!isOpen)}
           className={cn(
-            "flex h-12 w-full items-center justify-between rounded-xl border-2 border-border/60 bg-background px-4 py-3 text-sm text-foreground",
+            "flex h-12 w-full items-center justify-between rounded-xl border-2 border-border/60 bg-card px-4 py-3 text-sm text-foreground",
             "shadow-sm transition-all duration-200 ease-out cursor-pointer",
             "hover:border-primary/40 hover:shadow-md",
             isOpen && "border-primary ring-4 ring-primary/10 shadow-lg shadow-primary/10",
             props.disabled && "cursor-not-allowed opacity-50 hover:border-border/60 hover:shadow-sm",
-            selectClassName
+            selectClassName,
+            className
           )}
         >
           <span className={cn(!selectedOption && "text-muted-foreground")}>
             {selectedOption ? selectedOption.label : placeholder}
           </span>
-          <ChevronDown 
+          <ChevronDown
             className={cn(
-                "h-5 w-5 text-muted-foreground transition-transform duration-200", 
-                isOpen && "rotate-180 text-primary"
-            )} 
+              "h-5 w-5 text-muted-foreground transition-transform duration-200",
+              isOpen && "rotate-180 text-primary"
+            )}
           />
         </div>
 
@@ -138,27 +139,27 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             <div className="max-h-[200px] overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
               {options.length > 0 ? (
                 options.map((option) => {
-                    const isSelected = String(option.value) === String(value);
-                    return (
-                        <div
-                            key={option.value}
-                            onClick={() => handleSelect(option.value)}
-                            className={cn(
-                                "relative flex w-full cursor-pointer select-none items-center rounded-lg py-2.5 pl-3 pr-2 text-sm outline-none transition-colors",
-                                "hover:bg-accent hover:text-accent-foreground",
-                                isSelected && "bg-accent/50 font-medium text-accent-foreground"
-                            )}
-                        >
-                            <span className="flex-1 truncate">{option.label}</span>
-                            {isSelected && (
-                                <Check className="h-4 w-4 text-primary ml-2" />
-                            )}
-                        </div>
-                    );
+                  const isSelected = String(option.value) === String(value);
+                  return (
+                    <div
+                      key={option.value}
+                      onClick={() => handleSelect(option.value)}
+                      className={cn(
+                        "relative flex w-full cursor-pointer select-none items-center rounded-lg py-2.5 pl-3 pr-2 text-sm outline-none transition-colors",
+                        "hover:bg-accent hover:text-accent-foreground",
+                        isSelected && "bg-accent/50 font-medium text-accent-foreground"
+                      )}
+                    >
+                      <span className="flex-1 truncate">{option.label}</span>
+                      {isSelected && (
+                        <Check className="h-4 w-4 text-primary ml-2" />
+                      )}
+                    </div>
+                  );
                 })
               ) : (
                 <div className="p-2 text-sm text-muted-foreground text-center">
-                    Sem opções
+                  Sem opções
                 </div>
               )}
             </div>

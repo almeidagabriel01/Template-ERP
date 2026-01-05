@@ -4,9 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, X, Crown, Flag } from "lucide-react";
+import { Upload, X, Crown } from "lucide-react";
 import { ThemeType, themeOptions } from "./pdf-theme-utils";
 import { PdfSection } from "@/components/features/proposal/pdf-section-editor";
+import { ALLOWED_TYPES } from "@/services/storage-service";
 
 interface PdfCoverTabProps {
   coverTitle: string;
@@ -54,6 +55,13 @@ export function PdfCoverTab({
   const handleCoverImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        alert(
+          "O arquivo deve ser uma imagem válida (JPEG, PNG, GIF, WebP ou SVG)."
+        );
+        e.target.value = "";
+        return;
+      }
       if (file.size > 2 * 1024 * 1024) {
         alert("A imagem de capa deve ter no máximo 2MB.");
         e.target.value = "";
@@ -70,6 +78,13 @@ export function PdfCoverTab({
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        alert(
+          "O arquivo deve ser uma imagem válida (JPEG, PNG, GIF, WebP ou SVG)."
+        );
+        e.target.value = "";
+        return;
+      }
       if (file.size > 1 * 1024 * 1024) {
         alert("O logo deve ter no máximo 1MB.");
         e.target.value = "";
@@ -201,7 +216,9 @@ export function PdfCoverTab({
                 <Label className="text-xs">Ajuste</Label>
                 <Select
                   value={coverImageFit}
-                  onChange={(e) => setCoverImageFit(e.target.value as any)}
+                  onChange={(e) =>
+                    setCoverImageFit(e.target.value as "cover" | "contain")
+                  }
                 >
                   <option value="cover">Preencher (Cover)</option>
                   <option value="contain">Conter (Contain)</option>
@@ -241,7 +258,9 @@ export function PdfCoverTab({
                     }
                     setTheme(t.value as ThemeType);
                     // Set default color if available
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     if ((t as any).defaultColor) {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       setPrimaryColor((t as any).defaultColor);
                     }
                     // Reset section colors to ensure theme application
@@ -260,7 +279,7 @@ export function PdfCoverTab({
                       }))
                     );
                   }}
-                  className={`relative p-3 rounded-lg border-2 text-left transition-all ${
+                  className={`relative p-3 rounded-lg border-2 text-left transition-all cursor-pointer ${
                     isPremiumTemplate
                       ? "border-border opacity-75 hover:opacity-100"
                       : theme === t.value
@@ -270,10 +289,13 @@ export function PdfCoverTab({
                 >
                   {isPremiumTemplate && (
                     <div
-                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center shadow-sm"
-                      style={{ backgroundColor: premiumColor }}
+                      className="absolute -top-2 -right-2 p-1.5 rounded-full shadow-md bg-background border"
+                      style={{ borderColor: `${premiumColor}40` }}
                     >
-                      <Crown className="w-3.5 h-3.5 text-white" />
+                      <Crown
+                        className="w-4 h-4"
+                        style={{ color: premiumColor, fill: premiumColor }}
+                      />
                     </div>
                   )}
                   <div

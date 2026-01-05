@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Wallet } from "lucide-react";
 import { useTransactionForm } from "../_hooks/useTransactionForm";
@@ -15,13 +16,10 @@ import {
   PaymentStep,
   ReviewStep,
 } from "../_components/form-steps";
-import {
-  TrendingUp,
-  TrendingDown,
-  FileText,
-  CreditCard,
-  CheckCircle,
-} from "lucide-react";
+import { TrendingUp, FileText, CreditCard, CheckCircle } from "lucide-react";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { usePagePermission } from "@/hooks/usePagePermission";
+import { UpgradeRequired } from "@/components/ui/upgrade-required";
 
 const transactionSteps = [
   {
@@ -52,6 +50,8 @@ const transactionSteps = [
 
 export default function NewTransactionPage() {
   const router = useRouter();
+  const { hasFinancial, isLoading: planLoading } = usePlanLimits();
+  const { canCreate, isLoading: permLoading } = usePagePermission("financial");
   const {
     formData,
     setFormData,
@@ -65,7 +65,15 @@ export default function NewTransactionPage() {
     isLoading,
   } = useTransactionForm();
 
-  if (isLoading) {
+  // Redirect if no create permission
+  useEffect(() => {
+    if (!permLoading && !canCreate) {
+      router.push("/financial");
+    }
+  }, [permLoading, canCreate, router]);
+
+  // Show loading first - before checking plan access to avoid flash
+  if (isLoading || planLoading || permLoading || !canCreate) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="flex flex-col items-center gap-3">
@@ -76,12 +84,22 @@ export default function NewTransactionPage() {
     );
   }
 
+  // Check plan access after loading is complete
+  if (!hasFinancial) {
+    return (
+      <UpgradeRequired
+        feature="Novo Lançamento"
+        description="O módulo Financeiro permite gerenciar suas receitas, despesas e fluxo de caixa. Faça upgrade para o plano Profissional ou Enterprise para acessar."
+      />
+    );
+  }
+
   const handleFormSubmit = async () => {
     const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
     await handleSubmit(fakeEvent);
   };
 
-  // Step 2 validation: Description, amount, date and dueDate are required
+  // Step 2 validation: Description, amount, date are required. dueDate required only for income.
   const validateStep2 = (): boolean => {
     let isValid = true;
 
@@ -96,20 +114,11 @@ export default function NewTransactionPage() {
     if (!formData.date) {
       setFieldError("date", "Data é obrigatória");
       isValid = false;
-    } else {
-      // Check if date is today or later - parse date parts to avoid timezone issues
-      const [year, month, day] = formData.date.split("-").map(Number);
-      const selectedDate = new Date(year, month - 1, day);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      selectedDate.setHours(0, 0, 0, 0);
-      if (selectedDate < today) {
-        setFieldError("date", "Data deve ser hoje ou posterior");
-        isValid = false;
-      }
     }
-    if (!formData.dueDate) {
-      setFieldError("dueDate", "Vencimento é obrigatório");
+
+    // dueDate is required only for income (receita)
+    if (formData.type === "income" && !formData.dueDate) {
+      setFieldError("dueDate", "Vencimento é obrigatório para receitas");
       isValid = false;
     } else if (formData.date && formData.dueDate) {
       // Check if dueDate is not before date - parse date parts to avoid timezone issues
@@ -128,6 +137,15 @@ export default function NewTransactionPage() {
     }
 
     return isValid;
+  };
+
+  // Step 3 validation: Wallet is required
+  const validateStep3 = (): boolean => {
+    if (!formData.wallet || formData.wallet.trim() === "") {
+      setFieldError("wallet", "Carteira é obrigatória");
+      return false;
+    }
+    return true;
   };
 
   return (
@@ -166,8 +184,9 @@ export default function NewTransactionPage() {
             formData={formData}
             onFormDataChange={setFormData}
             onChange={handleChange}
+            errors={errors}
           />
-          <StepNavigation />
+          <StepNavigation onBeforeNext={validateStep3} />
         </StepCard>
 
         {/* Step 4: Review */}

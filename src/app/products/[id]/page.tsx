@@ -48,7 +48,8 @@ export default function EditProductPage() {
         loadProduct();
     }, [id]);
 
-    if (loading) {
+    // Show loading while permissions/product loading OR while redirecting (no view permission)
+    if (loading || permLoading || !canView) {
         return (
             <div className="flex items-center justify-center min-h-[50vh]">
                 <div className="flex flex-col items-center gap-3">

@@ -108,7 +108,7 @@ export function usePlanChange(
         }
         toastShownRef.current = true;
         localStorage.removeItem("profile_message");
-      } catch (e) {
+      } catch {
         localStorage.removeItem("profile_message");
       }
       window.history.replaceState({}, "", "/profile");
@@ -263,6 +263,7 @@ export function usePlanChange(
         planTier: selectedPlan.tier,
         userEmail: effectiveUser.email,
         billingInterval: billingInterval,
+        origin: window.location.origin,
       });
 
       if (data.url) {
@@ -296,6 +297,7 @@ export function usePlanChange(
       const { StripeService } = await import("@/services/stripe-service");
       const data = await StripeService.createPortalSession({
         userId: effectiveUser.id,
+        origin: window.location.origin,
       });
 
       if (data.url) {

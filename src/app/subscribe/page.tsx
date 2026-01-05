@@ -22,7 +22,6 @@ function SubscribeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isLoading: isAuthLoading } = useAuth();
-  const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Ref to prevent multiple checkout initiations
@@ -64,7 +63,6 @@ function SubscribeContent() {
 
     // Only set processing on first attempt
     if (retryCount === 0) {
-      setIsProcessing(true);
       setError(null);
     }
 
@@ -76,6 +74,7 @@ function SubscribeContent() {
         planTier: planTier,
         userEmail: user.email,
         billingInterval: billingInterval as "monthly" | "yearly",
+        origin: window.location.origin,
       });
 
       if (data.url) {
@@ -103,10 +102,10 @@ function SubscribeContent() {
         return initiateCheckout(retryCount + 1);
       }
 
+
       setError(
         err instanceof Error ? err.message : "Erro ao processar assinatura"
       );
-      setIsProcessing(false);
       // Reset ref so user can retry manually
       checkoutInitiatedRef.current = false;
     }

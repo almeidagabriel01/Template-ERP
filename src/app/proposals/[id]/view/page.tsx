@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Proposal } from "@/services/proposal-service"; // Types only
-import { ProposalStatus, ProposalTemplate } from "@/types";
+import { ProposalTemplate } from "@/types";
 import { useTenant } from "@/providers/tenant-provider";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { usePagePermission } from "@/hooks/usePagePermission";
@@ -21,6 +21,9 @@ import {
 } from "lucide-react";
 import { ProposalService } from "@/services/proposal-service";
 import { ProposalDefaults } from "@/lib/proposal-defaults";
+import { functions } from "@/lib/firebase";
+import { httpsCallable } from "firebase/functions";
+import { toast } from "react-toastify";
 
 export default function ViewProposalPage() {
   const params = useParams();
@@ -90,111 +93,338 @@ export default function ViewProposalPage() {
         "proposal-preview-content"
       );
       if (!previewElement) {
-        alert("Erro: Preview não encontrado");
+        toast.error("Erro: Preview não encontrado");
         return;
       }
 
-      const canvas = await html2canvas(previewElement, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-        onclone: (clonedDoc) => {
-          const allElements = clonedDoc.querySelectorAll("*");
-          allElements.forEach((el) => {
-            const element = el as HTMLElement;
-            const computedStyle = window.getComputedStyle(element);
+      // --- DEEP FLATTENING HELPERS ---
 
-            // Helper to check if a value contains modern color functions
-            const hasModernColor = (value: string) => {
-              return (
-                value &&
-                (value.includes("lab(") ||
-                  value.includes("oklab(") ||
-                  value.includes("lch(") ||
-                  value.includes("oklch(") ||
-                  value.includes("color("))
-              );
-            };
+      const canvas = document.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      const canvasCtx = canvas.getContext("2d", { willReadFrequently: true });
 
-            // Sanitize all color-related properties
-            if (hasModernColor(computedStyle.backgroundColor)) {
-              element.style.backgroundColor = "#ffffff";
-            }
-            if (hasModernColor(computedStyle.color)) {
-              element.style.color = "#000000";
-            }
-            if (hasModernColor(computedStyle.borderColor)) {
-              element.style.borderColor = "transparent";
-            }
-            if (hasModernColor(computedStyle.borderTopColor)) {
-              element.style.borderTopColor = "transparent";
-            }
-            if (hasModernColor(computedStyle.borderRightColor)) {
-              element.style.borderRightColor = "transparent";
-            }
-            if (hasModernColor(computedStyle.borderBottomColor)) {
-              element.style.borderBottomColor = "transparent";
-            }
-            if (hasModernColor(computedStyle.borderLeftColor)) {
-              element.style.borderLeftColor = "transparent";
-            }
-            if (hasModernColor(computedStyle.outlineColor)) {
-              element.style.outlineColor = "transparent";
-            }
-            if (hasModernColor(computedStyle.boxShadow)) {
-              element.style.boxShadow = "none";
-            }
-            if (hasModernColor(computedStyle.textShadow)) {
-              element.style.textShadow = "none";
-            }
-            if (hasModernColor(computedStyle.textDecorationColor)) {
-              element.style.textDecorationColor = "currentColor";
-            }
-            if (hasModernColor(computedStyle.caretColor)) {
-              element.style.caretColor = "auto";
-            }
-          });
-        },
-      });
+      // PIXEL READ STRATEGY: Guarantees RGB with Fallback
+      const safeColor = (color: string, propertyName: string = "") => {
+        if (!canvasCtx || !color || color === "none") return color;
+        // Optimization
+        if (color.startsWith("#") || color.startsWith("rgb")) return color;
+        if (color === "transparent") return "transparent";
 
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pageWidth = 210;
-      const pageHeight = 297;
-      const imgWidth = pageWidth;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
+        try {
+          canvasCtx.clearRect(0, 0, 1, 1);
+          canvasCtx.fillStyle = color;
+          canvasCtx.fillRect(0, 0, 1, 1);
 
-      pdf.addImage(
-        canvas.toDataURL("image/jpeg", 0.95),
-        "JPEG",
-        0,
-        position,
-        imgWidth,
-        imgHeight
-      );
-      heightLeft -= pageHeight;
+          const [r, g, b, a] = canvasCtx.getImageData(0, 0, 1, 1).data;
 
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(
-          canvas.toDataURL("image/jpeg", 0.95),
-          "JPEG",
-          0,
-          position,
-          imgWidth,
-          imgHeight
-        );
-        heightLeft -= pageHeight;
+          if (a === 0) {
+            if (propertyName.toLowerCase() === 'color') return "#000000";
+            if (propertyName.toLowerCase().includes("border") || propertyName.toLowerCase().includes("stroke")) return "#000000";
+          }
+
+          const rgba = `rgba(${r}, ${g}, ${b}, ${a / 255})`;
+          return rgba;
+        } catch {
+          if (propertyName.toLowerCase() === 'color') return "#000000";
+          return "transparent";
+        }
+      };
+
+      const containsModernColor = (value: string) => {
+        return /(lab|oklch|oklab|lch|color)\(/.test(value);
+      };
+
+      const deepCloneWithStyles = (node: HTMLElement): HTMLElement => {
+        const clone = node.cloneNode(false) as HTMLElement;
+
+        clone.removeAttribute("id");
+        clone.removeAttribute("class");
+
+        const computed = window.getComputedStyle(node);
+
+        // COMPREHENSIVE LIST OF PROPERTIES FOR VISUAL FIDELITY
+        const propertiesToCopy = [
+          // Layout Enforcers (Critical)
+          "display", "position", "boxSizing",
+          "top", "left", "right", "bottom",
+          "width", "height", "minWidth", "minHeight", "maxWidth", "maxHeight",
+          "margin", "marginTop", "marginBottom", "marginLeft", "marginRight",
+          "padding", "paddingTop", "paddingBottom", "paddingLeft", "paddingRight",
+
+          // Borders
+          "borderTopWidth", "borderBottomWidth", "borderLeftWidth", "borderRightWidth",
+          "borderTopStyle", "borderBottomStyle", "borderLeftStyle", "borderRightStyle",
+          "borderTopColor", "borderBottomColor", "borderLeftColor", "borderRightColor",
+          "borderTopLeftRadius", "borderTopRightRadius", "borderBottomLeftRadius", "borderBottomRightRadius",
+          "outline", "outlineColor", "outlineStyle", "outlineWidth",
+
+          // Flex & Grid
+          "flex", "flexDirection", "flexWrap", "justifyContent", "alignItems", "alignContent", "gap", "order", "flexGrow", "flexShrink", "flexBasis",
+          "gridTemplateColumns", "gridTemplateRows", "gridTemplateAreas", "gridAutoColumns", "gridAutoRows", "gridAutoFlow", "gridColumn", "gridRow", "gridArea", "columnGap", "rowGap",
+
+          // Typography
+          "font", "fontFamily", "fontSize", "fontWeight", "fontStyle", "lineHeight", "letterSpacing", "textAlign", "textTransform", "textDecoration", "textDecorationColor", "textUnderlineOffset", "whiteSpace", "wordBreak", "overflowWrap", "textOverflow", "verticalAlign",
+
+          // Visuals
+          "color", "backgroundColor",
+          "opacity", "visibility", "zIndex",
+          "boxShadow", "overflow", "overflowX", "overflowY",
+          "transform", "transformOrigin",
+          "fill", "stroke", "strokeWidth",
+          "objectFit", "objectPosition", "aspectRatio"
+        ];
+
+        propertiesToCopy.forEach(prop => {
+          let val = computed[prop as keyof CSSStyleDeclaration];
+          if (!val || typeof val !== 'string') return;
+
+          // 1. Sanitize Colors
+          if (typeof val === 'string') {
+            if (prop.toLowerCase().includes("color") || prop.toLowerCase() === "fill" || prop.toLowerCase() === "stroke") {
+              val = safeColor(val, prop);
+            }
+            // 2. Kill Complex Bad Color Strings
+            else if (containsModernColor(val)) {
+              if (prop.toLowerCase().includes("shadow")) {
+                val = "none";
+              } else {
+                val = "";
+              }
+            }
+          }
+
+          if (val) {
+            const kebab = prop.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2').toLowerCase();
+            clone.style.setProperty(kebab, val, "important");
+          }
+        });
+
+        // Background Image Sanitize
+        if (computed.backgroundImage && computed.backgroundImage !== "none") {
+          if (containsModernColor(computed.backgroundImage)) {
+            clone.style.backgroundImage = "none";
+            clone.style.backgroundColor = safeColor(computed.backgroundColor, "backgroundColor");
+          } else {
+            clone.style.backgroundImage = computed.backgroundImage;
+          }
+        }
+
+        if (node instanceof HTMLImageElement) {
+          (clone as HTMLImageElement).src = node.src;
+          (clone as HTMLImageElement).loading = "eager";
+        }
+
+        // SVG HANDLING
+        if (node instanceof SVGElement) {
+          const fill = computed.fill;
+          const stroke = computed.stroke;
+          if (fill && containsModernColor(fill)) {
+            clone.style.setProperty("fill", safeColor(fill, "fill"), "important");
+          }
+          if (stroke && containsModernColor(stroke)) {
+            clone.style.setProperty("stroke", safeColor(stroke, "stroke"), "important");
+          }
+        }
+
+        // --- CRITICAL FIX: USE childNodes INSTEAD OF children TO INCLUDE TEXT NODES ---
+        Array.from(node.childNodes).forEach(child => {
+          if (child.nodeType === Node.ELEMENT_NODE) { // 1
+            clone.appendChild(deepCloneWithStyles(child as HTMLElement));
+          } else if (child.nodeType === Node.TEXT_NODE) { // 3
+            clone.appendChild(child.cloneNode(true));
+          } else if (child.nodeType === Node.COMMENT_NODE) {
+            // Ignore comments
+          } else {
+            // Clone other types (like CDATA) just in case
+            clone.appendChild(child.cloneNode(true));
+          }
+        });
+
+        return clone;
+      };
+
+      // --- EXECUTION (IFRAME ISOLATION) ---
+
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "absolute";
+      iframe.style.left = "-9999px";
+      iframe.style.top = "0";
+      iframe.style.width = "210mm";
+      iframe.style.height = "297mm";
+      iframe.style.border = "none";
+      document.body.appendChild(iframe);
+
+      if (!iframe.contentDocument || !iframe.contentWindow) {
+        throw new Error("Iframe could not be created");
       }
 
-      const filename = `proposta-${proposal?.title?.toLowerCase().replace(/\s+/g, "-") || "comercial"}.pdf`;
-      pdf.save(filename);
+      const iframeDoc = iframe.contentDocument;
+
+      try {
+        // --- 1. FONT INJECTION ---
+        const styleElement = iframeDoc.createElement("style");
+        let fontFaceRules = "";
+
+        try {
+          Array.from(document.styleSheets).forEach(sheet => {
+            try {
+              Array.from(sheet.cssRules).forEach(rule => {
+                if (rule.type === CSSRule.FONT_FACE_RULE) {
+                  let ruleText = rule.cssText;
+                  ruleText = ruleText.replace(
+                    /url\((['"]?)\//g,
+                    `url($1${window.location.origin}/`
+                  );
+                  fontFaceRules += ruleText + "\n";
+                }
+              });
+            } catch {
+              // Ignore
+            }
+          });
+        } catch (e) {
+          console.warn("Could not copy fonts", e);
+        }
+
+        styleElement.textContent = fontFaceRules;
+        iframeDoc.head.appendChild(styleElement);
+
+
+        // --- 2. CLONE & INSERT ---
+        const clonedElement = deepCloneWithStyles(previewElement);
+
+        // Reset margins
+        clonedElement.style.margin = "0";
+        clonedElement.style.marginLeft = "0";
+        clonedElement.style.marginRight = "0";
+        clonedElement.style.marginTop = "0";
+        clonedElement.style.marginBottom = "0";
+        clonedElement.style.boxShadow = "none";
+        clonedElement.style.transform = "none";
+
+        const container = iframeDoc.createElement("div");
+        container.style.width = "210mm";
+        container.style.minWidth = "210mm";
+        container.style.maxWidth = "210mm";
+        container.style.backgroundColor = "#ffffff";
+        container.appendChild(clonedElement);
+
+        iframeDoc.body.style.margin = "0";
+        iframeDoc.body.style.padding = "0";
+        iframeDoc.body.appendChild(container);
+
+        // --- 3. WAIT ---
+        try {
+          await iframeDoc.fonts.ready;
+        } catch (e) {
+          console.warn("Font loading wait failed", e);
+        }
+
+        // --- 4. PROXY ---
+        const images = Array.from(container.querySelectorAll("img"));
+        if (images.length > 0) {
+          const proxyImageFn = httpsCallable<
+            { url: string },
+            { success: boolean; dataUrl: string }
+          >(functions, "proxyImage");
+
+          const uniqueUrls = new Set(
+            images
+              .map((img) => img.src)
+              .filter((src) => src && !src.startsWith("data:"))
+          );
+
+          const urlMap = new Map<string, string>();
+
+          await Promise.all(
+            Array.from(uniqueUrls).map(async (url) => {
+              try {
+                const result = await proxyImageFn({ url });
+                if (result.data.success) {
+                  urlMap.set(url, result.data.dataUrl);
+                }
+              } catch {
+                console.warn("Failed to proxy image:", url);
+              }
+            })
+          );
+
+          images.forEach((img) => {
+            if (urlMap.has(img.src)) {
+              img.src = urlMap.get(img.src)!;
+            }
+          });
+
+          await Promise.all(
+            images.map((img) => new Promise<void>((resolve) => {
+              if (img.complete) resolve();
+              else {
+                img.onload = () => resolve();
+                img.onerror = () => resolve();
+              }
+            }))
+          );
+
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+
+        // --- 5. RENDER EACH PAGE INDIVIDUALLY ---
+        const pageContainers = container.querySelectorAll('[data-page-index]');
+
+        if (pageContainers.length === 0) {
+          toast.error("Erro: Nenhuma página encontrada para gerar PDF");
+          return;
+        }
+
+        const pdf = new jsPDF("p", "mm", "a4");
+        const pageWidth = 210;
+        const pageHeight = 297;
+
+        // Capture and add each page individually
+        for (let i = 0; i < pageContainers.length; i++) {
+          const pageElement = pageContainers[i] as HTMLElement;
+
+          // Capture this specific page
+          const pageCanvas = await html2canvas(pageElement, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            allowTaint: true,
+            backgroundColor: "#ffffff",
+            width: 794,  // Fixed A4 width
+            height: 1123, // Fixed A4 height
+          });
+
+          // Add page to PDF (add new page for all except first)
+          if (i > 0) {
+            pdf.addPage();
+          }
+
+          // Add the page image to fill the entire PDF page
+          pdf.addImage(
+            pageCanvas.toDataURL("image/jpeg", 0.95),
+            "JPEG",
+            0,
+            0,
+            pageWidth,
+            pageHeight
+          );
+        }
+
+
+        const filename = `proposta-${proposal?.title?.toLowerCase().replace(/\s+/g, "-") || "comercial"}.pdf`;
+        pdf.save(filename);
+
+      } finally {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }
+
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
-      alert("Erro ao gerar PDF");
+      toast.error("Erro ao gerar PDF: Cores não suportadas detectadas.");
     } finally {
       setIsGenerating(false);
     }
@@ -306,15 +536,15 @@ export default function ViewProposalPage() {
         <CardContent className="p-0 overflow-hidden">
           <div
             id="proposal-preview-content"
-            className="w-[210mm] mx-auto shadow-2xl"
-            style={{ minWidth: "210mm" }}
+            className="mx-auto shadow-2xl"
+            style={{ width: "794px", minWidth: "794px" }}
           >
             <ProposalPdfViewer
               proposal={proposal}
               template={template} // Keep for fallback or minimal defaults
               tenant={tenant}
               // Inject saved settings from Firestore if available
-              customSettings={proposal.pdfSettings as any}
+              customSettings={(proposal.pdfSettings as Parameters<typeof ProposalPdfViewer>[0]['customSettings']) ?? undefined}
             />
           </div>
         </CardContent>

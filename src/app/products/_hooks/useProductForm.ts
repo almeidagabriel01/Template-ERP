@@ -11,6 +11,7 @@ import {
   uploadImage,
   deleteImage,
   isStorageUrl,
+  ALLOWED_TYPES,
 } from "@/services/storage-service";
 import { useFormValidation, FormErrors } from "@/hooks/useFormValidation";
 import { productSchema } from "@/lib/validations";
@@ -184,6 +185,14 @@ export function useProductForm(
     const totalImages = imageUrls.length + pendingFiles.length;
     if (totalImages >= maxImages) {
       setShowImageLimitModal(true);
+      return;
+    }
+
+    // Validation: File type
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast.error(
+        "O arquivo deve ser uma imagem válida (JPEG, PNG, GIF, WebP ou SVG)."
+      );
       return;
     }
 

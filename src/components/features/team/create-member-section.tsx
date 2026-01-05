@@ -26,8 +26,9 @@ import {
   useCreateMember,
   getDefaultPermissions,
 } from "@/hooks/useCreateMember";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { UpgradeModal, useUpgradeModal } from "@/components/ui/upgrade-modal";
-import { ROLE_PRESETS } from "./team-types";
+import { ROLE_PRESETS, AVAILABLE_PAGES } from "./team-types";
 import { PermissionToggle } from "./permission-toggle";
 
 interface CreateMemberSectionProps {
@@ -85,6 +86,7 @@ const steps = [
 export function CreateMemberSection({ onSuccess }: CreateMemberSectionProps) {
   const { createMember, isLoading, error } = useCreateMember();
   const upgradeModal = useUpgradeModal();
+  const { hasFinancial } = usePlanLimits();
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -186,7 +188,7 @@ export function CreateMemberSection({ onSuccess }: CreateMemberSectionProps) {
 
 
   return (
-    <div className="relative rounded-2xl border-2 border-dashed border-primary/30 bg-gradient-to-br from-primary/5 via-background to-primary/5 overflow-hidden">
+    <div className="relative rounded-2xl border-2 border-dashed border-primary/30 bg-linear-to-br from-primary/5 via-background to-primary/5 overflow-hidden">
       {/* Decorative elements */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-linear-to-br from-primary/10 to-transparent rounded-full -translate-y-32 translate-x-32" />
       <div className="absolute bottom-0 left-0 w-48 h-48 bg-linear-to-tr from-primary/10 to-transparent rounded-full translate-y-24 -translate-x-24" />
@@ -420,71 +422,87 @@ export function CreateMemberSection({ onSuccess }: CreateMemberSectionProps) {
                   </p>
                 </div>
                 <div className="p-4 space-y-1 bg-card max-h-[400px] overflow-y-auto">
-                  {Object.entries(customPermissions).map(([page, perms]) => (
-                    <div
-                      key={page}
-                      className="flex items-center justify-between py-3 px-3 rounded-lg hover:bg-muted/30 transition-colors"
-                    >
-                      <span className="text-sm font-medium capitalize text-foreground">
-                        {page.replace("/", "")}
-                      </span>
-                      <div className="flex gap-2">
-                        <PermissionToggle
-                          enabled={perms.canView}
-                          onChange={(v) => {
-                            setCustomPermissions((prev) => ({
-                              ...prev,
-                              [page]: {
-                                ...prev[page],
-                                canView: v,
-                                canCreate: v ? prev[page].canCreate : false,
-                                canEdit: v ? prev[page].canEdit : false,
-                                canDelete: v ? prev[page].canDelete : false,
-                              },
-                            }));
-                          }}
-                          label="Ver"
-                          icon={Eye}
-                        />
-                        <PermissionToggle
-                          enabled={perms.canCreate || false}
-                          onChange={(v) =>
-                            setCustomPermissions((prev) => ({
-                              ...prev,
-                              [page]: { ...prev[page], canCreate: v },
-                            }))
-                          }
-                          label="Criar"
-                          icon={UserPlus}
-                          disabled={!perms.canView}
-                        />
-                        <PermissionToggle
-                          enabled={perms.canEdit || false}
-                          onChange={(v) =>
-                            setCustomPermissions((prev) => ({
-                              ...prev,
-                              [page]: { ...prev[page], canEdit: v },
-                            }))
-                          }
-                          label="Editar"
-                          icon={Edit3}
-                          disabled={!perms.canView}
-                        />
-                        <PermissionToggle
-                          enabled={perms.canDelete || false}
-                          onChange={(v) =>
-                            setCustomPermissions((prev) => ({
-                              ...prev,
-                              [page]: { ...prev[page], canDelete: v },
-                            }))
-                          }
-                          label="Excluir"
-                          icon={Trash2}
-                          disabled={!perms.canView}
-                        />
+                  {Object.entries(customPermissions).map(([page, perms]) => {
+                    const pageInfo = AVAILABLE_PAGES.find(p => p.id === page);
+                    const pageName = pageInfo?.name || page;
+                    const isViewOnly = pageInfo?.viewOnly || false;
+
+                    // Skip Financial module if tenant doesn't have access
+                    if (page === "financial" && !hasFinancial) {
+                      return null;
+                    }
+
+                    return (
+                      <div
+                        key={page}
+                        className="flex items-center justify-between py-3 px-3 rounded-lg hover:bg-muted/30 transition-colors"
+                      >
+                        <span className="text-sm font-medium text-foreground">
+                          {pageName}
+                        </span>
+                        <div className="flex gap-2">
+                          <PermissionToggle
+                            enabled={perms.canView}
+                            onChange={(v) => {
+                              setCustomPermissions((prev) => ({
+                                ...prev,
+                                [page]: {
+                                  ...prev[page],
+                                  canView: v,
+                                  canCreate: v ? prev[page].canCreate : false,
+                                  canEdit: v ? prev[page].canEdit : false,
+                                  canDelete: v ? prev[page].canDelete : false,
+                                },
+                              }));
+                            }}
+                            label="Ver"
+                            icon={Eye}
+                          />
+                          {/* Only show create/edit/delete for non-viewOnly pages */}
+                          {!isViewOnly && (
+                            <>
+                              <PermissionToggle
+                                enabled={perms.canCreate || false}
+                                onChange={(v) =>
+                                  setCustomPermissions((prev) => ({
+                                    ...prev,
+                                    [page]: { ...prev[page], canCreate: v },
+                                  }))
+                                }
+                                label="Criar"
+                                icon={UserPlus}
+                                disabled={!perms.canView}
+                              />
+                              <PermissionToggle
+                                enabled={perms.canEdit || false}
+                                onChange={(v) =>
+                                  setCustomPermissions((prev) => ({
+                                    ...prev,
+                                    [page]: { ...prev[page], canEdit: v },
+                                  }))
+                                }
+                                label="Editar"
+                                icon={Edit3}
+                                disabled={!perms.canView}
+                              />
+                              <PermissionToggle
+                                enabled={perms.canDelete || false}
+                                onChange={(v) =>
+                                  setCustomPermissions((prev) => ({
+                                    ...prev,
+                                    [page]: { ...prev[page], canDelete: v },
+                                  }))
+                                }
+                                label="Excluir"
+                                icon={Trash2}
+                                disabled={!perms.canView}
+                              />
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

@@ -17,22 +17,22 @@ export function PdfTotals({ products, discount, contentStyles }: PdfTotalsProps)
 
     return (
         <div
-            className="mt-4 pt-4 border-t-2 flex justify-end"
+            className="mt-6 pt-5 border-t-2 flex justify-end"
             style={contentStyles.headerBorder}
         >
-            <div className="w-48 space-y-1 text-right">
-                <div className="flex justify-between">
+            <div className="w-56 grid gap-2 text-right">
+                <div className="flex items-baseline justify-between">
                     <span>Subtotal:</span>
-                    <span>{formatCurrency(subtotal)}</span>
+                    <span className="font-medium">{formatCurrency(subtotal)}</span>
                 </div>
                 {discount && discount > 0 && (
-                    <div className="flex justify-between text-red-600">
+                    <div className="flex items-baseline justify-between text-red-600">
                         <span>Desconto:</span>
                         <span>-{formatCurrency(discountAmt)}</span>
                     </div>
                 )}
                 <div
-                    className="flex justify-between text-xl font-bold pt-2 border-t"
+                    className="flex items-baseline justify-between text-xl font-bold pt-3 border-t"
                     style={contentStyles.total}
                 >
                     <span>Total:</span>

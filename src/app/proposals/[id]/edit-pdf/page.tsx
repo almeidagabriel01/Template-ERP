@@ -226,8 +226,9 @@ export default function EditPdfPage() {
               <div className="max-h-[75vh] overflow-auto bg-gray-200 p-4">
                 <div
                   id="pdf-preview-content"
-                  className="w-[210mm] mx-auto shadow-2xl origin-top transition-transform"
+                  className="mx-auto shadow-2xl origin-top transition-transform"
                   style={{
+                    width: "794px",
                     transform: `scale(${previewZoom})`,
                     marginBottom: `${-100 + previewZoom * 100}%`,
                     fontFamily,

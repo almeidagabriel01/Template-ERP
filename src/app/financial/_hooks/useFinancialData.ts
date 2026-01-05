@@ -12,6 +12,63 @@ import { WalletService } from "@/services/wallet-service";
 import { useTenant } from "@/providers/tenant-provider";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 
+type DateLike =
+  | string
+  | Date
+  | { toDate: () => Date }
+  | { toMillis: () => number }
+  | { seconds: number }
+  | null
+  | undefined;
+
+// Helper to get YYYY-MM-DD string in Local Time matching user perception
+function getDateString(val: DateLike): string {
+  if (!val) return "";
+  
+  // If it's a string, handle it carefully to avoid timezone issues
+  if (typeof val === "string") {
+    // If it's just a date (YYYY-MM-DD), return as-is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+      return val;
+    }
+    // If it has a time component (ISO format), extract just the date part
+    // This avoids timezone conversion issues
+    if (val.includes("T")) {
+      return val.split("T")[0];
+    }
+    // For other string formats, try to parse and convert
+    // Parse as local date to avoid timezone shift
+    const parts = val.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (parts) {
+      return `${parts[1]}-${parts[2]}-${parts[3]}`;
+    }
+    // Fallback: try parsing as date
+    const date = new Date(val + "T12:00:00"); // Add noon time to avoid day boundary issues
+    if (!isNaN(date.getTime())) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+    return "";
+  }
+  
+  let date: Date;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const v = val as any;
+  if (typeof v?.toDate === "function") date = v.toDate();
+  else if (v?.seconds) date = new Date(v.seconds * 1000);
+  else date = new Date(v);
+
+  if (isNaN(date.getTime())) return "";
+
+  // Use local component methods to ensure it matches what user sees on screen
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 interface FinancialSummary {
   totalIncome: number;
   totalExpense: number;
@@ -33,6 +90,14 @@ interface UseFinancialDataReturn {
   setFilterStatus: (status: TransactionStatus | "all") => void;
   filterWallet: string;
   setFilterWallet: (wallet: string) => void;
+  filterStartDate: string;
+  setFilterStartDate: (date: string) => void;
+  filterEndDate: string;
+  setFilterEndDate: (date: string) => void;
+  filterDateType: "date" | "dueDate";
+  setFilterDateType: (type: "date" | "dueDate") => void;
+  sortBy: "date" | "created";
+  setSortBy: (sort: "date" | "created") => void;
   filteredTransactions: Transaction[];
   totalWalletBalance: number;
   deleteTransaction: (transaction: Transaction) => Promise<boolean>;
@@ -56,6 +121,12 @@ export function useFinancialData(): UseFinancialDataReturn {
     TransactionStatus | "all"
   >("all");
   const [filterWallet, setFilterWallet] = React.useState<string>("");
+  const [filterStartDate, setFilterStartDate] = React.useState<string>("");
+  const [filterEndDate, setFilterEndDate] = React.useState<string>("");
+  const [filterDateType, setFilterDateType] = React.useState<
+    "date" | "dueDate"
+  >("date");
+  const [sortBy, setSortBy] = React.useState<"date" | "created">("created");
   const [totalWalletBalance, setTotalWalletBalance] = React.useState<number>(0);
   const [summary, setSummary] = React.useState<FinancialSummary>({
     totalIncome: 0,
@@ -154,6 +225,34 @@ export function useFinancialData(): UseFinancialDataReturn {
       filtered = filtered.filter((t) => t.wallet === filterWallet);
     }
 
+    // Filter by date range
+    if (filterStartDate || filterEndDate) {
+      filtered = filtered.filter((t) => {
+        let dateVal: string | undefined = t.date;
+        
+        if (filterDateType === "dueDate") {
+          // When filtering by due date, only consider transactions that have a due date
+          // Don't fallback to main date - if no due date, exclude from filter
+          if (!t.dueDate) return false;
+          dateVal = t.dueDate;
+        }
+
+        const dateStr = getDateString(dateVal);
+        if (!dateStr) return false;
+
+        // Compare dates using localeCompare for reliable string comparison
+        if (filterStartDate) {
+          // dateStr must be >= filterStartDate
+          if (dateStr.localeCompare(filterStartDate) < 0) return false;
+        }
+        if (filterEndDate) {
+          // dateStr must be <= filterEndDate
+          if (dateStr.localeCompare(filterEndDate) > 0) return false;
+        }
+        return true;
+      });
+    }
+
     // Filter by search term
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
@@ -166,11 +265,34 @@ export function useFinancialData(): UseFinancialDataReturn {
       );
     }
 
-    // Sort by date descending
-    return filtered.sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
-  }, [transactions, searchTerm, filterType, filterStatus, filterWallet]);
+    // Sort
+    return filtered.sort((a, b) => {
+      if (sortBy === "date") {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      } else {
+        // Handle Firestore Timestamp or string for createdAt
+        const getMillis = (val: DateLike) => {
+          if (!val) return 0;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const v = val as any;
+          if (typeof v?.toMillis === "function") return v.toMillis(); // Firestore SDK
+          if (v?.seconds) return v.seconds * 1000; // Serialized
+          return new Date(v).getTime(); // String/Date
+        };
+        return getMillis(b.createdAt) - getMillis(a.createdAt);
+      }
+    });
+  }, [
+    transactions,
+    searchTerm,
+    filterType,
+    filterStatus,
+    filterWallet,
+    filterStartDate,
+    filterEndDate,
+    filterDateType,
+    sortBy,
+  ]);
 
   const deleteTransaction = React.useCallback(
     async (transaction: Transaction): Promise<boolean> => {
@@ -252,6 +374,14 @@ export function useFinancialData(): UseFinancialDataReturn {
     setFilterStatus,
     filterWallet,
     setFilterWallet,
+    filterStartDate,
+    setFilterStartDate,
+    filterEndDate,
+    setFilterEndDate,
+    filterDateType,
+    setFilterDateType,
+    sortBy,
+    setSortBy,
     filteredTransactions,
     totalWalletBalance,
     deleteTransaction,
