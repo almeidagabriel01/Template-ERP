@@ -3,13 +3,9 @@
  */
 
 import * as functions from "firebase-functions";
-import { initializeApp, getApps } from "firebase-admin/app";
-import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
-
-if (getApps().length === 0) {
-  initializeApp();
-}
+import { db } from "./init";
 
 /**
  * Helper function to delete images from Firebase Storage
@@ -76,7 +72,7 @@ async function deleteProductImages(
 export const deleteProduct = functions
   .region("southamerica-east1")
   .https.onCall(async (data: { productId: string }, context) => {
-    const db = getFirestore();
+    // const db = getFirestore();
 
     if (!context.auth)
       throw new functions.https.HttpsError(
