@@ -204,7 +204,7 @@ export function FormGroup({
   };
 
   return (
-    <div className={cn("grid gap-5", gridCols[cols], className)} {...props}>
+    <div className={cn("grid gap-5 items-start", gridCols[cols], className)} {...props}>
       {children}
     </div>
   );
@@ -234,12 +234,13 @@ export function FormItem({
   ...props
 }: FormItemProps) {
   return (
-    <div className={cn("space-y-2", className)} {...props}>
-      <div className="flex items-center justify-between">
+    <div className={cn("flex flex-col gap-2", className)} {...props}>
+      {/* Label row - fixed height for alignment */}
+      <div className="flex items-center justify-between h-5">
         <label
           htmlFor={htmlFor}
           className={cn(
-            "text-sm font-medium text-foreground",
+            "text-sm font-medium text-foreground leading-5",
             error && "text-destructive"
           )}
         >
@@ -253,26 +254,30 @@ export function FormItem({
         )}
       </div>
 
+      {/* Input row - always same height (h-12) */}
       {children}
 
-      {error && (
-        <p className="text-sm text-destructive flex items-center gap-1.5 animate-in slide-in-from-top-1 duration-200">
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          {error}
-        </p>
-      )}
+      {/* Error row - fixed min height to prevent layout shift */}
+      <div className="min-h-[20px]">
+        {error && (
+          <p className="text-sm text-destructive flex items-center gap-1.5 animate-in slide-in-from-top-1 duration-200">
+            <svg
+              className="w-4 h-4 flex-shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            {error}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
