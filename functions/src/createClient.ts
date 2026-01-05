@@ -11,13 +11,8 @@
  */
 
 import * as functions from "firebase-functions";
-import { initializeApp, getApps } from "firebase-admin/app";
-import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
-
-// Initialize Firebase Admin (only once)
-if (getApps().length === 0) {
-  initializeApp();
-}
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { db } from "./init";
 
 // ============================================
 // TYPES
@@ -60,7 +55,7 @@ interface UserDoc {
 export const createClient = functions
   .region("southamerica-east1")
   .https.onCall(async (data: CreateClientInput, context) => {
-    const db = getFirestore();
+    // const db = getFirestore();
 
     // 1. Authentication
     if (!context.auth) {
