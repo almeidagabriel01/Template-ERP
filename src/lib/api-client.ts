@@ -1,26 +1,22 @@
 import { auth } from "./firebase";
 
-// API URLs per Firebase Project
-const API_URLS: Record<string, string> = {
-  "erp-softcode": "https://api-2lumykmdwa-rj.a.run.app", // DEV
-  "template-erp-prod": "https://api-XXXXXXXXXX-rj.a.run.app", // PROD - update after deploy
-};
-
+/**
+ * Get API base URL from environment.
+ * Set NEXT_PUBLIC_API_URL in:
+ * - .env.local for local development
+ * - Vercel Environment Variables for deployments
+ */
 const getBaseUrl = (): string => {
-  // 1. Explicit override via env var (highest priority)
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  if (!apiUrl) {
+    throw new Error(
+      "NEXT_PUBLIC_API_URL is not defined. " +
+        "Set it in .env.local or Vercel Environment Variables."
+    );
   }
 
-  // 2. Dynamic selection based on Firebase project
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-  if (projectId && API_URLS[projectId]) {
-    return API_URLS[projectId];
-  }
-
-  // 3. Fallback to DEV
-  console.warn("[API] Unknown project, falling back to DEV API");
-  return API_URLS["erp-softcode"];
+  return apiUrl;
 };
 
 export class ApiError extends Error {
