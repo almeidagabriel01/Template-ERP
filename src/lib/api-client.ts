@@ -1,0 +1,94 @@
+import { auth } from "./firebase";
+
+/**
+ * Get API base URL from environment.
+ * Set NEXT_PUBLIC_API_URL in:
+ * - .env.local for local development
+ * - Vercel Environment Variables for deployments
+ */
+const getBaseUrl = (): string => {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  if (!apiUrl) {
+    throw new Error(
+      "NEXT_PUBLIC_API_URL is not defined. " +
+        "Set it in .env.local or Vercel Environment Variables."
+    );
+  }
+
+  return apiUrl;
+};
+
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public message: string,
+    public data?: unknown
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+export const callApi = async <T = unknown>(
+  endpoint: string,
+  method: "GET" | "POST" | "PUT" | "DELETE" = "GET",
+  body?: unknown
+): Promise<T> => {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
+
+  const token = await user.getIdToken();
+  const baseUrl = getBaseUrl();
+
+  // Ensure endpoint starts with /
+  const path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const url = `${baseUrl}${path}`;
+
+  const headers: HeadersInit = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+
+  const config: RequestInit = {
+    method,
+    headers,
+  };
+
+  if (body) {
+    config.body = JSON.stringify(body);
+  }
+
+  try {
+    const response = await fetch(url, config);
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { raw: await response.text() };
+      }
+      throw new ApiError(
+        response.status,
+        errorData.message ||
+          (typeof errorData.raw === "string"
+            ? errorData.raw
+            : "API Request Failed"),
+        errorData
+      );
+    }
+
+    // Handle empty responses (e.g. 204 No Content)
+    if (response.status === 204) {
+      return {} as T;
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`API Call Failed [${method} ${url}]:`, error);
+    throw error;
+  }
+};
