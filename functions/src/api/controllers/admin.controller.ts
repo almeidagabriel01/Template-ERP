@@ -481,3 +481,119 @@ export const getAllTenantsBilling = async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Erro ao buscar tenants." });
   }
 };
+
+export const updateCredentials = async (req: Request, res: Response) => {
+  try {
+    const loggedUserId = req.user!.uid;
+    const { userId, email, password } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ message: "ID do usuário é obrigatório" });
+    }
+
+    // Verify Super Admin
+    const loggedUserSnap = await db.collection("users").doc(loggedUserId).get();
+    const loggedUserData = loggedUserSnap.data() as UserDoc | undefined;
+    const isSuperAdmin = loggedUserData?.role?.toUpperCase() === "SUPERADMIN";
+
+    if (!isSuperAdmin) {
+      return res.status(403).json({ message: "Permissão negada. Apenas super admins podem alterar credenciais." });
+    }
+
+    // Update Auth
+    const updateData: { email?: string; password?: string } = {};
+    if (email) updateData.email = email;
+    if (password && password.length >= 6) updateData.password = password;
+
+    if (Object.keys(updateData).length > 0) {
+      await auth.updateUser(userId, updateData);
+    }
+
+    // Update Firestore User
+    if (email) {
+      await db.collection("users").doc(userId).update({ email });
+    }
+
+    return res.json({ success: true, message: "Credenciais atualizadas com sucesso." });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Erro ao atualizar credenciais";
+    return res.status(500).json({ message });
+  }
+};
+
+export const updateUserPlan = async (req: Request, res: Response) => {
+  try {
+    const loggedUserId = req.user!.uid;
+    const { userId } = req.params;
+    const { planId } = req.body;
+
+    if (!userId || !planId) {
+      return res.status(400).json({ message: "ID do usuário e Plan ID são obrigatórios" });
+    }
+
+    // Verify Super Admin
+    const loggedUserSnap = await db.collection("users").doc(loggedUserId).get();
+    const loggedUserData = loggedUserSnap.data() as UserDoc | undefined;
+    const isSuperAdmin = loggedUserData?.role?.toUpperCase() === "SUPERADMIN";
+
+    if (!isSuperAdmin) {
+      return res.status(403).json({ message: "Permissão negada. Apenas super admins podem alterar planos." });
+    }
+
+    // Update Plan
+    await db.collection("users").doc(userId).update({ 
+      planId,
+      updatedAt: FieldValue.serverTimestamp()
+    });
+
+    return res.json({ success: true, message: "Plano atualizado com sucesso." });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Erro ao atualizar plano";
+    return res.status(500).json({ message });
+  }
+};
+
+export const updateUserSubscription = async (req: Request, res: Response) => {
+  try {
+    const loggedUserId = req.user!.uid;
+    const { userId } = req.params;
+    const updates = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ message: "ID do usuário é obrigatório" });
+    }
+
+    // Verify Super Admin
+    const loggedUserSnap = await db.collection("users").doc(loggedUserId).get();
+    const loggedUserData = loggedUserSnap.data() as UserDoc | undefined;
+    const isSuperAdmin = loggedUserData?.role?.toUpperCase() === "SUPERADMIN";
+
+    if (!isSuperAdmin) {
+      return res.status(403).json({ message: "Permissão negada. Apenas super admins podem alterar assinaturas." });
+    }
+
+    // Allowed fields to update
+    const allowedFields = ['subscriptionStatus', 'currentPeriodEnd', 'isManualSubscription'];
+    const safeUpdates: Record<string, any> = {};
+
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        safeUpdates[field] = updates[field];
+      }
+    }
+
+    if (Object.keys(safeUpdates).length === 0) {
+      return res.status(400).json({ message: "Nenhum campo válido para atualização" });
+    }
+
+    safeUpdates.updatedAt = FieldValue.serverTimestamp();
+
+    // Update Subscription
+    await db.collection("users").doc(userId).update(safeUpdates);
+
+    return res.json({ success: true, message: "Assinatura atualizada com sucesso." });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Erro ao atualizar assinatura";
+    return res.status(500).json({ message });
+  }
+};

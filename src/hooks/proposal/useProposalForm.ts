@@ -341,7 +341,7 @@ export function useProposalForm({
     }
 
     if (!tenant) {
-      alert("Erro: Nenhuma empresa selecionada!");
+      toast.error("Erro: Nenhuma empresa selecionada!");
       return;
     }
 
@@ -350,7 +350,7 @@ export function useProposalForm({
       !formData.clientName ||
       selectedProducts.length === 0
     ) {
-      alert(
+      toast.error(
         "Preencha o título, nome do cliente e selecione pelo menos um produto!"
       );
       return;
