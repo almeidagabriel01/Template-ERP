@@ -6,7 +6,6 @@
  */
 
 import Stripe from "stripe";
-// import * as functions from "firebase-functions"; // Removed v1 import
 
 // Lazy initialization to avoid issues during deployment
 let stripeInstance: Stripe | null = null;
