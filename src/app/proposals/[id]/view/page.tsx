@@ -4,7 +4,7 @@ import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Proposal } from "@/services/proposal-service"; // Types only
+import { Proposal } from "@/types/proposal";
 import { ProposalTemplate } from "@/types";
 import { useTenant } from "@/providers/tenant-provider";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
@@ -21,9 +21,15 @@ import {
 } from "lucide-react";
 import { ProposalService } from "@/services/proposal-service";
 import { ProposalDefaults } from "@/lib/proposal-defaults";
-import { functions } from "@/lib/firebase";
-import { httpsCallable } from "firebase/functions";
 import { toast } from "react-toastify";
+
+const getApiBaseUrl = (): string => {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!apiUrl) {
+    throw new Error("NEXT_PUBLIC_API_URL is not defined.");
+  }
+  return apiUrl;
+};
 
 export default function ViewProposalPage() {
   const params = useParams();
@@ -70,7 +76,7 @@ export default function ViewProposalPage() {
             const t = ProposalDefaults.createDefaultTemplate(
               tenant.id,
               tenant.name,
-              tenant.primaryColor
+              tenant.primaryColor || "#2563eb"
             );
             setTemplate(t);
           }
@@ -324,10 +330,7 @@ export default function ViewProposalPage() {
         // --- 4. PROXY ---
         const images = Array.from(container.querySelectorAll("img"));
         if (images.length > 0) {
-          const proxyImageFn = httpsCallable<
-            { url: string },
-            { success: boolean; dataUrl: string }
-          >(functions, "proxyImage");
+          const apiBaseUrl = getApiBaseUrl();
 
           const uniqueUrls = new Set(
             images
@@ -340,9 +343,16 @@ export default function ViewProposalPage() {
           await Promise.all(
             Array.from(uniqueUrls).map(async (url) => {
               try {
-                const result = await proxyImageFn({ url });
-                if (result.data.success) {
-                  urlMap.set(url, result.data.dataUrl);
+                const proxyUrl = `${apiBaseUrl}/v1/aux/proxy-image?url=${encodeURIComponent(url)}`;
+                const response = await fetch(proxyUrl);
+                if (response.ok) {
+                  const blob = await response.blob();
+                  const reader = new FileReader();
+                  const dataUrl = await new Promise<string>((resolve) => {
+                    reader.onloadend = () => resolve(reader.result as string);
+                    reader.readAsDataURL(blob);
+                  });
+                  urlMap.set(url, dataUrl);
                 }
               } catch {
                 console.warn("Failed to proxy image:", url);

@@ -5,7 +5,8 @@ import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { useTenant } from "@/providers/tenant-provider";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
-import { ProposalService, Proposal } from "@/services/proposal-service";
+import { ProposalService } from "@/services/proposal-service";
+import { Proposal } from "@/types/proposal";
 import { ProposalDefaults } from "@/lib/proposal-defaults";
 import { PAGE_WIDTH_PX, PAGE_HEIGHT_PX } from "@/utils/pdf-layout";
 import {
@@ -14,6 +15,19 @@ import {
 } from "@/components/features/proposal/pdf-section-editor";
 import { ProposalTemplate } from "@/types";
 import { ThemeType } from "./pdf-theme-utils";
+
+interface PdfSettings {
+  primaryColor?: string;
+  fontFamily?: string;
+  theme?: string;
+  coverImage?: string;
+  coverLogo?: string;
+  coverImageOpacity?: number;
+  coverImageFit?: "cover" | "contain";
+  coverImagePosition?: string;
+  repeatHeader?: boolean;
+  sections?: unknown[];
+}
 
 export function useEditPdfPage() {
   const params = useParams();
@@ -72,7 +86,8 @@ export function useEditPdfPage() {
           if (p) {
             // Inject placeholders for missing images (for demo purposes)
             if (p.products) {
-              p.products = p.products.map((prod) => ({
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              p.products = p.products.map((prod: any) => ({
                 ...prod,
                 productImage:
                   prod.productImage ||
@@ -93,13 +108,13 @@ export function useEditPdfPage() {
 
             // 1. Check if we have saved PDF settings in the proposal
             if (p.pdfSettings) {
-              const s = p.pdfSettings;
+              const s = p.pdfSettings as PdfSettings;
 
               // We MUST set a template object because the render guard requires it
               const baseTemplate = ProposalDefaults.createDefaultTemplate(
                 tenant.id,
                 tenant.name,
-                s.primaryColor || tenant.primaryColor
+                s.primaryColor || tenant.primaryColor || "#2563eb"
               );
               setTemplate(baseTemplate);
 
@@ -131,7 +146,7 @@ export function useEditPdfPage() {
                 const t = ProposalDefaults.createDefaultTemplate(
                   tenant.id,
                   tenant.name,
-                  s.primaryColor || tenant.primaryColor
+                  s.primaryColor || tenant.primaryColor || "#2563eb"
                 );
                 setSections(createDefaultSections(t, t.primaryColor));
               }
@@ -140,7 +155,7 @@ export function useEditPdfPage() {
               const t = ProposalDefaults.createDefaultTemplate(
                 tenant.id,
                 tenant.name,
-                tenant.primaryColor
+                tenant.primaryColor || "#2563eb"
               );
 
               if (t) {
