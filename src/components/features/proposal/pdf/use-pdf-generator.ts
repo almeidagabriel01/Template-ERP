@@ -6,12 +6,12 @@ import { Proposal } from "@/services/proposal-service";
 import { toast } from "react-toastify";
 import { PAGE_WIDTH_PX, PAGE_HEIGHT_PX } from "@/utils/pdf-layout";
 
-// API base URL for proxy-image
-const getApiBaseUrl = () => {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
+const getApiBaseUrl = (): string => {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!apiUrl) {
+    throw new Error("NEXT_PUBLIC_API_URL is not defined.");
   }
-  return "https://api-2lumykmdwa-rj.a.run.app";
+  return apiUrl;
 };
 
 interface UsePdfGeneratorProps {
