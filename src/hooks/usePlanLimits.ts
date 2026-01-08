@@ -158,9 +158,17 @@ export function usePlanLimits(): UsePlanLimitsReturn {
 
         if (plan?.features) {
           setBaseFeatures(plan.features);
-          // Normalize tier to lowercase for consistency with addon definitions
-          const normalizedTier = plan.tier?.toLowerCase() as PlanTier;
-          console.log("[usePlanLimits] Setting planTier to:", normalizedTier);
+          // Use plan.tier if available, otherwise fallback to effectivePlanId
+          // This handles cases where Firestore plan document doesn't have tier field
+          const tierValue = plan.tier || effectivePlanId;
+          const normalizedTier = tierValue?.toLowerCase() as PlanTier;
+          console.log(
+            "[usePlanLimits] Setting planTier to:",
+            normalizedTier,
+            "(from:",
+            plan.tier ? "plan.tier" : "effectivePlanId",
+            ")"
+          );
           setPlanTier(normalizedTier);
         } else {
           const fallbackPlan = DEFAULT_PLANS.find(
