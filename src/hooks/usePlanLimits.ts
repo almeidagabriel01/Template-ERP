@@ -146,39 +146,18 @@ export function usePlanLimits(): UsePlanLimitsReturn {
           plan = await PlanService.getPlanByTier(effectivePlanId);
         }
 
-        // Debug log for production troubleshooting
-        console.log(
-          "[usePlanLimits] effectivePlanId:",
-          effectivePlanId,
-          "plan?.tier:",
-          plan?.tier,
-          "plan found:",
-          !!plan
-        );
-
         if (plan?.features) {
           setBaseFeatures(plan.features);
           // Use plan.tier if available, otherwise fallback to effectivePlanId
           // This handles cases where Firestore plan document doesn't have tier field
           const tierValue = plan.tier || effectivePlanId;
           const normalizedTier = tierValue?.toLowerCase() as PlanTier;
-          console.log(
-            "[usePlanLimits] Setting planTier to:",
-            normalizedTier,
-            "(from:",
-            plan.tier ? "plan.tier" : "effectivePlanId",
-            ")"
-          );
           setPlanTier(normalizedTier);
         } else {
           const fallbackPlan = DEFAULT_PLANS.find(
             (p) =>
               p.tier === effectivePlanId ||
               p.tier === effectivePlanId?.toLowerCase()
-          );
-          console.log(
-            "[usePlanLimits] Using fallback plan:",
-            fallbackPlan?.tier
           );
           if (fallbackPlan?.features) {
             setBaseFeatures(fallbackPlan.features);

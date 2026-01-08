@@ -93,22 +93,18 @@ export default function AddonsPage() {
     }
   }, [searchParams, router, isPlanLoading, isPriceLoading]);
 
-  // Get available add-ons for user's tier (now using the correct tier from hook)
+  // Get available add-ons for user's tier
   const availableAddons = React.useMemo(() => {
     const addons = AddonService.getAvailableAddonsForTier(planTier);
-
-    // Debug log for production troubleshooting
-    console.log('[AddonsPage] planTier:', planTier, 'availableAddons:', addons.length, 'purchasedAddons:', purchasedAddons);
 
     // If no addons available and user is on a basic tier (starter or unknown), 
     // fallback to showing starter addons to avoid "you have everything" message
     if (addons.length === 0 && !['pro', 'enterprise'].includes(planTier?.toLowerCase() || '')) {
-      console.warn('[AddonsPage] No addons found for tier, falling back to starter addons');
       return AddonService.getAvailableAddonsForTier('starter');
     }
 
     return addons;
-  }, [planTier, purchasedAddons]);
+  }, [planTier]);
 
   // Open confirmation dialog instead of going directly to checkout
   const handlePurchaseClick = (addonType: AddonType) => {
