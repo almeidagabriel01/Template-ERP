@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User, Package, Cpu, CheckCircle } from "lucide-react";
+import { User, Package, Cpu, CheckCircle, CreditCard } from "lucide-react";
 import { SistemaSelector } from "@/components/features/automation";
 import { AmbienteManagerDialog } from "@/components/features/automation/ambiente-manager-dialog";
 import { SistemaManagerDialog } from "@/components/features/automation/sistema-manager-dialog";
@@ -31,6 +31,7 @@ import {
   ProposalSystemsSection,
   ProposalProductsSection,
   ProposalSummarySection,
+  ProposalPaymentSection,
   ProposalReadOnlyView,
 } from "./form";
 
@@ -48,6 +49,12 @@ const stepsAutomation = [
     icon: User,
   },
   { id: "systems", title: "Sistemas", description: "Automação", icon: Cpu },
+  {
+    id: "payment",
+    title: "Pagamento",
+    description: "Condições",
+    icon: CreditCard,
+  },
   {
     id: "summary",
     title: "Resumo",
@@ -69,6 +76,12 @@ const stepsDefault = [
     title: "Produtos",
     description: "Selecionar itens",
     icon: Package,
+  },
+  {
+    id: "payment",
+    title: "Pagamento",
+    description: "Condições",
+    icon: CreditCard,
   },
   {
     id: "summary",
@@ -484,7 +497,7 @@ export function SimpleProposalForm({
   };
 
   const handleFormSubmit = async () => {
-    const fakeEvent = { preventDefault: () => { } } as React.FormEvent;
+    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
     await handleSubmit(fakeEvent);
   };
 
@@ -646,7 +659,37 @@ export function SimpleProposalForm({
           <StepNavigation onBeforeNext={validateStep2} />
         </StepCard>
 
-        {/* Step 3: Summary */}
+        {/* Step 3: Payment */}
+        <StepCard>
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-linear-to-br from-emerald-500/15 to-emerald-500/5 flex items-center justify-center">
+                <CreditCard className="w-6 h-6 text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">
+                  Condições de Pagamento
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Configure parcelamento e entrada
+                </p>
+              </div>
+            </div>
+
+            <ProposalPaymentSection
+              formData={formData}
+              calculateTotal={calculateTotal}
+              onFormChange={handleChange}
+              onPaymentToggle={(field, value) => {
+                setFormData((prev) => ({ ...prev, [field]: value }));
+              }}
+              noContainer
+            />
+          </div>
+          <StepNavigation />
+        </StepCard>
+
+        {/* Step 4: Summary */}
         <StepCard>
           <div className="space-y-6">
             <div className="flex items-center gap-3 mb-6">

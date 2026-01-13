@@ -15,6 +15,7 @@ import {
   PdfTotals,
   PdfSectionRenderer,
   PdfPageHeader,
+  PdfPaymentTerms,
 } from "./components";
 
 // Type definitions
@@ -45,6 +46,12 @@ interface Proposal {
   discount?: number;
   clientName: string;
   title?: string;
+  // Payment options
+  downPaymentEnabled?: boolean;
+  downPaymentValue?: number;
+  installmentsEnabled?: boolean;
+  installmentsCount?: number;
+  installmentValue?: number;
 }
 
 interface Tenant {
@@ -85,6 +92,44 @@ function buildContentItems(
 ): ContentItem[] {
   const items: ContentItem[] = [];
   const hasSistemas = proposal.sistemas && proposal.sistemas.length > 0;
+
+  // Check if proposal has dynamic payment options configured
+  const hasDynamicPaymentOptions =
+    (proposal.installmentsEnabled &&
+      proposal.installmentsCount &&
+      proposal.installmentsCount >= 1) ||
+    (proposal.downPaymentEnabled &&
+      proposal.downPaymentValue &&
+      proposal.downPaymentValue > 0);
+
+  // Helper to add payment terms block
+  const addPaymentTermsBlock = () => {
+    if (hasDynamicPaymentOptions) {
+      items.push({
+        type: "payment-terms",
+        height: ESTIMATED_HEIGHTS.PAYMENT_TERMS,
+      });
+    }
+  };
+
+  // Helper to check if a section is about payment terms and should be skipped
+  const shouldSkipPaymentSection = (section: PdfSection): boolean => {
+    if (!hasDynamicPaymentOptions) return false;
+    const content = (section.content || "").toLowerCase();
+    return (
+      content.includes("condições de pagamento") ||
+      content.includes("condicoes de pagamento") ||
+      content.includes("formas de pagamento") ||
+      content.includes("entrada:") ||
+      content.includes("saldo:")
+    );
+  };
+
+  // Helper to check if section is "Garantia"
+  const isGarantiaSection = (section: PdfSection): boolean => {
+    const content = (section.content || "").toLowerCase();
+    return content.includes("garantia") && section.type === "title";
+  };
 
   const addSistemaProducts = (
     sistema: Sistema,
@@ -187,6 +232,14 @@ function buildContentItems(
           addRegularProducts(products);
         }
       } else {
+        // Skip static payment sections if dynamic payment options are configured
+        if (shouldSkipPaymentSection(section)) return;
+
+        // Insert payment terms before "Garantia"
+        if (isGarantiaSection(section)) {
+          addPaymentTermsBlock();
+        }
+
         const height = calculateSectionHeight(section);
         items.push({ type: "section", data: section, height });
       }
@@ -265,6 +318,14 @@ function buildContentItems(
       }
 
       const section = sections[i];
+      // Skip static payment sections if dynamic payment options are configured
+      if (shouldSkipPaymentSection(section)) continue;
+
+      // Insert payment terms before "Garantia"
+      if (isGarantiaSection(section)) {
+        addPaymentTermsBlock();
+      }
+
       const height = calculateSectionHeight(section);
       items.push({ type: "section", data: section, height });
     }
@@ -319,6 +380,12 @@ function distributeIntoPages(items: ContentItem[]): ContentItem[][] {
         currentHeight + item.height > SAFE_HEIGHT &&
         currentHeight > ESTIMATED_HEIGHTS.HEADER
       ) {
+        forceBreak = true;
+      }
+    }
+
+    if (item.type === "payment-terms") {
+      if (currentHeight + item.height > SAFE_HEIGHT) {
         forceBreak = true;
       }
     }
@@ -429,12 +496,33 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
               contentStyles={
                 contentStyles as unknown as Record<string, React.CSSProperties>
               }
+              downPaymentEnabled={proposal.downPaymentEnabled}
+              downPaymentValue={proposal.downPaymentValue}
+              installmentsEnabled={proposal.installmentsEnabled}
+              installmentsCount={proposal.installmentsCount}
+              installmentValue={proposal.installmentValue}
             />
           </div>
         );
 
       case "extra-products-header":
         return null;
+
+      case "payment-terms":
+        return (
+          <div key="payment-terms" style={{ width: "100%" }}>
+            <PdfPaymentTerms
+              contentStyles={
+                contentStyles as unknown as Record<string, React.CSSProperties>
+              }
+              downPaymentEnabled={proposal.downPaymentEnabled}
+              downPaymentValue={proposal.downPaymentValue}
+              installmentsEnabled={proposal.installmentsEnabled}
+              installmentsCount={proposal.installmentsCount}
+              installmentValue={proposal.installmentValue}
+            />
+          </div>
+        );
 
       default:
         return null;

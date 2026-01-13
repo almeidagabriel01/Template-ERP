@@ -9,6 +9,7 @@ import { Transaction } from "@/services/transaction-service";
 interface InstallmentsCardProps {
   installments: Transaction[];
   currentTransactionId?: string;
+  disableLinks?: boolean;
 }
 
 /**
@@ -19,7 +20,9 @@ function formatDateSafe(dateString: string): string {
   if (!dateString) return "";
 
   // Extract date part if ISO format
-  const datePart = dateString.includes("T") ? dateString.split("T")[0] : dateString;
+  const datePart = dateString.includes("T")
+    ? dateString.split("T")[0]
+    : dateString;
   const parts = datePart.split("-");
 
   if (parts.length !== 3) return dateString;
@@ -35,9 +38,9 @@ function formatDateSafe(dateString: string): string {
 export function InstallmentsCard({
   installments,
   currentTransactionId,
+  disableLinks = false,
 }: InstallmentsCardProps) {
   if (installments.length <= 1) return null;
-
 
   return (
     <Card>
@@ -49,55 +52,73 @@ export function InstallmentsCard({
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          {installments.map((installment) => (
-            <Link
-              key={installment.id}
-              href={`/financial/${installment.id}`}
-              className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${installment.id === currentTransactionId
-                ? "bg-primary/10 border-primary"
-                : "hover:bg-muted"
+          {installments.map((installment) => {
+            const Content = (
+              <div
+                className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                  installment.id === currentTransactionId
+                    ? "bg-primary/10 border-primary"
+                    : disableLinks
+                      ? "bg-muted/5 border-border"
+                      : "hover:bg-muted"
                 }`}
-            >
-              <div className="flex items-center gap-3">
-                <span
-                  className={`text-sm font-medium ${installment.id === currentTransactionId
-                    ? "text-primary"
-                    : ""
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`text-sm font-medium ${
+                      installment.id === currentTransactionId
+                        ? "text-primary"
+                        : ""
                     }`}
-                >
-                  Parcela {installment.installmentNumber}/
-                  {installment.installmentCount}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {formatDateSafe(installment.dueDate || installment.date)}
-                </span>
-              </div>
+                  >
+                    Parcela {installment.installmentNumber}/
+                    {installment.installmentCount}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    {formatDateSafe(installment.dueDate || installment.date)}
+                  </span>
+                </div>
 
-              <div className="flex items-center gap-2">
-                <Badge
-                  variant={
-                    installment.status === "paid"
-                      ? "success"
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={
+                      installment.status === "paid"
+                        ? "success"
+                        : installment.status === "overdue"
+                          ? "destructive"
+                          : "warning"
+                    }
+                    className="text-xs"
+                  >
+                    {installment.status === "paid"
+                      ? "Pago"
                       : installment.status === "overdue"
-                        ? "destructive"
-                        : "warning"
-                  }
-                  className="text-xs"
-                >
-                  {installment.status === "paid"
-                    ? "Pago"
-                    : installment.status === "overdue"
-                      ? "Atrasado"
-                      : "Pendente"}
-                </Badge>
-                {installment.id === currentTransactionId && (
-                  <Badge variant="outline" className="text-xs">
-                    Editando
+                        ? "Atrasado"
+                        : "Pendente"}
                   </Badge>
-                )}
+                  {installment.id === currentTransactionId && (
+                    <Badge variant="outline" className="text-xs">
+                      Editando
+                    </Badge>
+                  )}
+                </div>
               </div>
-            </Link>
-          ))}
+            );
+
+            if (disableLinks) {
+              return <div key={installment.id}>{Content}</div>;
+            }
+
+            return (
+              <Link
+                key={installment.id}
+                href={`/financial/${installment.id}`}
+                className="block"
+              >
+                {Content}
+              </Link>
+            );
+          })}
         </div>
       </CardContent>
     </Card>

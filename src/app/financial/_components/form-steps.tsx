@@ -161,6 +161,12 @@ interface DetailsStepProps {
   ) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => void;
   errors?: FormErrors<TransactionFormData>;
+  isProposalTransaction?: boolean;
+  groupInfo?: {
+    currentTotal: number;
+    number: number;
+    count: number;
+  };
 }
 
 export function DetailsStep({
@@ -168,6 +174,8 @@ export function DetailsStep({
   onChange,
   onBlur,
   errors = {},
+  isProposalTransaction = false,
+  groupInfo,
 }: DetailsStepProps) {
   return (
     <div className="space-y-6">
@@ -218,7 +226,13 @@ export function DetailsStep({
             placeholder="0,00"
             className={errors.amount ? "border-destructive" : ""}
             required
+            disabled={isProposalTransaction}
           />
+          {isProposalTransaction && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Valor gerenciado pela Proposta. Para alterar, edite a proposta.
+            </p>
+          )}
         </FormItem>
 
         <FormItem label="Categoria" htmlFor="category">
@@ -291,6 +305,7 @@ interface PaymentStepProps {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => void;
   errors?: FormErrors<TransactionFormData>;
+  isProposalTransaction?: boolean;
 }
 
 export function PaymentStep({
@@ -298,6 +313,7 @@ export function PaymentStep({
   onFormDataChange,
   onChange,
   errors = {},
+  isProposalTransaction = false,
 }: PaymentStepProps) {
   return (
     <div className="space-y-6">
@@ -323,6 +339,13 @@ export function PaymentStep({
           error={errors.wallet}
         />
       </div>
+
+      {isProposalTransaction && (
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-sm text-blue-600">
+          As condições de pagamento são gerenciadas pela Proposta. Para alterar
+          parcelamento, edite a Proposta original.
+        </div>
+      )}
 
       {/* Installments Card */}
       <div
@@ -358,7 +381,8 @@ export function PaymentStep({
             name="isInstallment"
             checked={formData.isInstallment}
             onChange={onChange}
-            className="w-7 h-7 rounded-lg border-2 border-border text-primary focus:ring-primary/20 cursor-pointer"
+            disabled={isProposalTransaction}
+            className="w-7 h-7 rounded-lg border-2 border-border text-primary focus:ring-primary/20 cursor-pointer disabled:opacity-50"
           />
         </div>
 
@@ -513,10 +537,7 @@ export function ReviewStep({
               <p className="font-semibold">
                 {formData.installmentCount}x de{" "}
                 {formatCurrency(
-                  totalOverride !== undefined
-                    ? parseFloat(formData.amount || "0")
-                    : parseFloat(formData.amount || "0") /
-                        formData.installmentCount
+                  parseFloat(formData.amount || "0") / formData.installmentCount
                 )}
               </p>
             </div>
@@ -529,7 +550,8 @@ export function ReviewStep({
         <div className="flex items-center gap-2">
           <User className="w-4 h-4 text-muted-foreground" />
           <Label className="text-sm font-medium">
-            Cliente {isIncome && <span className="text-destructive">*</span>}
+            {isIncome ? "Cliente" : "Fornecedor"}{" "}
+            {isIncome && <span className="text-destructive">*</span>}
           </Label>
         </div>
         <ClientSelect
