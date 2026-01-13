@@ -70,6 +70,16 @@ export async function updateProposal(payload: UpdateProposalPayload): Promise<vo
     products: productsForUpdate,
     sistemas: sistemasPayload,
     status: (formData.status as ProposalStatus) || "draft",
+    // Payment options
+    downPaymentEnabled: formData.downPaymentEnabled || false,
+    downPaymentValue: formData.downPaymentValue || 0,
+    downPaymentWallet: formData.downPaymentWallet || "",
+    downPaymentDueDate: formData.downPaymentDueDate || "",
+    installmentsEnabled: formData.installmentsEnabled || false,
+    installmentsCount: formData.installmentsCount || 1,
+    installmentValue: formData.installmentValue || 0,
+    installmentsWallet: formData.installmentsWallet || "",
+    firstInstallmentDate: formData.firstInstallmentDate || "",
   });
   
   toast.success("Proposta atualizada com sucesso!");
@@ -101,5 +111,15 @@ export function prepareCreatePayload(payload: CreateProposalPayload) {
       : undefined,
     targetTenantId: tenantId, // Pass tenant ID to backend (for super admin)
     status: (formData.status as ProposalStatus) || "draft",
+    // Payment options
+    downPaymentEnabled: formData.downPaymentEnabled || false,
+    downPaymentValue: formData.downPaymentValue || 0,
+    downPaymentWallet: formData.downPaymentWallet || "",
+    downPaymentDueDate: formData.downPaymentDueDate || "",
+    installmentsEnabled: formData.installmentsEnabled || false,
+    installmentsCount: formData.installmentsCount || 1,
+    installmentValue: formData.installmentValue || 0,
+    installmentsWallet: formData.installmentsWallet || "",
+    firstInstallmentDate: formData.firstInstallmentDate || "",
   };
 }

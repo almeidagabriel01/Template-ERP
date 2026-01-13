@@ -5,6 +5,12 @@ interface PdfTotalsProps {
   products: ProposalProduct[];
   discount: number;
   contentStyles: Record<string, React.CSSProperties>;
+  // Payment options (optional for backwards compatibility)
+  downPaymentEnabled?: boolean;
+  downPaymentValue?: number;
+  installmentsEnabled?: boolean;
+  installmentsCount?: number;
+  installmentValue?: number;
 }
 
 /**
@@ -14,17 +20,26 @@ export function PdfTotals({
   products,
   discount,
   contentStyles,
+  downPaymentEnabled,
+  downPaymentValue,
+  installmentsEnabled,
+  installmentsCount,
+  installmentValue,
 }: PdfTotalsProps) {
   const subtotal = products.reduce((sum, p) => sum + p.total, 0);
   const discountAmt = (subtotal * (discount || 0)) / 100;
   const total = subtotal - discountAmt;
+
+  const hasPaymentOptions =
+    (downPaymentEnabled && downPaymentValue && downPaymentValue > 0) ||
+    (installmentsEnabled && installmentsCount && installmentsCount >= 1);
 
   return (
     <div
       className="mt-6 pt-5 border-t-2 flex justify-end"
       style={contentStyles.headerBorder}
     >
-      <div className="w-56 grid gap-2 text-right">
+      <div className="w-72 grid gap-2 text-right">
         <div
           className="flex items-baseline justify-between"
           style={contentStyles.subtotal}

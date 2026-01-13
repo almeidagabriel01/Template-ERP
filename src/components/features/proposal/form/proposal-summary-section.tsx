@@ -271,6 +271,79 @@ export function ProposalSummarySection({
           </Select>
         </div>
 
+        {/* Payment Summary (read-only) */}
+        {formData.installmentsEnabled && (
+          <div className="border rounded-xl p-4 bg-muted/30">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-3.5 h-3.5 text-primary"
+                >
+                  <rect width="20" height="14" x="2" y="5" rx="2" />
+                  <line x1="2" x2="22" y1="10" y2="10" />
+                </svg>
+              </div>
+              <span className="font-semibold text-sm">
+                Condições de Pagamento
+              </span>
+            </div>
+            <div className="text-sm space-y-1.5 text-muted-foreground">
+              {formData.downPaymentEnabled &&
+                formData.downPaymentValue &&
+                formData.downPaymentValue > 0 && (
+                  <p>
+                    • Entrada:{" "}
+                    <span className="font-semibold text-foreground">
+                      R${" "}
+                      {(formData.downPaymentValue || 0).toLocaleString(
+                        "pt-BR",
+                        {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        }
+                      )}
+                    </span>
+                    {formData.downPaymentDueDate && (
+                      <span className="text-xs ml-2">
+                        (venc:{" "}
+                        {new Date(
+                          formData.downPaymentDueDate + "T12:00:00"
+                        ).toLocaleDateString("pt-BR")}
+                        )
+                      </span>
+                    )}
+                  </p>
+                )}
+              <p>
+                • Parcelas:{" "}
+                <span className="font-semibold text-foreground">
+                  {formData.installmentsCount || 1}x de R${" "}
+                  {(formData.installmentValue || 0).toLocaleString("pt-BR", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+                {formData.firstInstallmentDate && (
+                  <span className="text-xs ml-2">
+                    (1ª venc:{" "}
+                    {new Date(
+                      formData.firstInstallmentDate + "T12:00:00"
+                    ).toLocaleDateString("pt-BR")}
+                    )
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Custom Notes */}
         <div className="grid gap-2">
           <Label htmlFor="customNotes">Observações Adicionais</Label>
