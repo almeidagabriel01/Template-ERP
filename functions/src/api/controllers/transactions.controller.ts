@@ -196,7 +196,9 @@ export const updateTransaction = async (req: Request, res: Response) => {
       if (!snap.exists) throw new Error("Transação não encontrada.");
 
       const currentData = snap.data();
-      if (!isSuperAdmin && currentData?.tenantId !== tenantId)
+      if (!currentData) throw new Error("Dados da transação inválidos.");
+
+      if (!isSuperAdmin && currentData.tenantId !== tenantId)
         throw new Error("Acesso negado.");
 
       // Calc Impact logic
@@ -213,6 +215,9 @@ export const updateTransaction = async (req: Request, res: Response) => {
           (newData.type === "income" ? 1 : -1) * (newData.amount || 0);
       }
 
+      // Use the transaction's tenantId for wallet lookup (not the user's tenantId)
+      const txTenantId = currentData?.tenantId || tenantId;
+
       if (oldImpact !== newImpact || currentData?.wallet !== newData.wallet) {
         const now = Timestamp.now();
         if (currentData?.wallet !== newData.wallet) {
@@ -221,7 +226,7 @@ export const updateTransaction = async (req: Request, res: Response) => {
             const w = await resolveWalletRef(
               t,
               db,
-              tenantId,
+              txTenantId,
               currentData.wallet
             );
             if (w)
@@ -232,7 +237,7 @@ export const updateTransaction = async (req: Request, res: Response) => {
           }
           // Apply new
           if (newImpact !== 0 && newData.wallet) {
-            const w = await resolveWalletRef(t, db, tenantId, newData.wallet);
+            const w = await resolveWalletRef(t, db, txTenantId, newData.wallet);
             if (w)
               t.update(w.ref, {
                 balance: FieldValue.increment(newImpact),
@@ -243,7 +248,7 @@ export const updateTransaction = async (req: Request, res: Response) => {
           // Same wallet
           const diff = newImpact - oldImpact;
           if (diff !== 0 && newData.wallet) {
-            const w = await resolveWalletRef(t, db, tenantId, newData.wallet);
+            const w = await resolveWalletRef(t, db, txTenantId, newData.wallet);
             if (w)
               t.update(w.ref, {
                 balance: FieldValue.increment(diff),
@@ -251,6 +256,25 @@ export const updateTransaction = async (req: Request, res: Response) => {
               });
           }
         }
+      }
+
+      // Sync Wallet change to Proposal
+      if (
+        newData.wallet &&
+        currentData.wallet !== newData.wallet &&
+        currentData.proposalId
+      ) {
+        const proposalRef = db.collection("proposals").doc(currentData.proposalId);
+        
+        const proposalUpdate: any = {};
+        if (currentData.isDownPayment) {
+          proposalUpdate.downPaymentWallet = newData.wallet;
+        } else {
+           // Default to installments wallet if not explicitly down payment
+           proposalUpdate.installmentsWallet = newData.wallet;
+        }
+        
+        t.update(proposalRef, proposalUpdate);
       }
 
       t.update(ref, { ...updateData, updatedAt: Timestamp.now() });
@@ -287,10 +311,25 @@ export const deleteTransaction = async (req: Request, res: Response) => {
       if (!isSuperAdmin && currentData?.tenantId !== tenantId)
         throw new Error("Acesso negado.");
 
+      // Check if linked to an approved proposal
+      if (currentData?.proposalId) {
+        const proposalRef = db.collection("proposals").doc(currentData.proposalId);
+        const proposalSnap = await t.get(proposalRef);
+        
+        if (proposalSnap.exists) {
+           const proposalData = proposalSnap.data();
+           if (proposalData?.status === "approved") {
+             throw new Error("Não é possível excluir um lançamento vinculado a uma proposta Aprovada. Reverta o status da proposta para Rascunho antes de excluir.");
+           }
+        }
+      }
+
       if (currentData?.status === "paid" && currentData?.wallet) {
         const impact =
           (currentData.type === "income" ? 1 : -1) * (currentData.amount || 0);
-        const w = await resolveWalletRef(t, db, tenantId, currentData.wallet);
+        // Use transaction's tenantId for wallet lookup
+        const txTenantId = currentData?.tenantId || tenantId;
+        const w = await resolveWalletRef(t, db, txTenantId, currentData.wallet);
         if (w) {
           t.update(w.ref, {
             balance: FieldValue.increment(-impact),

@@ -48,4 +48,14 @@ export interface Proposal {
   createdAt: string;
   updatedAt: string;
   pdfSettings?: Record<string, unknown>;
+  // Payment options
+  downPaymentEnabled?: boolean;
+  downPaymentValue?: number;
+  downPaymentWallet?: string; // Internal use only - not shown in PDF
+  downPaymentDueDate?: string; // YYYY-MM-DD
+  installmentsEnabled?: boolean;
+  installmentsCount?: number;
+  installmentValue?: number;
+  installmentsWallet?: string; // Internal use only - not shown in PDF
+  firstInstallmentDate?: string; // YYYY-MM-DD - date of first installment
 }

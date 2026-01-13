@@ -29,8 +29,10 @@ export type Transaction = {
   clientId?: string;
   clientName?: string;
   proposalId?: string;
+  proposalGroupId?: string; // ID to group down payment + installments from same proposal
   category?: string;
   wallet?: string; // Payment method: NuBank, PicPay, Boleto, etc.
+  isDownPayment?: boolean; // True if this is a down payment entry
   isInstallment?: boolean;
   installmentCount?: number; // Total number of installments
   installmentNumber?: number; // Current installment (1, 2, 3...)

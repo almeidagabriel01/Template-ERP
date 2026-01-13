@@ -106,6 +106,13 @@ interface UseFinancialDataReturn {
     transaction: Transaction,
     newStatus: Transaction["status"]
   ) => Promise<boolean>;
+  updateTransaction: (
+    transaction: Transaction,
+    data: Partial<Transaction>
+  ) => Promise<boolean>;
+  updateBatchTransactions: (
+    updates: { id: string; data: Partial<Transaction> }[]
+  ) => Promise<boolean>;
   updateGroupStatus: (
     transaction: Transaction,
     newStatus: Transaction["status"]
@@ -170,8 +177,9 @@ export function useFinancialData(): UseFinancialDataReturn {
   }, [fetchData]);
 
   const filteredTransactions = React.useMemo(() => {
-    // 1. Group installments and select the "active" one for each group
-    const processedGroups = new Set<string>();
+    // 1. Group by proposalGroupId first, then by installmentGroupId
+    const processedProposalGroups = new Set<string>();
+    const processedInstallmentGroups = new Set<string>();
     const effectiveTransactions: Transaction[] = [];
 
     // Pre-sort transactions by date to ensure order (though we sort again later)
@@ -181,36 +189,84 @@ export function useFinancialData(): UseFinancialDataReturn {
     );
 
     sortedRaw.forEach((t) => {
-      if (!t.isInstallment || !t.installmentGroupId) {
-        effectiveTransactions.push(t);
+      // CASE 1: Transaction is part of a proposal group (has both down payment and installments)
+      if (t.proposalGroupId) {
+        if (processedProposalGroups.has(t.proposalGroupId)) return;
+
+        // Find all transactions belonging to this proposal group
+        const proposalGroup = transactions.filter(
+          (g) => g.proposalGroupId === t.proposalGroupId
+        );
+
+        // Find the down payment transaction as the base for the representative
+        let base = proposalGroup.find((g) => g.isDownPayment);
+        if (!base && proposalGroup.length > 0) base = proposalGroup[0];
+
+        if (base) {
+          // Calculate aggregate status
+          // Priority: Overdue > Pending > Paid
+          let aggregateStatus: Transaction["status"] = "paid";
+          
+          const hasOverdue = proposalGroup.some(g => g.status === "overdue");
+          const hasPending = proposalGroup.some(g => g.status === "pending");
+          
+          if (hasOverdue) {
+            aggregateStatus = "overdue";
+          } else if (hasPending) {
+            aggregateStatus = "pending";
+          }
+          
+          // Create a synthetic representative with the aggregate status
+          // This ensures the main card reflects the group state
+          const representative = {
+            ...base,
+            status: aggregateStatus
+          };
+
+          effectiveTransactions.push(representative);
+          processedProposalGroups.add(t.proposalGroupId);
+          
+          // Also mark the installmentGroupId as processed to avoid duplicates
+          const installmentGroupIds = proposalGroup
+            .filter(g => g.installmentGroupId)
+            .map(g => g.installmentGroupId!);
+          installmentGroupIds.forEach(id => processedInstallmentGroups.add(id));
+        }
         return;
       }
 
-      if (processedGroups.has(t.installmentGroupId)) return;
+      // CASE 2: Transaction is part of an installment group (without proposal group)
+      if (t.isInstallment && t.installmentGroupId) {
+        if (processedInstallmentGroups.has(t.installmentGroupId)) return;
 
-      // Find all belonging to this group
-      const group = transactions.filter(
-        (g) => g.installmentGroupId === t.installmentGroupId
-      );
+        // Find all belonging to this group
+        const group = transactions.filter(
+          (g) => g.installmentGroupId === t.installmentGroupId
+        );
 
-      // Sort group by installment number
-      group.sort(
-        (a, b) => (a.installmentNumber || 0) - (b.installmentNumber || 0)
-      );
+        // Sort group by installment number
+        group.sort(
+          (a, b) => (a.installmentNumber || 0) - (b.installmentNumber || 0)
+        );
 
-      // Find the first "pending" or "overdue" installment (not paid)
-      let active = group.find((g) => g.status !== "paid");
+        // Find the first "pending" or "overdue" installment (not paid)
+        let active = group.find((g) => g.status !== "paid");
 
-      // If all are paid, show the last one
-      if (!active && group.length > 0) {
-        active = group[group.length - 1];
+        // If all are paid, show the last one
+        if (!active && group.length > 0) {
+          active = group[group.length - 1];
+        }
+
+        // If for some reason we didn't find one (empty group?), skip
+        if (active) {
+          effectiveTransactions.push(active);
+          processedInstallmentGroups.add(t.installmentGroupId);
+        }
+        return;
       }
 
-      // If for some reason we didn't find one (empty group?), skip
-      if (active) {
-        effectiveTransactions.push(active);
-        processedGroups.add(t.installmentGroupId);
-      }
+      // CASE 3: Regular transaction (not part of any group)
+      effectiveTransactions.push(t);
     });
 
     let filtered = effectiveTransactions;
@@ -460,6 +516,93 @@ export function useFinancialData(): UseFinancialDataReturn {
     [tenant]
   );
 
+  // Generic update transaction
+  const updateTransaction = React.useCallback(
+    async (
+      transaction: Transaction,
+      data: Partial<Transaction>
+    ): Promise<boolean> => {
+      try {
+        await TransactionService.updateTransaction(transaction.id, data);
+
+        // Update local state ONLY after success
+        setTransactions((prev) =>
+          prev.map((t) =>
+            t.id === transaction.id ? { ...t, ...data } : t
+          )
+        );
+
+        toast.success("Lançamento atualizado!");
+
+        // Refresh summary and wallet balance
+        if (tenant) {
+          const [summaryData, wallets] = await Promise.all([
+            TransactionService.getSummary(tenant.id),
+            WalletService.getWallets(tenant.id),
+          ]);
+          setSummary(summaryData);
+          const totalBalance = wallets
+            .filter((w) => w.status === "active")
+            .reduce((sum, w) => sum + w.balance, 0);
+          setTotalWalletBalance(totalBalance);
+        }
+
+        return true;
+      } catch (error) {
+        console.error("Error updating transaction:", error);
+        toast.error("Erro ao atualizar lançamento");
+        return false;
+      }
+    },
+    [tenant]
+  );
+
+  // Batch update transactions
+  const updateBatchTransactions = React.useCallback(
+    async (
+      updates: { id: string; data: Partial<Transaction> }[]
+    ): Promise<boolean> => {
+      try {
+        await Promise.all(
+          updates.map((update) =>
+            TransactionService.updateTransaction(update.id, update.data)
+          )
+        );
+
+        // Update local state
+        setTransactions((prev) => {
+          const updatesMap = new Map(updates.map((u) => [u.id, u.data]));
+          return prev.map((t) => {
+            const update = updatesMap.get(t.id);
+            return update ? { ...t, ...update } : t;
+          });
+        });
+
+        toast.success(`${updates.length} lançamentos atualizados!`);
+
+        // Refresh summary and wallet balance
+        if (tenant) {
+          const [summaryData, wallets] = await Promise.all([
+            TransactionService.getSummary(tenant.id),
+            WalletService.getWallets(tenant.id),
+          ]);
+          setSummary(summaryData);
+          const totalBalance = wallets
+            .filter((w) => w.status === "active")
+            .reduce((sum, w) => sum + w.balance, 0);
+          setTotalWalletBalance(totalBalance);
+        }
+
+        return true;
+      } catch (error) {
+        console.error("Error updating batch:", error);
+        toast.error("Erro ao atualizar lançamentos");
+        return false;
+      }
+    },
+    [tenant]
+  );
+
   // Update status for all installments in a group OR single
   const updateGroupStatus = React.useCallback(
     async (
@@ -468,12 +611,40 @@ export function useFinancialData(): UseFinancialDataReturn {
       updateAll: boolean = true
     ): Promise<boolean> => {
       try {
-        // If it's an installment AND we want to update the whole group
-        if (
-          transaction.isInstallment &&
-          transaction.installmentGroupId &&
-          updateAll
-        ) {
+        // Check if this is a proposal group (has proposalGroupId)
+        const hasProposalGroup = transaction.proposalGroupId && updateAll;
+        
+        // Check if this is an installment group
+        const hasInstallmentGroup = transaction.isInstallment && 
+          transaction.installmentGroupId && 
+          updateAll;
+
+        if (hasProposalGroup) {
+          // Update all transactions in the proposal group (down payment + all installments)
+          const groupTransactions = transactions.filter(
+            (t) => t.proposalGroupId === transaction.proposalGroupId
+          );
+
+          // Update all in parallel
+          await Promise.all(
+            groupTransactions.map((t) =>
+              TransactionService.updateTransaction(t.id, {
+                status: newStatus,
+              })
+            )
+          );
+
+          // Update local state for all
+          const groupIds = new Set(groupTransactions.map((t) => t.id));
+          setTransactions((prev) =>
+            prev.map((t) =>
+              groupIds.has(t.id) ? { ...t, status: newStatus } : t
+            )
+          );
+
+          toast.success(`${groupTransactions.length} lançamentos da proposta atualizados!`);
+        } else if (hasInstallmentGroup) {
+          // Update all installments in the installment group
           const groupTransactions = transactions.filter(
             (t) => t.installmentGroupId === transaction.installmentGroupId
           );
@@ -559,6 +730,8 @@ export function useFinancialData(): UseFinancialDataReturn {
     deleteTransaction,
     deleteTransactionGroup,
     updateTransactionStatus,
+    updateTransaction,
+    updateBatchTransactions,
     updateGroupStatus,
     refreshData: fetchData,
   };

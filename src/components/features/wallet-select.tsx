@@ -22,6 +22,7 @@ interface WalletSelectProps extends Omit<
   onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   required?: boolean;
   error?: string;
+  preSelectDefault?: boolean;
 }
 
 export function WalletSelect({
@@ -31,10 +32,12 @@ export function WalletSelect({
   className,
   required,
   error,
+  preSelectDefault = false,
   ...props
 }: WalletSelectProps) {
   const { wallets, createWallet, isLoading, refreshData } = useWalletsData();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const hasAutoSelected = React.useRef(false);
 
   // Helper to trigger onChange with a synthetic event
   const triggerChange = (newValue: string) => {
@@ -50,6 +53,23 @@ export function WalletSelect({
     } as React.ChangeEvent<HTMLSelectElement>;
     onChange(event);
   };
+
+  // Auto-select default wallet when wallets load and value is empty
+  React.useEffect(() => {
+    if (!preSelectDefault) return;
+    if (hasAutoSelected.current) return;
+    if (!value && wallets.length > 0) {
+      const defaultWallet = wallets.find((w) => w.isDefault);
+      if (defaultWallet) {
+        triggerChange(defaultWallet.name);
+        hasAutoSelected.current = true;
+      } else if (wallets.length > 0) {
+        // If no default, select the first wallet
+        triggerChange(wallets[0].name);
+        hasAutoSelected.current = true;
+      }
+    }
+  }, [preSelectDefault, value, wallets, triggerChange]);
 
   const handleCreateWallet = async (
     data: CreateWalletInput | UpdateWalletInput
