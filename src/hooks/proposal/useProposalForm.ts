@@ -24,6 +24,7 @@ import {
   useMasterDataTransaction,
   MasterDataAction,
 } from "./useMasterDataTransaction";
+import { useWalletsData } from "@/app/financial/wallets/_hooks/useWalletsData";
 
 export interface UseProposalFormProps {
   proposalId?: string;
@@ -131,6 +132,16 @@ export function useProposalForm({
     discount: 0,
     products: [],
     status: "draft" as ProposalStatus,
+    // Payment options
+    downPaymentEnabled: false,
+    downPaymentValue: 0,
+    downPaymentWallet: "",
+    downPaymentDueDate: "",
+    installmentsEnabled: false,
+    installmentsCount: 1,
+    installmentValue: 0,
+    installmentsWallet: "",
+    firstInstallmentDate: "",
   });
 
   const [selectedSistemas, setSelectedSistemas] = React.useState<
@@ -142,6 +153,23 @@ export function useProposalForm({
 
   const primaryColor = tenant?.primaryColor || "#2563eb";
   const isAutomacaoNiche = tenant?.niche === "automacao_residencial";
+
+  // Get wallets to pre-select default wallet
+  const { wallets } = useWalletsData();
+
+  // Pre-select default wallet for payment options
+  React.useEffect(() => {
+    if (wallets.length === 0) return;
+    
+    const defaultWallet = wallets.find((w) => w.isDefault);
+    if (!defaultWallet) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      downPaymentWallet: prev.downPaymentWallet || defaultWallet.name,
+      installmentsWallet: prev.installmentsWallet || defaultWallet.name,
+    }));
+  }, [wallets]);
 
   // Transactional Master Data Management
   // This allows creates/updates/deletes to be buffered until proposal save
@@ -271,6 +299,16 @@ export function useProposalForm({
               discount: proposal.discount || 0,
               products: syncedProducts,
               status: (proposal.status as ProposalStatus) || "draft",
+              // Payment options
+              downPaymentEnabled: proposal.downPaymentEnabled || false,
+              downPaymentValue: proposal.downPaymentValue || 0,
+              downPaymentWallet: proposal.downPaymentWallet || "",
+              downPaymentDueDate: proposal.downPaymentDueDate || "",
+              installmentsEnabled: proposal.installmentsEnabled || false,
+              installmentsCount: proposal.installmentsCount || 1,
+              installmentValue: proposal.installmentValue || 0,
+              installmentsWallet: proposal.installmentsWallet || "",
+              firstInstallmentDate: proposal.firstInstallmentDate || "",
             });
 
             if (proposal.sistemas && proposal.sistemas.length > 0) {
@@ -450,16 +488,36 @@ export function useProposalForm({
   const calculateDiscount = () =>
     (calculateSubtotal() * (formData.discount || 0)) / 100;
   const calculateTotal = () => calculateSubtotal() - calculateDiscount();
+  
+  // Calculate installment value based on total minus down payment
+  const calculateInstallmentValue = React.useCallback(() => {
+    const total = calculateTotal();
+    const downPayment = formData.downPaymentEnabled ? (formData.downPaymentValue || 0) : 0;
+    const remaining = Math.max(0, total - downPayment);
+    const count = Math.max(1, formData.installmentsCount || 1);
+    return remaining / count;
+  }, [formData.downPaymentEnabled, formData.downPaymentValue, formData.installmentsCount, calculateTotal]);
+
+  // Auto-update installment value when dependencies change
+  React.useEffect(() => {
+    if (formData.installmentsEnabled) {
+      const newInstallmentValue = calculateInstallmentValue();
+      if (newInstallmentValue !== formData.installmentValue) {
+        setFormData(prev => ({ ...prev, installmentValue: newInstallmentValue }));
+      }
+    }
+  }, [formData.installmentsEnabled, formData.downPaymentEnabled, formData.downPaymentValue, formData.installmentsCount, calculateInstallmentValue, formData.installmentValue]);
 
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >
   ) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    const numericFields = ['discount', 'downPaymentValue', 'installmentsCount'];
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "discount" ? Number(value) : value,
+      [name]: numericFields.includes(name) || type === 'number' ? Number(value) : value,
     }));
   };
 

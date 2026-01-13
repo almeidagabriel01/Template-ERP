@@ -65,26 +65,35 @@ export default function EditTransactionPage() {
     isLoading,
     isSaving,
     canEdit,
+    isProposalTransaction,
+    groupTotalValue,
   } = useEditTransaction();
 
   // Adapt formData type for shared components
   // Moved to top and handled null transaction
-  const adaptedFormData: TransactionFormData = React.useMemo(() => ({
-    ...formData,
-    clientId: formData.clientId || "",
-    isInstallment: formData.isInstallment,
-    installmentCount: formData.installmentCount,
-  }), [formData]);
+  const adaptedFormData: TransactionFormData = React.useMemo(
+    () => ({
+      ...formData,
+      clientId: formData.clientId || "",
+      isInstallment: formData.isInstallment,
+      installmentCount: formData.installmentCount,
+    }),
+    [formData]
+  );
 
   // Calculate total amount (sum of all installments) for display
   const totalValueOverride = React.useMemo(() => {
-    if (!transaction?.isInstallment || relatedInstallments.length === 0) return undefined;
+    if (!transaction?.isInstallment || relatedInstallments.length === 0)
+      return undefined;
 
-    return relatedInstallments
-      .filter((t: Transaction) => t.id !== transaction.id)
-      .reduce((sum: number, t: Transaction) => sum + t.amount, 0) +
-      parseFloat(formData.amount || "0");
-  }, [transaction, relatedInstallments, formData.amount]);
+    // If it's a proposal group, use the explicit group total value
+    if (isProposalTransaction && groupTotalValue) {
+      return groupTotalValue;
+    }
+
+    // For standard installment groups (or new ones), formData.amount IS now the total
+    return parseFloat(formData.amount || "0");
+  }, [transaction, isProposalTransaction, groupTotalValue, formData.amount]);
 
   // Show loading first - before checking plan access to avoid flash
   if (isLoading || planLoading) {
@@ -135,7 +144,7 @@ export default function EditTransactionPage() {
   }
 
   const handleFormSubmit = async () => {
-    const fakeEvent = { preventDefault: () => { } } as React.FormEvent;
+    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
     await handleSubmit(fakeEvent);
   };
 
@@ -152,14 +161,15 @@ export default function EditTransactionPage() {
 
         <ReviewStep
           formData={adaptedFormData}
-          onChange={() => { }}
-          onClientChange={() => { }}
+          onChange={() => {}}
+          onClientChange={() => {}}
           totalOverride={totalValueOverride}
         />
 
         {previewInstallments.length > 0 && (
           <InstallmentsCard
             installments={previewInstallments} // No currentTransactionId passed here to avoid "Editing" highlight
+            disableLinks
           />
         )}
 
@@ -196,7 +206,20 @@ export default function EditTransactionPage() {
 
         {/* Step 2: Details */}
         <StepCard>
-          <DetailsStep formData={adaptedFormData} onChange={handleChange} />
+          <DetailsStep
+            formData={adaptedFormData}
+            onChange={handleChange}
+            isProposalTransaction={!!isProposalTransaction}
+            groupInfo={
+              transaction?.isInstallment && relatedInstallments.length > 0
+                ? {
+                    currentTotal: totalValueOverride || 0,
+                    number: transaction.installmentNumber || 1,
+                    count: transaction.installmentCount || 1,
+                  }
+                : undefined
+            }
+          />
           <StepNavigation />
         </StepCard>
 
@@ -232,12 +255,14 @@ export default function EditTransactionPage() {
               }
             }}
             onChange={handleChange}
+            isProposalTransaction={!!isProposalTransaction}
           />
 
           {previewInstallments.length > 0 && (
             <div className="mt-6">
               <InstallmentsCard
                 installments={previewInstallments}
+                disableLinks
               />
             </div>
           )}

@@ -4,3 +4,4 @@ export { PdfProductRow } from "./pdf-product-row";
 export { PdfTotals } from "./pdf-totals";
 export { PdfSectionRenderer } from "./pdf-section-renderer";
 export { PdfPageHeader } from "./pdf-page-header";
+export { PdfPaymentTerms } from "./pdf-payment-terms";

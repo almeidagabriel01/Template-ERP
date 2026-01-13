@@ -14,9 +14,10 @@ export const ESTIMATED_HEIGHTS = {
   SECTION_PADDING: 24,
   LINE_HEIGHT: 28, // Increased line height estimation
   IMAGE_DEFAULT: 300,
-  PRODUCT_HEADER: 80,
+  PRODUCT_HEADER: 60,
   PRODUCT_ROW: 250,
-  TOTALS: 200,
+  TOTALS: 180,
+  PAYMENT_TERMS: 120,
 };
 
 /**
@@ -34,7 +35,8 @@ export type ContentItemType =
   | "sistema-container-header"
   | "sistema-container-product"
   | "sistema-container-footer"
-  | "sistema-extras-block";
+  | "sistema-extras-block"
+  | "payment-terms";
 
 export interface ContentItem {
   type: ContentItemType;

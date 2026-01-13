@@ -47,9 +47,10 @@ export default function FinancialPage() {
     totalWalletBalance,
     deleteTransactionGroup,
     updateGroupStatus,
+    updateTransaction,
+    updateBatchTransactions,
     transactions,
   } = useFinancialData();
-
 
   const isLoading = tenantLoading || dataLoading || isPlanLoading;
 
@@ -190,28 +191,50 @@ export default function FinancialPage() {
       ) : (
         <div className="grid gap-3">
           {filteredTransactions.map((transaction) => {
+            // Get related installments (for standalone installment groups)
             const relatedInstallments =
-              transaction.isInstallment && transaction.installmentGroupId
+              transaction.isInstallment &&
+              transaction.installmentGroupId &&
+              !transaction.proposalGroupId
                 ? transactions
-                  .filter(
-                    (t) =>
-                      t.installmentGroupId === transaction.installmentGroupId
-                  )
-                  .sort(
-                    (a, b) =>
-                      (a.installmentNumber || 0) - (b.installmentNumber || 0)
-                  )
+                    .filter(
+                      (t) =>
+                        t.installmentGroupId === transaction.installmentGroupId
+                    )
+                    .sort(
+                      (a, b) =>
+                        (a.installmentNumber || 0) - (b.installmentNumber || 0)
+                    )
                 : [];
+
+            // Get all transactions from the same proposal group (down payment + installments)
+            const proposalGroupTransactions = transaction.proposalGroupId
+              ? transactions
+                  .filter(
+                    (t) => t.proposalGroupId === transaction.proposalGroupId
+                  )
+                  .sort((a, b) => {
+                    // Down payment first, then installments by number
+                    if (a.isDownPayment && !b.isDownPayment) return -1;
+                    if (!a.isDownPayment && b.isDownPayment) return 1;
+                    return (
+                      (a.installmentNumber || 0) - (b.installmentNumber || 0)
+                    );
+                  })
+              : [];
 
             return (
               <TransactionCard
                 key={transaction.id}
                 transaction={transaction}
                 relatedInstallments={relatedInstallments}
+                proposalGroupTransactions={proposalGroupTransactions}
                 canEdit={canEdit}
                 canDelete={canDelete}
                 onDelete={openDeleteDialog}
                 onStatusChange={updateGroupStatus}
+                onUpdate={updateTransaction}
+                onUpdateBatch={updateBatchTransactions}
               />
             );
           })}
