@@ -234,36 +234,17 @@ export function DetailsStep({
         </FormItem>
       </FormGroup>
 
-      <FormGroup>
-        <FormItem label="Data" htmlFor="date" required error={errors.date}>
-          <DateInput
-            id="date"
-            name="date"
-            value={formData.date}
-            onChange={onChange}
-            onBlur={onBlur}
-            className={errors.date ? "border-destructive" : ""}
-            required
-          />
-        </FormItem>
-
-        <FormItem
-          label="Vencimento"
-          htmlFor="dueDate"
-          required={formData.type === "income"}
-          error={errors.dueDate}
-        >
-          <DateInput
-            id="dueDate"
-            name="dueDate"
-            value={formData.dueDate}
-            onChange={onChange}
-            onBlur={onBlur}
-            className={errors.dueDate ? "border-destructive" : ""}
-            required={formData.type === "income"}
-          />
-        </FormItem>
-      </FormGroup>
+      <FormItem label="Data" htmlFor="date" required error={errors.date}>
+        <DateInput
+          id="date"
+          name="date"
+          value={formData.date}
+          onChange={onChange}
+          onBlur={onBlur}
+          className={errors.date ? "border-destructive" : ""}
+          required
+        />
+      </FormItem>
     </div>
   );
 }
@@ -439,7 +420,7 @@ export function PaymentStep({
 
       {/* ================== MODE: VALOR TOTAL ================== */}
       {formData.paymentMode === "total" && (
-        <div className="space-y-6 animate-in fade-in duration-300">
+        <div className="space-y-3 animate-in fade-in duration-300">
           {/* Amount Input */}
           <FormItem
             label="Valor Total"
@@ -463,6 +444,24 @@ export function PaymentStep({
                 Valor gerenciado pela Proposta. Para alterar, edite a proposta.
               </p>
             )}
+          </FormItem>
+
+          {/* Due Date Input */}
+          <FormItem
+            label="Vencimento"
+            htmlFor="dueDate"
+            required={formData.type === "income"}
+            error={errors.dueDate}
+          >
+            <DateInput
+              id="dueDate"
+              name="dueDate"
+              value={formData.dueDate}
+              onChange={onChange}
+              onBlur={onBlur}
+              className={errors.dueDate ? "border-destructive" : ""}
+              required={formData.type === "income"}
+            />
           </FormItem>
 
           {/* Wallet Select */}
@@ -631,10 +630,11 @@ export function PaymentStep({
                       placeholder="Ex: 12"
                       value={formData.installmentCount || ""}
                       onChange={(e) => {
-                        const value = parseInt(e.target.value) || 2;
+                        const value =
+                          e.target.value === "" ? 0 : parseInt(e.target.value);
                         onFormDataChange((prev) => ({
                           ...prev,
-                          installmentCount: value,
+                          installmentCount: isNaN(value) ? 0 : value,
                         }));
                       }}
                     />
@@ -750,6 +750,7 @@ export function PaymentStep({
                             name="downPaymentValue"
                             value={formData.downPaymentValue || ""}
                             onChange={onChange}
+                            placeholder="0,00"
                           />
                         </div>
                         <div className="space-y-2">
@@ -766,7 +767,7 @@ export function PaymentStep({
                         <Calendar className="w-4 h-4 text-muted-foreground" />
                         <div className="flex-1">
                           <Label htmlFor="downPaymentDueDate">
-                            Data de Vencimento da Entrada
+                            Data da Entrada
                           </Label>
                           <Input
                             type="date"
@@ -873,6 +874,40 @@ export function ReviewStep({
 }: ReviewStepProps) {
   const isIncome = formData.type === "income";
 
+  // Calculate total based on payment mode
+  const calculateDisplayTotal = () => {
+    if (totalOverride !== undefined) return totalOverride;
+
+    if (formData.paymentMode === "installmentValue") {
+      const installmentValue = parseFloat(formData.installmentValue || "0");
+      const installmentCount = formData.installmentCount || 1;
+      const downPayment = formData.downPaymentEnabled
+        ? parseFloat(formData.downPaymentValue || "0")
+        : 0;
+      return installmentValue * installmentCount + downPayment;
+    }
+
+    return parseFloat(formData.amount || "0");
+  };
+
+  const displayTotal = calculateDisplayTotal();
+
+  // Get installment value for display
+  const getInstallmentDisplayValue = () => {
+    if (formData.paymentMode === "installmentValue") {
+      return parseFloat(formData.installmentValue || "0");
+    }
+    return parseFloat(formData.amount || "0") / formData.installmentCount;
+  };
+
+  // Get wallet display
+  const getWalletDisplay = () => {
+    if (formData.paymentMode === "installmentValue") {
+      return formData.installmentsWallet || formData.wallet || "—";
+    }
+    return formData.wallet || "—";
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3 mb-8">
@@ -924,10 +959,7 @@ export function ReviewStep({
             >
               <p className="text-sm">Valor Total</p>
               <p className="text-2xl font-bold">
-                {isIncome ? "+" : "-"}{" "}
-                {formatCurrency(
-                  totalOverride ?? parseFloat(formData.amount || "0")
-                )}
+                {isIncome ? "+" : "-"} {formatCurrency(displayTotal)}
               </p>
             </div>
           </div>
@@ -941,7 +973,7 @@ export function ReviewStep({
             </div>
             <div>
               <span className="text-muted-foreground">Carteira:</span>
-              <p className="font-medium">{formData.wallet || "—"}</p>
+              <p className="font-medium">{getWalletDisplay()}</p>
             </div>
             <div>
               <span className="text-muted-foreground">Data:</span>
@@ -954,14 +986,21 @@ export function ReviewStep({
           </div>
 
           {formData.isInstallment && (
-            <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
+            <div className="p-4 rounded-xl bg-muted/30 border border-border/50 space-y-2">
               <p className="text-sm text-muted-foreground">Parcelamento</p>
               <p className="font-semibold">
                 {formData.installmentCount}x de{" "}
-                {formatCurrency(
-                  parseFloat(formData.amount || "0") / formData.installmentCount
-                )}
+                {formatCurrency(getInstallmentDisplayValue())}
               </p>
+              {formData.paymentMode === "installmentValue" &&
+                formData.downPaymentEnabled && (
+                  <p className="text-sm text-muted-foreground">
+                    + Entrada de{" "}
+                    {formatCurrency(
+                      parseFloat(formData.downPaymentValue || "0")
+                    )}
+                  </p>
+                )}
             </div>
           )}
         </div>
