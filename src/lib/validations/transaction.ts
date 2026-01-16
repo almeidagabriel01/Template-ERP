@@ -42,12 +42,12 @@ export const transactionSchema = z
   })
   .refine(
     (data) => {
-      // dueDate é obrigatório apenas para receitas (income)
-      if (
-        data.type === "income" &&
-        (!data.dueDate || data.dueDate.trim() === "")
-      ) {
-        return false;
+      // dueDate é obrigatório apenas para receitas (income) no modo "total"
+      // No modo "installmentValue", usa-se firstInstallmentDate
+      if (data.type === "income" && data.paymentMode === "total") {
+        if (!data.dueDate || data.dueDate.trim() === "") {
+          return false;
+        }
       }
       return true;
     },
@@ -76,7 +76,10 @@ export const transactionSchema = z
   )
   .refine(
     (data) => {
-      if (!data.date || !data.dueDate) return true;
+      // Skip date validation if either date is missing or if in installmentValue mode
+      if (!data.date || data.paymentMode === "installmentValue") return true;
+      if (!data.dueDate) return true;
+      
       // Parse date parts to avoid timezone issues
       const [yearD, monthD, dayD] = data.date.split("-").map(Number);
       const [yearDue, monthDue, dayDue] = data.dueDate.split("-").map(Number);

@@ -99,7 +99,7 @@ export default function NewTransactionPage() {
     await handleSubmit(fakeEvent);
   };
 
-  // Step 2 validation: Description, date are required. dueDate required only for income.
+  // Step 2 validation: Description, date are required.
   const validateStep2 = (): boolean => {
     let isValid = true;
 
@@ -112,26 +112,6 @@ export default function NewTransactionPage() {
       isValid = false;
     }
 
-    // dueDate is required only for income (receita)
-    if (formData.type === "income" && !formData.dueDate) {
-      setFieldError("dueDate", "Vencimento é obrigatório para receitas");
-      isValid = false;
-    } else if (formData.date && formData.dueDate) {
-      // Check if dueDate is not before date - parse date parts to avoid timezone issues
-      const [yearD, monthD, dayD] = formData.date.split("-").map(Number);
-      const [yearDue, monthDue, dayDue] = formData.dueDate
-        .split("-")
-        .map(Number);
-      const date = new Date(yearD, monthD - 1, dayD);
-      const dueDate = new Date(yearDue, monthDue - 1, dayDue);
-      date.setHours(0, 0, 0, 0);
-      dueDate.setHours(0, 0, 0, 0);
-      if (dueDate < date) {
-        setFieldError("dueDate", "Vencimento não pode ser anterior à data");
-        isValid = false;
-      }
-    }
-
     return isValid;
   };
 
@@ -140,11 +120,32 @@ export default function NewTransactionPage() {
     let isValid = true;
 
     if (formData.paymentMode === "total") {
-      // Total mode: amount and wallet are required
+      // Total mode: amount, dueDate (for income), and wallet are required
       if (!formData.amount || parseFloat(formData.amount) <= 0) {
         setFieldError("amount", "Valor deve ser maior que 0");
         isValid = false;
       }
+
+      // dueDate is required only for income (receita)
+      if (formData.type === "income" && !formData.dueDate) {
+        setFieldError("dueDate", "Vencimento é obrigatório para receitas");
+        isValid = false;
+      } else if (formData.date && formData.dueDate) {
+        // Check if dueDate is not before date - parse date parts to avoid timezone issues
+        const [yearD, monthD, dayD] = formData.date.split("-").map(Number);
+        const [yearDue, monthDue, dayDue] = formData.dueDate
+          .split("-")
+          .map(Number);
+        const date = new Date(yearD, monthD - 1, dayD);
+        const dueDate = new Date(yearDue, monthDue - 1, dayDue);
+        date.setHours(0, 0, 0, 0);
+        dueDate.setHours(0, 0, 0, 0);
+        if (dueDate < date) {
+          setFieldError("dueDate", "Vencimento não pode ser anterior à data");
+          isValid = false;
+        }
+      }
+
       if (!formData.wallet || formData.wallet.trim() === "") {
         setFieldError("wallet", "Carteira é obrigatória");
         isValid = false;

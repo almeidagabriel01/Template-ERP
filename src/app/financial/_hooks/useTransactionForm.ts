@@ -225,16 +225,19 @@ export function useTransactionForm(): UseTransactionFormReturn {
         walletToUse = formData.installmentsWallet || formData.wallet;
         dueDateToUse = formData.firstInstallmentDate || formData.dueDate;
 
-        if (formData.isInstallment && formData.installmentCount > 1) {
+        // Always create group ID when there are installments (or installments + down payment)
+        if (formData.isInstallment && formData.installmentCount >= 1) {
           installmentGroupId = `installment_${Date.now()}`;
         }
 
-        // Create down payment transaction if enabled
-        if (formData.downPaymentEnabled && downPayment > 0) {
+        // Create down payment transaction if enabled (as part of the installment group)
+        // NOTE: isInstallment is false to prevent backend from generating installments
+        // but we include installmentGroupId to group it with the installments
+        if (formData.downPaymentEnabled && downPayment > 0 && installmentGroupId) {
           await TransactionService.createTransaction({
             tenantId: tenant.id,
             type: formData.type,
-            description: `${formData.description.trim()} - Entrada`,
+            description: formData.description.trim(),
             amount: downPayment,
             date: formData.date,
             dueDate: formData.downPaymentDueDate || formData.date,
@@ -243,15 +246,18 @@ export function useTransactionForm(): UseTransactionFormReturn {
             clientName: formData.clientName || undefined,
             category: formData.category || undefined,
             wallet: formData.downPaymentWallet || walletToUse,
-            isInstallment: false,
-            installmentCount: 1,
+            isInstallment: false, // Don't generate installments for this
+            isDownPayment: true, // Mark as down payment
+            installmentNumber: 0, // 0 indicates down payment / entrada
+            installmentCount: formData.installmentCount + 1, // Total count including down payment
+            installmentGroupId,
             notes: formData.notes || undefined,
             createdAt: now,
             updatedAt: now,
           });
         }
 
-        // Create installment transactions
+        // Create installment transactions (backend will generate all installments)
         await TransactionService.createTransaction({
           tenantId: tenant.id,
           type: formData.type,
