@@ -58,19 +58,19 @@ export interface UseProposalFormReturn {
   handleChange: (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => void;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
   toggleProduct: (product: Product) => void;
   updateProductQuantity: (
     productId: string,
     delta: number,
-    systemInstanceId?: string
+    systemInstanceId?: string,
   ) => void;
   removeProduct: (productId: string, systemInstanceId?: string) => void;
   handleToggleProductStatus: (
     productId: string,
-    newStatus: "active" | "inactive"
+    newStatus: "active" | "inactive",
   ) => Promise<void>;
 
   // Calculations
@@ -96,7 +96,12 @@ export interface UseProposalFormReturn {
   addProductToSystem: (
     product: Product,
     systemIndex: number,
-    systemInstanceId: string
+    systemInstanceId: string,
+  ) => void;
+  updateProductMarkup: (
+    productId: string,
+    markup: number,
+    systemInstanceId?: string,
   ) => void;
 }
 
@@ -130,6 +135,7 @@ export function useProposalForm({
     validUntil: "",
     customNotes: "",
     discount: 0,
+    extraExpense: 0,
     products: [],
     status: "draft" as ProposalStatus,
     // Payment options
@@ -148,7 +154,7 @@ export function useProposalForm({
     ProposalSistema[]
   >([]);
   const [systemProductIds, setSystemProductIds] = React.useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   const primaryColor = tenant?.primaryColor || "#2563eb";
@@ -160,7 +166,7 @@ export function useProposalForm({
   // Pre-select default wallet for payment options
   React.useEffect(() => {
     if (wallets.length === 0) return;
-    
+
     const defaultWallet = wallets.find((w) => w.isDefault);
     if (!defaultWallet) return;
 
@@ -216,7 +222,7 @@ export function useProposalForm({
           setProducts(loadedProducts);
 
           const templates = await ProposalTemplateService.getTemplates(
-            tenant.id
+            tenant.id,
           );
           const defaultTemplate =
             templates.find((t) => t.isDefault) || templates[0];
@@ -247,7 +253,7 @@ export function useProposalForm({
                 const { ClientService } =
                   await import("@/services/client-service");
                 const freshClient = await ClientService.getClientById(
-                  proposal.clientId
+                  proposal.clientId,
                 );
                 if (freshClient) {
                   syncedClientName = freshClient.name || syncedClientName;
@@ -268,6 +274,13 @@ export function useProposalForm({
               const freshProduct = products.find((p) => p.id === pp.productId);
               if (freshProduct) {
                 const price = parseFloat(freshProduct.price) || pp.unitPrice;
+                // Preserve stored markup or use fresh product markup
+                const markup =
+                  pp.markup !== undefined
+                    ? pp.markup
+                    : parseFloat(freshProduct.markup || "0");
+                const sellingPrice = price * (1 + markup / 100);
+
                 return {
                   ...pp,
                   productName: freshProduct.name,
@@ -280,7 +293,8 @@ export function useProposalForm({
                   productDescription:
                     freshProduct.description || pp.productDescription || "",
                   unitPrice: price,
-                  total: pp.quantity * price,
+                  markup: markup,
+                  total: pp.quantity * sellingPrice,
                   manufacturer: freshProduct.manufacturer || pp.manufacturer,
                   category: freshProduct.category || pp.category,
                 };
@@ -297,6 +311,7 @@ export function useProposalForm({
               validUntil: proposal.validUntil || "",
               customNotes: proposal.customNotes || "",
               discount: proposal.discount || 0,
+              extraExpense: proposal.extraExpense || 0,
               products: syncedProducts,
               status: (proposal.status as ProposalStatus) || "draft",
               // Payment options
@@ -330,10 +345,10 @@ export function useProposalForm({
 
               const sistemas: ProposalSistema[] = proposal.sistemas.map((s) => {
                 const masterAmbiente = freshAmbientes.find(
-                  (a) => a.id === s.ambienteId
+                  (a) => a.id === s.ambienteId,
                 );
                 const masterSistema = freshSistemas.find(
-                  (sys) => sys.id === s.sistemaId
+                  (sys) => sys.id === s.sistemaId,
                 );
 
                 return {
@@ -346,8 +361,8 @@ export function useProposalForm({
                   products: syncedProducts
                     .filter((p: ProposalProduct) =>
                       (s.productIds as string[] | undefined)?.includes(
-                        p.productId
-                      )
+                        p.productId,
+                      ),
                     )
                     .map((p: ProposalProduct) => ({
                       productId: p.productId,
@@ -360,8 +375,8 @@ export function useProposalForm({
 
               const sysProductIds = new Set(
                 proposal.sistemas.flatMap(
-                  (s) => (s.productIds as string[] | undefined) || []
-                )
+                  (s) => (s.productIds as string[] | undefined) || [],
+                ),
               );
               setSystemProductIds(sysProductIds);
             }
@@ -388,6 +403,7 @@ export function useProposalForm({
       }));
     } else {
       const price = parseFloat(product.price) || 0;
+      const markup = parseFloat(product.markup || "0");
       const newProduct: ProposalProduct = {
         productId: product.id,
         productName: product.name,
@@ -400,7 +416,8 @@ export function useProposalForm({
         productDescription: product.description || "",
         quantity: 1,
         unitPrice: price,
-        total: price,
+        markup: markup,
+        total: price * (1 + markup / 100),
         manufacturer: product.manufacturer,
         category: product.category,
       };
@@ -414,7 +431,7 @@ export function useProposalForm({
   const updateProductQuantity = (
     productId: string,
     delta: number,
-    systemInstanceId?: string
+    systemInstanceId?: string,
   ) => {
     setFormData((prev) => ({
       ...prev,
@@ -425,14 +442,41 @@ export function useProposalForm({
           p.productId === productId
         ) {
           const newQty = Math.max(1, p.quantity + delta);
-          return { ...p, quantity: newQty, total: newQty * p.unitPrice };
+          const sellingPrice = p.unitPrice * (1 + (p.markup || 0) / 100);
+          return { ...p, quantity: newQty, total: newQty * sellingPrice };
         } else if (
           !systemInstanceId &&
           !p.systemInstanceId &&
           p.productId === productId
         ) {
           const newQty = Math.max(1, p.quantity + delta);
-          return { ...p, quantity: newQty, total: newQty * p.unitPrice };
+          const sellingPrice = p.unitPrice * (1 + (p.markup || 0) / 100);
+          return { ...p, quantity: newQty, total: newQty * sellingPrice };
+        }
+        return p;
+      }),
+    }));
+  };
+
+  const updateProductMarkup = (
+    productId: string,
+    markup: number,
+    systemInstanceId?: string,
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      products: (prev.products || []).map((p) => {
+        const isTarget = systemInstanceId
+          ? p.systemInstanceId === systemInstanceId && p.productId === productId
+          : !p.systemInstanceId && p.productId === productId;
+
+        if (isTarget) {
+          const sellingPrice = p.unitPrice * (1 + markup / 100);
+          return {
+            ...p,
+            markup: markup,
+            total: p.quantity * sellingPrice,
+          };
         }
         return p;
       }),
@@ -456,12 +500,12 @@ export function useProposalForm({
   // Toggle product status (active/inactive)
   const handleToggleProductStatus = async (
     productId: string,
-    newStatus: "active" | "inactive"
+    newStatus: "active" | "inactive",
   ) => {
     try {
       // Optimistic update - update local state immediately
       setProducts((prev) =>
-        prev.map((p) => (p.id === productId ? { ...p, status: newStatus } : p))
+        prev.map((p) => (p.id === productId ? { ...p, status: newStatus } : p)),
       );
 
       // Persist to Firebase
@@ -474,8 +518,8 @@ export function useProposalForm({
         prev.map((p) =>
           p.id === productId
             ? { ...p, status: newStatus === "active" ? "inactive" : "active" }
-            : p
-        )
+            : p,
+        ),
       );
 
       toast.error("Erro ao alterar status do produto");
@@ -487,37 +531,64 @@ export function useProposalForm({
     selectedProducts.reduce((sum, p) => sum + p.total, 0);
   const calculateDiscount = () =>
     (calculateSubtotal() * (formData.discount || 0)) / 100;
-  const calculateTotal = () => calculateSubtotal() - calculateDiscount();
-  
-  // Calculate installment value based on total minus down payment
+  const calculateTotal = () =>
+    calculateSubtotal() - calculateDiscount() + (formData.extraExpense || 0);
+
+  // Calculate installment value based on total (including extra expense) minus down payment
   const calculateInstallmentValue = React.useCallback(() => {
     const total = calculateTotal();
-    const downPayment = formData.downPaymentEnabled ? (formData.downPaymentValue || 0) : 0;
+    const downPayment = formData.downPaymentEnabled
+      ? formData.downPaymentValue || 0
+      : 0;
     const remaining = Math.max(0, total - downPayment);
     const count = Math.max(1, formData.installmentsCount || 1);
     return remaining / count;
-  }, [formData.downPaymentEnabled, formData.downPaymentValue, formData.installmentsCount, calculateTotal]);
+  }, [
+    formData.downPaymentEnabled,
+    formData.downPaymentValue,
+    formData.installmentsCount,
+    formData.extraExpense,
+    calculateTotal,
+  ]);
 
   // Auto-update installment value when dependencies change
   React.useEffect(() => {
     if (formData.installmentsEnabled) {
       const newInstallmentValue = calculateInstallmentValue();
       if (newInstallmentValue !== formData.installmentValue) {
-        setFormData(prev => ({ ...prev, installmentValue: newInstallmentValue }));
+        setFormData((prev) => ({
+          ...prev,
+          installmentValue: newInstallmentValue,
+        }));
       }
     }
-  }, [formData.installmentsEnabled, formData.downPaymentEnabled, formData.downPaymentValue, formData.installmentsCount, calculateInstallmentValue, formData.installmentValue]);
+  }, [
+    formData.installmentsEnabled,
+    formData.downPaymentEnabled,
+    formData.downPaymentValue,
+    formData.installmentsCount,
+    calculateInstallmentValue,
+    formData.installmentValue,
+  ]);
 
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value, type } = e.target;
-    const numericFields = ['discount', 'downPaymentValue', 'installmentsCount'];
+    const numericFields = [
+      "discount",
+      "extraExpense",
+      "downPaymentValue",
+      "installmentsCount",
+    ];
     setFormData((prev) => ({
       ...prev,
-      [name]: numericFields.includes(name) || type === 'number' ? Number(value) : value,
+      [name]:
+        numericFields.includes(name) || type === "number"
+          ? Number(value)
+          : value,
     }));
   };
 
@@ -545,7 +616,7 @@ export function useProposalForm({
       selectedProducts.length === 0
     ) {
       toast.error(
-        "Preencha o título, nome do cliente e selecione pelo menos um produto!"
+        "Preencha o título, nome do cliente e selecione pelo menos um produto!",
       );
       return;
     }
@@ -565,7 +636,7 @@ export function useProposalForm({
             source: "proposal",
             targetTenantId: tenant.id,
           },
-          { suppressSuccessToast: true }
+          { suppressSuccessToast: true },
         );
 
         if (newClientResult?.success && newClientResult.clientId) {
@@ -644,6 +715,7 @@ export function useProposalForm({
       const systemProducts: ProposalProduct[] = sistema.products.map((sp) => {
         const productDef = products.find((p) => p.id === sp.productId);
         const price = productDef ? parseFloat(productDef.price) : 0;
+        const markup = productDef ? parseFloat(productDef.markup || "0") : 0;
         return {
           productId: sp.productId,
           productName: productDef?.name || sp.productName || "Produto",
@@ -652,7 +724,8 @@ export function useProposalForm({
           productDescription: productDef?.description || "",
           quantity: sp.quantity,
           unitPrice: price,
-          total: sp.quantity * price,
+          markup: markup,
+          total: sp.quantity * price * (1 + markup / 100),
           manufacturer: productDef?.manufacturer,
           category: productDef?.category,
           systemInstanceId,
@@ -672,7 +745,7 @@ export function useProposalForm({
     setFormData((prev) => ({
       ...prev,
       products: (prev.products || []).filter(
-        (p) => p.systemInstanceId !== systemInstanceId
+        (p) => p.systemInstanceId !== systemInstanceId,
       ),
     }));
   };
@@ -680,7 +753,7 @@ export function useProposalForm({
   const updateSistema = (index: number, updatedSistema: ProposalSistema) => {
     // Update the system in the list
     setSelectedSistemas((prev) =>
-      prev.map((s, i) => (i === index ? updatedSistema : s))
+      prev.map((s, i) => (i === index ? updatedSistema : s)),
     );
 
     // Update products?
@@ -734,9 +807,10 @@ export function useProposalForm({
   const addProductToSystem = (
     product: Product,
     systemIndex: number,
-    systemInstanceId: string
+    systemInstanceId: string,
   ) => {
     const price = parseFloat(product.price) || 0;
+    const markup = parseFloat(product.markup || "0");
     const newProduct: ProposalProduct = {
       productId: product.id,
       productName: product.name,
@@ -749,7 +823,8 @@ export function useProposalForm({
       productDescription: product.description || "",
       quantity: 1,
       unitPrice: price,
-      total: price,
+      markup: markup,
+      total: price * (1 + markup / 100),
       manufacturer: product.manufacturer,
       category: product.category,
       systemInstanceId,
@@ -805,5 +880,6 @@ export function useProposalForm({
     removeSistema,
     updateSistema,
     addProductToSystem,
+    updateProductMarkup,
   };
 }

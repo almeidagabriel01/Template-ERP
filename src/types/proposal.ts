@@ -6,7 +6,8 @@ export interface ProposalProduct {
   productName: string; // Used in components
   quantity: number;
   price?: number; // Legacy/Optional
-  unitPrice: number; // Used in components
+  unitPrice: number; // Used in components (base/cost price)
+  markup?: number; // Profit percentage
   total: number;
   productImage?: string;
   productImages?: string[];
@@ -43,6 +44,7 @@ export interface Proposal {
   sections: Record<string, unknown>[];
   discount?: number;
   totalValue?: number;
+  extraExpense?: number; // Additional expense (reduces total but not profit)
   customNotes?: string;
   notes?: string;
   createdAt: string;

@@ -45,6 +45,7 @@ interface Sistema {
 interface Proposal {
   sistemas?: Record<string, unknown>[];
   discount?: number;
+  extraExpense?: number;
   clientName: string;
   title?: string;
   // Payment options
@@ -503,6 +504,7 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
             <PdfTotals
               products={products}
               discount={proposal.discount || 0}
+              extraExpense={proposal.extraExpense || 0}
               contentStyles={
                 contentStyles as unknown as Record<string, React.CSSProperties>
               }
