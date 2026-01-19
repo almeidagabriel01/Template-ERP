@@ -1,4 +1,9 @@
-export type ProposalStatus = "draft" | "sent" | "approved" | "rejected";
+export type ProposalStatus =
+  | "draft"
+  | "in_progress"
+  | "sent"
+  | "approved"
+  | "rejected";
 
 export interface ProposalProduct {
   productId: string;
@@ -20,9 +25,9 @@ export interface ProposalProduct {
 }
 
 export interface ProposalSystemInstance {
-  sistemaId: string;
+  sistemaId?: string; // Optional/Partial if only environment selected
   ambienteId: string;
-  sistemaName: string;
+  sistemaName?: string; // Optional if no system
   ambienteName: string;
   description?: string;
   productIds: string[];

@@ -17,16 +17,30 @@ export const createProposal = async (req: Request, res: Response) => {
     const input = req.body;
     console.log("createProposal payload:", JSON.stringify(input, null, 2));
 
-    if (!input.title || input.title.trim().length < 3) {
-      return res
-        .status(400)
-        .json({ message: "Título deve ter pelo menos 3 caracteres" });
-    }
-    if (!input.clientId || !input.clientName) {
-      return res.status(400).json({ message: "Cliente é obrigatório" });
-    }
-    if (typeof input.totalValue !== "number" || input.totalValue < 0) {
-      return res.status(400).json({ message: "Valor total inválido" });
+    // Relaxed validation for drafts
+    const isDraft = input.status === "draft";
+
+    if (!isDraft) {
+      if (!input.title || input.title.trim().length < 3) {
+        return res
+          .status(400)
+          .json({ message: "Título deve ter pelo menos 3 caracteres" });
+      }
+      if (!input.clientId || !input.clientName) {
+        return res.status(400).json({ message: "Cliente é obrigatório" });
+      }
+      if (typeof input.totalValue !== "number" || input.totalValue < 0) {
+        return res.status(400).json({ message: "Valor total inválido" });
+      }
+    } else {
+      // Draft specific defaults/validation
+      if (!input.title) {
+        input.title = `Rascunho ${new Date().toLocaleString()}`;
+      }
+      // Allow missing client for drafts (though frontend might enforce it usually)
+      if (!input.clientName) input.clientName = "";
+      if (input.totalValue === undefined || input.totalValue < 0)
+        input.totalValue = 0;
     }
 
     const {
