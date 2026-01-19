@@ -86,7 +86,7 @@ export async function updateProposal(
     extraExpense: formData.extraExpense || 0,
     products: productsForUpdate,
     sistemas: sistemasPayload,
-    status: (formData.status as ProposalStatus) || "draft",
+    status: (formData.status as ProposalStatus) || "in_progress",
     // Payment options
     downPaymentEnabled: formData.downPaymentEnabled || false,
     downPaymentValue: formData.downPaymentValue || 0,
@@ -119,9 +119,9 @@ export function prepareCreatePayload(payload: CreateProposalPayload) {
     typeof safeTotal === "number" && !isNaN(safeTotal) ? safeTotal : 0;
 
   return {
-    title: formData.title!,
-    clientId: clientId!,
-    clientName: formData.clientName!,
+    title: formData.title || "", // Allow empty title for drafts (backend handles default)
+    clientId: clientId || "", // Allow empty client for drafts
+    clientName: formData.clientName || "",
     clientEmail: formData.clientEmail || undefined,
     clientPhone: formData.clientPhone || undefined,
     clientAddress: formData.clientAddress || undefined,
@@ -133,11 +133,9 @@ export function prepareCreatePayload(payload: CreateProposalPayload) {
     customNotes: formData.customNotes,
     products: sanitizedProducts,
     sistemas:
-      selectedSistemas.length > 0
-        ? transformSistemas(selectedSistemas)
-        : undefined,
+      selectedSistemas.length > 0 ? transformSistemas(selectedSistemas) : [],
     targetTenantId: tenantId, // Pass tenant ID to backend (for super admin)
-    status: (formData.status as ProposalStatus) || "draft",
+    status: (formData.status as ProposalStatus) || "in_progress",
     // Payment options
     downPaymentEnabled: formData.downPaymentEnabled || false,
     downPaymentValue: formData.downPaymentValue || 0,

@@ -13,7 +13,7 @@ import { ProposalStatus } from "@/types/proposal";
 import { FileText, Percent, Tag } from "lucide-react";
 
 const statusOptions: { value: ProposalStatus; label: string }[] = [
-  { value: "draft", label: "Rascunho" },
+  { value: "in_progress", label: "Em Aberto" },
   { value: "sent", label: "Enviada" },
   { value: "approved", label: "Aprovada" },
   { value: "rejected", label: "Rejeitada" },
@@ -325,7 +325,7 @@ export function ProposalSummarySection({
             <Select
               id="status"
               name="status"
-              value={formData.status || "draft"}
+              value={formData.status || "in_progress"}
               onChange={onFormChange}
               className="w-40"
             >

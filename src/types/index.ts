@@ -181,7 +181,12 @@ export type ProposalTableItem = {
   total: number;
 };
 
-export type ProposalStatus = "draft" | "sent" | "approved" | "rejected";
+export type ProposalStatus =
+  | "draft"
+  | "in_progress"
+  | "sent"
+  | "approved"
+  | "rejected";
 
 /* 
    We have partial duplication of Proposal/Product types in services. 

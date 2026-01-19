@@ -121,6 +121,7 @@ export function SimpleProposalForm({
     handleSistemaAction,
     addSistema,
     removeSistema,
+    updateSistema,
     addProductToSystem,
     handleChange,
     handleSubmit,
@@ -405,7 +406,7 @@ export function SimpleProposalForm({
       return;
     }
     lastAddedSystemRef.current = {
-      sistemaId: sistema.sistemaId,
+      sistemaId: sistema.sistemaId || "",
       ambienteId: sistema.ambienteId,
       time: now,
     };
@@ -498,6 +499,11 @@ export function SimpleProposalForm({
     });
 
     setEditingSelectionIndex(null);
+  };
+
+  // Handle updating system (without key reset)
+  const handleUpdateSystem = (index: number, sistema: ProposalSistema) => {
+    updateSistema(index, sistema);
   };
 
   const handleFormSubmit = async () => {
@@ -617,6 +623,7 @@ export function SimpleProposalForm({
                   onUpdateProductMarkup={updateProductMarkup}
                   onAddExtraProductToSystem={addProductToSystem}
                   onAddNewSystem={handleAddNewSystem}
+                  onUpdateSystem={handleUpdateSystem}
                   onRemoveProduct={removeProduct}
                   SistemaSelectorComponent={SistemaSelector}
                   onToggleStatus={handleToggleProductStatus}
