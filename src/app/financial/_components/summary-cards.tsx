@@ -90,7 +90,7 @@ export function FinancialSummaryCards({
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div className="flex items-center gap-2">
             <CardTitle className="text-sm font-medium">
-              Receitas Pagas
+              Receitas Recebidas
             </CardTitle>
             {hasSelection && (
               <Badge variant="secondary" className="text-[10px] h-5">
