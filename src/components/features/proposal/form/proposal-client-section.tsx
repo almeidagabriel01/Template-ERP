@@ -126,7 +126,7 @@ export function ProposalClientSection({
             className={errors.title ? "border-destructive" : ""}
           />
         </FormItem>
-        <div className="space-y-1.5">
+        <div className="space-y-3">
           <div className="flex items-center gap-3">
             <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
               {isNewClient ? "Cliente/Fornecedor" : "Cliente"}

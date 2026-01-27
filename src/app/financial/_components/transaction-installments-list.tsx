@@ -98,8 +98,40 @@ export function TransactionInstallmentsList({
       { main: Transaction; subs: Transaction[] }
     >();
 
+    // Determine if we have actual installments (not just down payment or leftovers)
+    // This helps in hiding the "Restante" (non-installment remainder) if true installments exist.
+    const hasTrueInstallments = installments.some(
+      (i) => i.isInstallment && !i.isDownPayment,
+    );
+
+    // Filter out the "Restante" item if we have actual installments.
+    // The "Restante" item is characterized by !isInstallment, !isDownPayment, !isPartialPayment (usually).
+    // But we need to be careful not to hide legitimate items.
+    // Logic: If hasTrueInstallments is true, ignore items that are !isInstallment AND !isDownPayment AND !isPartialPayment.
+
+    const filteredInstallments = installments.filter((item) => {
+      // 1. Always exclude Down Payments from this list (they appear in the top section)
+      if (item.isDownPayment) return false;
+
+      // 2. If we have actual installments, we want to hide the "Restante" row (which is usually the parent transaction or a non-installment remnant).
+      if (hasTrueInstallments) {
+        // Keep actual installments
+        if (item.isInstallment) return true;
+
+        // Keep partial payments related to installments
+        if (item.isPartialPayment && (item.installmentNumber || 0) > 0)
+          return true;
+
+        // Hide the "Restante" row
+        return false;
+      }
+
+      // 3. If no installments exist (e.g. Entry + Remainder), show the Restante row.
+      return true;
+    });
+
     // Sort all by date desc first to have latest payments
-    const sorted = [...installments].sort(
+    const sorted = [...filteredInstallments].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
     );
 
