@@ -28,6 +28,7 @@ import {
   CreditCard as CreditCardIcon,
   Edit2,
   Layers,
+  Split,
 } from "lucide-react";
 import { Transaction, TransactionStatus } from "@/services/transaction-service";
 import { typeConfig, statusConfig } from "../_constants/config";
@@ -38,6 +39,9 @@ import { cn } from "@/lib/utils";
 
 import { TransactionInstallmentsList } from "./transaction-installments-list";
 import { EditBlockDialog } from "./edit-block-dialog";
+import { PartialPaymentDialog } from "./partial-payment-dialog";
+import { TransactionService } from "@/services/transaction-service";
+import { useRouter } from "next/navigation";
 
 interface TransactionCardProps {
   transaction: Transaction;
@@ -98,6 +102,12 @@ export function TransactionCard({
   const [isEditingAmount, setIsEditingAmount] = React.useState(false);
   const [editAmountValue, setEditAmountValue] = React.useState<number>(0);
   const [isSavingAmount, setIsSavingAmount] = React.useState(false);
+
+  const [showPartialPaymentDialog, setShowPartialPaymentDialog] =
+    React.useState(false);
+  const [partialPaymentTransaction, setPartialPaymentTransaction] =
+    React.useState<Transaction | null>(null);
+  const router = useRouter();
 
   // ... rest of implementation until Edit button
 
@@ -270,6 +280,51 @@ export function TransactionCard({
           ? relatedInstallments.reduce((sum, t) => sum + t.amount, 0)
           : transaction.amount,
       );
+    }
+  };
+
+  const handlePartialPayment = (tx: Transaction) => {
+    setPartialPaymentTransaction(tx);
+    setShowPartialPaymentDialog(true);
+  };
+
+  const processPartialPayment = async (amount: number, date: string) => {
+    if (!partialPaymentTransaction) return;
+
+    try {
+      const original = partialPaymentTransaction;
+      const remainingAmount = original.amount - amount;
+
+      // 1. Update original to be the remaining part (keeping same ID)
+      await TransactionService.updateTransaction(original.id, {
+        amount: remainingAmount,
+      });
+
+      // 2. Create new transaction for the paid part
+      await TransactionService.createTransaction({
+        ...original,
+        amount: amount,
+        status: "paid",
+        date: date,
+        description: original.description, // Keep description
+        isPartialPayment: true,
+        parentTransactionId: original.id,
+        // IDs managed by backend or omitted for new creation:
+        // installmentGroupId and proposalGroupId should be kept to link them
+      });
+
+      toast.success("Pagamento parcial registrado com sucesso!");
+
+      // Refresh the page/view with a small delay to ensure propagation
+      setTimeout(() => {
+        router.refresh();
+      }, 500);
+
+      // If we have an onStatusChange with updateAll, we might call it to trigger parent refresh
+      // But router.refresh() is safer for now.
+    } catch (error) {
+      console.error(error);
+      throw error; // Dialog handles error toast
     }
   };
 
@@ -819,6 +874,15 @@ export function TransactionCard({
                                     )}
                                   </DropdownMenuItem>
                                 ))}
+                                {inst.status === "pending" && (
+                                  <DropdownMenuItem
+                                    onClick={() => handlePartialPayment(inst)}
+                                    className="gap-2 cursor-pointer text-xs border-t mt-1 pt-2"
+                                  >
+                                    <Split className="h-3.5 w-3.5" />
+                                    <span>Parcial</span>
+                                  </DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           ) : (
@@ -848,6 +912,7 @@ export function TransactionCard({
                 canEdit={canEdit}
                 selectedIds={selectedIds}
                 onToggleSelection={onToggleSelection}
+                onPartialPayment={handlePartialPayment}
               />
             </div>
           )}
@@ -858,6 +923,14 @@ export function TransactionCard({
         onOpenChange={setShowEditBlockDialog}
         transaction={transaction}
       />
+      {partialPaymentTransaction && (
+        <PartialPaymentDialog
+          open={showPartialPaymentDialog}
+          onOpenChange={setShowPartialPaymentDialog}
+          transaction={partialPaymentTransaction}
+          onConfirm={processPartialPayment}
+        />
+      )}
     </div>
   );
 }

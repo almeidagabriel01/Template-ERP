@@ -40,6 +40,8 @@ export type Transaction = {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  isPartialPayment?: boolean;
+  parentTransactionId?: string; // ID of the transaction this was split from (or related to)
 };
 
 const COLLECTION_NAME = "transactions";
