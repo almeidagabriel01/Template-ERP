@@ -37,6 +37,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
       top: 0,
       left: 0,
       width: 0,
+      maxHeight: 250,
     });
 
     // Inner ref for the native select
@@ -77,10 +78,17 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
 
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const spaceBelow = viewportHeight - rect.bottom - 16; // 16px margin from bottom
+
+        // Use available space, but cap at 250px max and minimum 100px
+        const calculatedMaxHeight = Math.min(Math.max(spaceBelow, 100), 250);
+
         setFixedCoords({
           top: rect.bottom + 4,
           left: rect.left,
           width: rect.width,
+          maxHeight: calculatedMaxHeight,
         });
         setIsOpen(true);
       }
@@ -167,7 +175,10 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           }}
           className="overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-xl animate-in fade-in duration-100"
         >
-          <div className="max-h-[250px] overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+          <div
+            style={{ maxHeight: fixedCoords.maxHeight }}
+            className="overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+          >
             {options.length > 0 ? (
               options.map((option) => (
                 <div

@@ -1263,7 +1263,7 @@ export function useProposalForm({
             (s.products || []).map((p) => p.productId)
           )
         );
-        setSystemProductIds(sysProductIds);
+        setSystemProductIds(sysProductIds as Set<string>);
       }
     } catch (e) {
       console.error("Error resetting form to initial state:", e);
