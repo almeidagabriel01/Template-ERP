@@ -162,7 +162,6 @@ export function SimpleProposalForm({
     router,
     features,
     primaryColor,
-    resetToInitial,
     markAsDiscarded,
     // isAutomacaoNiche - removed duplicate
   } = useProposalForm({ proposalId });
