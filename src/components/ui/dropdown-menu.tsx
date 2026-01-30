@@ -15,6 +15,10 @@ const DropdownMenuContext = React.createContext<{
   setOpen: () => {},
 });
 
+export function useDropdownMenuContext() {
+  return React.useContext(DropdownMenuContext);
+}
+
 export function DropdownMenu({ children }: DropdownMenuProps) {
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -137,11 +141,13 @@ export function DropdownMenuItem({
   className,
   onClick,
   disabled,
+  preventClose,
 }: {
   children: React.ReactNode;
   className?: string;
   onClick?: () => void;
   disabled?: boolean;
+  preventClose?: boolean;
 }) {
   const { setOpen } = React.useContext(DropdownMenuContext);
 
@@ -155,7 +161,9 @@ export function DropdownMenuItem({
       onClick={() => {
         if (disabled) return;
         onClick?.();
-        setOpen(false);
+        if (!preventClose) {
+          setOpen(false);
+        }
       }}
       data-disabled={disabled ? "" : undefined}
     >

@@ -6,6 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  useDropdownMenuContext,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { MoreVertical, Share2, Copy, Paperclip, Loader2 } from "lucide-react";
@@ -21,6 +22,43 @@ export interface ProposalActionsDropdownProps {
   onShare: () => void;
   onDuplicate: () => void;
   onAttachments: () => void;
+}
+
+// Inner component to access context
+function DuplicateMenuItem({
+  isDuplicating,
+  onDuplicate,
+}: {
+  isDuplicating?: boolean;
+  onDuplicate: () => void;
+}) {
+  const { setOpen } = useDropdownMenuContext();
+  const wasHereDuplicating = React.useRef(false);
+
+  // Close dropdown when duplication finishes
+  React.useEffect(() => {
+    if (isDuplicating) {
+      wasHereDuplicating.current = true;
+    } else if (wasHereDuplicating.current) {
+      wasHereDuplicating.current = false;
+      setOpen(false);
+    }
+  }, [isDuplicating, setOpen]);
+
+  return (
+    <DropdownMenuItem
+      onClick={onDuplicate}
+      disabled={isDuplicating}
+      preventClose
+    >
+      {isDuplicating ? (
+        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+      ) : (
+        <Copy className="w-4 h-4 mr-2" />
+      )}
+      Duplicar
+    </DropdownMenuItem>
+  );
 }
 
 export function ProposalActionsDropdown({
@@ -64,14 +102,10 @@ export function ProposalActionsDropdown({
 
         {/* Duplicar */}
         {canCreate && (
-          <DropdownMenuItem onClick={onDuplicate} disabled={isDuplicating}>
-            {isDuplicating ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Copy className="w-4 h-4 mr-2" />
-            )}
-            Duplicar
-          </DropdownMenuItem>
+          <DuplicateMenuItem
+            isDuplicating={isDuplicating}
+            onDuplicate={onDuplicate}
+          />
         )}
 
         {/* Anexos */}
