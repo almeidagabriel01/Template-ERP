@@ -333,13 +333,14 @@ export default function ProposalsPage() {
         clientPhone: original.clientPhone,
         clientAddress: original.clientAddress,
         validUntil: original.validUntil,
-        status: "draft",
+        status: "in_progress",
         products: original.products || [],
         sistemas: original.sistemas || [],
         customNotes: original.customNotes,
         discount: original.discount || 0,
         totalValue: original.totalValue || 0,
         sections: original.sections || [],
+        pdfSettings: original.pdfSettings,
       });
 
       const data = await ProposalService.getProposals(tenant.id);
