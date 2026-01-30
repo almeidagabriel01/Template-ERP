@@ -101,13 +101,13 @@ export function PdfPaymentTerms({
   return (
     <div className="mt-4 mb-2 break-inside-avoid">
       <div
-        className="text-xs font-semibold mb-2 pb-1 border-b"
+        className="mb-4 text-xl font-bold"
         style={{
-          color: headerColor,
-          borderColor: headerColor,
+          ...(contentStyles.headerTitle as React.CSSProperties),
+          color: headerColor, // Ensure color is respected if override needed, though it's usually in headerTitle
         }}
       >
-        Formas de Pagamento
+        Condições de Pagamento
       </div>
 
       <div className="w-full text-xs">

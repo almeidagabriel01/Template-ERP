@@ -3,6 +3,7 @@ export {
   PdfSistemaHeader,
   PdfSistemaProduct,
   PdfSistemaFooter,
+  PdfAmbienteHeader,
 } from "./pdf-sistema-block";
 export { PdfExtraProductsBlock } from "./pdf-extra-products-block";
 export { PdfProductRow } from "./pdf-product-row";

@@ -22,6 +22,7 @@ import { SistemaManagerDialog } from "@/components/features/automation/sistema-m
 import { toast } from "react-toastify";
 import { SistemaTemplateDialog } from "@/components/features/automation/sistema-template-dialog";
 import { Sistema, ProposalSistema } from "@/types/automation";
+import { ProposalProduct } from "@/types/proposal";
 import { LimitReachedModal } from "@/components/ui/limit-reached-modal";
 import { UnsavedChangesModal } from "@/components/ui/unsaved-changes-modal";
 import { useProposalForm } from "@/hooks/proposal/useProposalForm";
@@ -321,7 +322,9 @@ export function SimpleProposalForm({
       errors.validUntil = "Validade é obrigatória";
     } else {
       // Validate date >= today (allow today as valid)
-      const [year, month, day] = currentFormData.validUntil.split("-").map(Number);
+      const [year, month, day] = currentFormData.validUntil
+        .split("-")
+        .map(Number);
       const selectedDate = new Date(year, month - 1, day);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -346,7 +349,7 @@ export function SimpleProposalForm({
     clearFieldError("clientEmail");
     clearFieldError("clientPhone");
     clearFieldError("validUntil");
-    
+
     return true;
   }, [setFieldError, clearFieldError]);
 
@@ -354,11 +357,11 @@ export function SimpleProposalForm({
   const validateStep2 = React.useCallback((): boolean => {
     // Use ref to get current formData (avoid stale closure)
     const currentFormData = formDataRef.current;
-    
+
     // Check if there are products in formData
     if (!currentFormData.products || currentFormData.products.length === 0) {
       const field = isAutomacaoNiche ? "sistemas" : "products";
-      const message = isAutomacaoNiche 
+      const message = isAutomacaoNiche
         ? "Selecione pelo menos 1 sistema de automação com produtos"
         : "Selecione pelo menos 1 produto";
       setFieldError(field, message);
@@ -383,14 +386,14 @@ export function SimpleProposalForm({
   }) => {
     // Detect if this is a different client being selected
     // If it's the same client, preserve existing proposal data (don't overwrite with fresh client data)
-    const isChangeToNewClient = 
+    const isChangeToNewClient =
       data.isNew || // Creating a new client
       !selectedClientId || // No client was selected before
       data.clientId !== selectedClientId; // Different client selected
 
     setSelectedClientId(data.clientId);
     setIsNewClient(data.isNew);
-    
+
     if (isChangeToNewClient) {
       // Client actually changed - update all fields with new client data
       setFormData((prev) => ({
@@ -429,26 +432,103 @@ export function SimpleProposalForm({
     }
     lastAddedSystemRef.current = {
       sistemaId: sistema.sistemaId || "",
-      ambienteId: sistema.ambienteId,
+      ambienteId:
+        sistema.ambientes?.[0]?.ambienteId || sistema.ambienteId || "",
       time: now,
     };
 
     // Check for duplicates
-    const exists = selectedSistemas.some(
-      (s) =>
-        s.sistemaId === sistema.sistemaId &&
-        s.ambienteId === sistema.ambienteId,
+    // Check if system (by ID) already exists in the list
+    const existingSystemIndex = selectedSistemas.findIndex(
+      (s) => s.sistemaId === sistema.sistemaId,
     );
 
-    if (exists) {
-      toast.error("Este sistema já foi adicionado a esta proposta");
-      setSelectorKey((prev) => prev + 1);
-      return;
-    }
+    if (existingSystemIndex >= 0) {
+      // Merge logic: Add environment to existing system
+      const existingSystem = selectedSistemas[existingSystemIndex];
+      const newAmbiente = sistema.ambientes?.[0]; // Assuming prompt creates one env at a time
 
-    // Use hook handler
-    addSistema(sistema);
-    setSelectorKey((prev) => prev + 1);
+      if (!newAmbiente) {
+        addSistema(sistema); // Fallback if malformed
+        setSelectorKey((prev) => prev + 1);
+        return;
+      }
+
+      // Check if environment already exists in this system
+      const ambienteExists = existingSystem.ambientes?.some(
+        (a) => a.ambienteId === newAmbiente.ambienteId,
+      );
+
+      // Also check legacy
+      if (
+        ambienteExists ||
+        existingSystem.ambienteId === newAmbiente.ambienteId
+      ) {
+        toast.error(
+          `O ambiente "${newAmbiente.ambienteName}" já foi adicionado ao sistema "${existingSystem.sistemaName}".`,
+        );
+        setSelectorKey((prev) => prev + 1);
+        return;
+      }
+
+      // 1. Update existing system with new environment
+      const updatedSystem = {
+        ...existingSystem,
+        ambientes: [...(existingSystem.ambientes || []), newAmbiente],
+      };
+
+      const newSistemas = [...selectedSistemas];
+      newSistemas[existingSystemIndex] = updatedSystem;
+      setSelectedSistemas(newSistemas);
+
+      // 2. Add products for the new environment
+      if (newAmbiente.products && newAmbiente.products.length > 0) {
+        // Create unique instance ID for this environment in this system
+        // Note: Use same convention as existing products logic if possible.
+        // But here we are adding a NEW environment to a system.
+        // Convention: "SystemID-AmbienteID"
+        const newInstanceId = `${existingSystem.sistemaId}-${newAmbiente.ambienteId}`;
+
+        const newProposalProducts: ProposalProduct[] = newAmbiente.products.map(
+          (sp) => {
+            const productDef = products.find((p) => p.id === sp.productId);
+            const price = productDef ? parseFloat(productDef.price) : 0;
+            const markup = productDef
+              ? parseFloat(productDef.markup || "0")
+              : 0;
+            return {
+              productId: sp.productId,
+              productName: productDef?.name || sp.productName || "Produto",
+              productImage: productDef?.images?.[0] || productDef?.image || "",
+              productImages: productDef?.images || [],
+              productDescription: productDef?.description || "",
+              quantity: sp.quantity,
+              unitPrice: price,
+              markup: markup,
+              total: sp.quantity * price * (1 + markup / 100),
+              manufacturer: productDef?.manufacturer,
+              category: productDef?.category,
+              systemInstanceId: newInstanceId,
+              isExtra: false,
+              // Link to the environment for grouping
+              ambienteInstanceId: newInstanceId,
+            };
+          },
+        );
+
+        setFormData((prev) => ({
+          ...prev,
+          products: [...(prev.products || []), ...newProposalProducts],
+        }));
+      }
+
+      toast.success(
+        `Ambiente "${newAmbiente.ambienteName}" adicionado ao sistema "${existingSystem.sistemaName}".`,
+      );
+    } else {
+      // Create new system entry
+      addSistema(sistema);
+    }
   };
 
   // Handle editing system selection
@@ -456,16 +536,22 @@ export function SimpleProposalForm({
     if (!newSistema || editingSelectionIndex === null) return;
 
     const oldSistema = selectedSistemas[editingSelectionIndex];
-    const oldInstanceId = `${oldSistema.sistemaId}-${oldSistema.ambienteId}`;
-    const newInstanceId = `${newSistema.sistemaId}-${newSistema.ambienteId}`;
+    const oldAmbienteId =
+      oldSistema.ambientes?.[0]?.ambienteId || oldSistema.ambienteId || "";
+    const newAmbienteId =
+      newSistema.ambientes?.[0]?.ambienteId || newSistema.ambienteId || "";
+    const oldInstanceId = `${oldSistema.sistemaId}-${oldAmbienteId}`;
+    const newInstanceId = `${newSistema.sistemaId}-${newAmbienteId}`;
 
     // Check for duplicates
-    const exists = selectedSistemas.some(
-      (s, idx) =>
+    const exists = selectedSistemas.some((s, idx) => {
+      const sAmbienteId = s.ambientes?.[0]?.ambienteId || s.ambienteId;
+      return (
         idx !== editingSelectionIndex &&
         s.sistemaId === newSistema.sistemaId &&
-        s.ambienteId === newSistema.ambienteId,
-    );
+        sAmbienteId === newAmbienteId
+      );
+    });
 
     if (exists) {
       alert("Este sistema já existe na proposta.");
@@ -494,7 +580,10 @@ export function SimpleProposalForm({
         .filter((p) => p.systemInstanceId === oldInstanceId && p.isExtra)
         .map((p) => ({ ...p, systemInstanceId: newInstanceId }));
 
-      const newStandardProducts = newSistema.products.map((sp) => {
+      // Get products from ambientes array or legacy products field
+      const sistemaProducts =
+        newSistema.ambientes?.[0]?.products || newSistema.products || [];
+      const newStandardProducts = sistemaProducts.map((sp) => {
         const existingProduct = products.find((p) => p.id === sp.productId);
         const price = existingProduct ? parseFloat(existingProduct.price) : 0;
         return {
@@ -509,7 +598,8 @@ export function SimpleProposalForm({
           total: price * sp.quantity,
           manufacturer: existingProduct?.manufacturer,
           category: existingProduct?.category,
-          systemInstanceId: newInstanceId,
+          ambienteInstanceId: newInstanceId,
+          systemInstanceId: newInstanceId, // Legacy field
           isExtra: false,
         };
       });
@@ -575,17 +665,17 @@ export function SimpleProposalForm({
     const validators: Record<number, () => boolean> = {
       0: validateStep1, // Client step
     };
-    
+
     // Add step 2 validator (systems or products)
     if (isAutomacaoNiche) {
       validators[1] = validateStep2; // Systems step (for automation niche)
     } else {
       validators[1] = validateStep2; // Products step (for non-automation)
     }
-    
+
     // Steps 3 and 4 (Payment and PDF settings) don't need validation
     // Step 5 (Summary) is the last step
-    
+
     return validators;
   }, [isAutomacaoNiche, validateStep1, validateStep2]);
 
@@ -635,8 +725,8 @@ export function SimpleProposalForm({
     <FormContainer>
       <ProposalFormHeader proposalId={proposalId} onBack={handleBack} />
 
-      <StepWizard 
-        steps={steps} 
+      <StepWizard
+        steps={steps}
         allowClickAhead={!!proposalId}
         stepValidators={stepValidators}
       >

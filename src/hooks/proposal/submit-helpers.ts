@@ -4,8 +4,9 @@ import {
   ProposalService,
 } from "@/services/proposal-service";
 import { ProposalSistema } from "@/types/automation";
-import { ProposalStatus } from "@/types/proposal";
+import { ProposalStatus, ProposalSystemInstance } from "@/types/proposal";
 import { toast } from "react-toastify";
+import { getPrimaryAmbiente, getAllProductsFromSistema } from "@/lib/sistema-migration-utils";
 
 interface CreateProposalPayload {
   formData: Partial<Proposal>;
@@ -39,21 +40,45 @@ export function sanitizeProducts(products: ProposalProduct[]) {
     total: typeof p.total === "number" && !isNaN(p.total) ? p.total : 0,
     manufacturer: p.manufacturer,
     category: p.category,
-    systemInstanceId: p.systemInstanceId,
+    // Support both new and legacy format
+    ambienteInstanceId: p.ambienteInstanceId || p.systemInstanceId,
+    systemInstanceId: p.systemInstanceId || p.ambienteInstanceId,
     isExtra: p.isExtra,
   }));
 }
 
-// Transform sistemas for API
-export function transformSistemas(sistemas: ProposalSistema[]) {
-  return sistemas.map((s) => ({
-    sistemaId: s.sistemaId,
-    sistemaName: s.sistemaName,
-    ambienteId: s.ambienteId,
-    ambienteName: s.ambienteName,
-    description: s.description,
-    productIds: s.products.map((p) => p.productId),
-  }));
+// Transform sistemas for API - outputs new format with ambientes array
+export function transformSistemas(sistemas: ProposalSistema[]): ProposalSystemInstance[] {
+  return sistemas.map((s) => {
+    const primaryAmbiente = getPrimaryAmbiente(s);
+    const allProducts = getAllProductsFromSistema(s);
+    
+    // Build ambientes array from new or legacy format
+    const ambientes = s.ambientes && s.ambientes.length > 0
+      ? s.ambientes.map(a => ({
+          ambienteId: a.ambienteId,
+          ambienteName: a.ambienteName,
+          productIds: a.products.map(p => p.productId),
+        }))
+      : primaryAmbiente
+        ? [{
+            ambienteId: primaryAmbiente.ambienteId,
+            ambienteName: primaryAmbiente.ambienteName,
+            productIds: primaryAmbiente.products.map(p => p.productId),
+          }]
+        : [];
+
+    return {
+      sistemaId: s.sistemaId,
+      sistemaName: s.sistemaName,
+      description: s.description,
+      ambientes,
+      // Legacy fields for backward compat
+      ambienteId: primaryAmbiente?.ambienteId,
+      ambienteName: primaryAmbiente?.ambienteName,
+      productIds: allProducts.map(p => p.productId),
+    };
+  });
 }
 
 // Update existing proposal

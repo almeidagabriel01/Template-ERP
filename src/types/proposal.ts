@@ -20,18 +20,40 @@ export interface ProposalProduct {
   productDescription?: string;
   manufacturer?: string;
   category?: string;
+  // Novo: identificador composto sistemaId-ambienteId
+  ambienteInstanceId?: string;
+  // DEPRECATED: Mantido para migração
+  /** @deprecated Use ambienteInstanceId instead */
   systemInstanceId?: string;
   isExtra?: boolean;
   isMonthly?: boolean;
 }
 
-export interface ProposalSystemInstance {
-  sistemaId?: string; // Optional/Partial if only environment selected
+/**
+ * Ambiente dentro de um sistema na proposta
+ */
+export interface ProposalAmbienteInstance {
   ambienteId: string;
-  sistemaName?: string; // Optional if no system
   ambienteName: string;
-  description?: string;
   productIds: string[];
+}
+
+/**
+ * Sistema na proposta com múltiplos ambientes
+ */
+export interface ProposalSystemInstance {
+  sistemaId: string;
+  sistemaName: string;
+  description?: string;
+  // Novo: array de ambientes dentro do sistema
+  ambientes: ProposalAmbienteInstance[];
+  // DEPRECATED: Mantido para migração
+  /** @deprecated Use ambientes[0].ambienteId instead */
+  ambienteId?: string;
+  /** @deprecated Use ambientes[0].ambienteName instead */
+  ambienteName?: string;
+  /** @deprecated Use ambientes[].productIds instead */
+  productIds?: string[];
 }
 
 export interface ProposalAttachment {

@@ -34,6 +34,7 @@ export type ContentItemType =
   | "sistema-product"
   | "sistema-footer"
   | "extra-products-header"
+  | "ambiente-header"
   | "sistema-container-header"
   | "sistema-container-product"
   | "sistema-container-footer"
@@ -182,10 +183,10 @@ export function calculatePaymentTermsHeight(
   }
 
   if (installmentsCount > 0) {
-    height += installmentsCount * 30; // Row height for each installment
+    height += installmentsCount * 35; // Row height for each installment
   }
 
-  height += 60; // Total row + margin
-  height += 80; // Summary text section
+  height += 80; // Total row + margin
+  height += 100; // Summary text section
   return height;
 }
