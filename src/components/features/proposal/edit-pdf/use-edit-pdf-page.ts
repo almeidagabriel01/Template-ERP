@@ -17,6 +17,7 @@ import {
 } from "@/components/features/proposal/pdf-section-editor";
 import { ProposalTemplate } from "@/types";
 import { ThemeType } from "./pdf-theme-utils";
+import { generatePaymentTerms, hydrateSections } from "./pdf-hydration-utils";
 
 interface PdfSettings {
   primaryColor?: string;
@@ -35,7 +36,7 @@ interface PdfSettings {
 
 export function useEditPdfPage() {
   const params = useParams();
-  const { tenant } = useTenant();
+  const { tenant, refreshTenant } = useTenant();
   const { features, isLoading: isPlanLoading } = usePlanLimits();
   const proposalId = params.id as string;
 
@@ -43,7 +44,9 @@ export function useEditPdfPage() {
   const [template, setTemplate] = useState<ProposalTemplate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
   const [isSavingDefault, setIsSavingDefault] = useState(false);
+
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Upgrade modal state
@@ -117,7 +120,6 @@ export function useEditPdfPage() {
 
             setProposal(p);
 
-            // 1. Check if we have saved PDF settings in the proposal
             if (p.pdfSettings) {
               const s = p.pdfSettings as PdfSettings;
 
@@ -154,13 +156,16 @@ export function useEditPdfPage() {
 
               // Load sections
               if (s.sections && s.sections.length > 0) {
-                setSections(s.sections as PdfSection[]);
+                // Hydrate saved sections to ensure dynamic text is up to date
+                setSections(hydrateSections(s.sections as PdfSection[], p));
               } else {
                 const t = ProposalDefaults.createDefaultTemplate(
                   tenant.id,
                   tenant.name,
                   s.primaryColor || tenant.primaryColor || "#2563eb",
                 );
+                // Override payment terms with dynamic ones
+                t.paymentTerms = generatePaymentTerms(p);
                 setSections(createDefaultSections(t, t.primaryColor));
               }
 
@@ -206,12 +211,18 @@ export function useEditPdfPage() {
 
               // Load sections from tenant defaults
               if (s.sections && s.sections.length > 0) {
-                setSections(s.sections as PdfSection[]);
+                // Hydrate tenant default sections
+                setSections(hydrateSections(s.sections as PdfSection[], p));
               } else {
+                // Inject dynamic payment terms into baseTemplate before creating sections
+                const dynamicTemplate = {
+                  ...baseTemplate,
+                  paymentTerms: generatePaymentTerms(p),
+                };
                 setSections(
                   createDefaultSections(
-                    baseTemplate,
-                    baseTemplate.primaryColor,
+                    dynamicTemplate,
+                    dynamicTemplate.primaryColor,
                   ),
                 );
               }
@@ -245,6 +256,10 @@ export function useEditPdfPage() {
                 setCoverImagePosition("center");
                 setRepeatHeader(false);
 
+                setRepeatHeader(false);
+
+                // Dynamic terms
+                t.paymentTerms = generatePaymentTerms(p);
                 setSections(createDefaultSections(t, t.primaryColor));
                 setCoverElements(createDefaultCoverElements());
               }
@@ -257,11 +272,26 @@ export function useEditPdfPage() {
       };
       fetchProposal();
     }
-  }, [proposalId, tenant, canAccessPage, isPlanLoading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proposalId, tenant?.id, canAccessPage, isPlanLoading]);
 
-  const handleSave = async () => {
+  const handleSave = async (optionsOrEvent?: unknown) => {
+    const suppressToast =
+      typeof optionsOrEvent === "object" &&
+      optionsOrEvent !== null &&
+      "suppressToast" in optionsOrEvent
+        ? (optionsOrEvent as { suppressToast?: boolean }).suppressToast
+        : false;
+
+    const suppressLoading =
+      typeof optionsOrEvent === "object" &&
+      optionsOrEvent !== null &&
+      "suppressLoading" in optionsOrEvent
+        ? (optionsOrEvent as { suppressLoading?: boolean }).suppressLoading
+        : false;
+
     if (!proposal || !template) return;
-    setIsSaving(true);
+    if (!suppressLoading) setIsSaving(true);
 
     try {
       const cleanForFirestore = (obj: unknown): unknown => {
@@ -320,12 +350,14 @@ export function useEditPdfPage() {
         pdfSettings: sanitizedSettings as Proposal["pdfSettings"],
       });
 
-      toast.success("Proposta e personalizações salvas com sucesso!");
+      if (!suppressToast) {
+        toast.success("Proposta e personalizações salvas com sucesso!");
+      }
     } catch (error) {
       console.error(error);
       alert("Erro ao salvar");
     } finally {
-      setIsSaving(false);
+      if (!suppressLoading) setIsSaving(false);
     }
   };
 
@@ -545,14 +577,15 @@ export function useEditPdfPage() {
           proposalDefaults: sanitizedSettings as Record<string, unknown>,
         });
 
-        // Also save the current settings to this proposal
-        await handleSave();
+        // Also save the current settings to this proposal - SILENT Manual Save
+        await handleSave({ suppressToast: true, suppressLoading: true });
 
         // NOTE: We don't call refreshTenant() here because it would trigger
-        // the useEffect that reloads all settings from the database,
-        // potentially overwriting what the user just configured.
-        // The defaults are saved for new proposals; the current proposal has
-        // its own settings saved via handleSave().
+        // the useEffect that reloads all settings from the database...
+        // ...UNLESS we fixed the dependency array to depend on tenant.id!
+        // Now that we fixed the dependency array, we CAN and SHOULD call refreshTenant
+        // so that NEW proposals get the updated defaults.
+        refreshTenant(); // Global update for future proposals
 
         toast.success("Configurações salvas como padrão para novas propostas!");
       } catch (error) {
