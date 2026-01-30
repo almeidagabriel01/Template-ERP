@@ -624,34 +624,44 @@ export function useProposalForm({
 
               const sistemas: ProposalSistema[] = proposal.sistemas.map((s) => {
                 // Try to find by ID first, then by Name (fix for Temp ID persistence race condition)
+                // Handle both new format (ambientes array) and legacy (ambienteId)
+                const primaryAmbienteId = s.ambientes?.[0]?.ambienteId || s.ambienteId;
+                const primaryAmbienteName = s.ambientes?.[0]?.ambienteName || s.ambienteName;
+                
                 const masterAmbiente =
-                  freshAmbientes.find((a) => a.id === s.ambienteId) ||
-                  freshAmbientes.find((a) => a.name === s.ambienteName);
+                  freshAmbientes.find((a) => a.id === primaryAmbienteId) ||
+                  freshAmbientes.find((a) => a.name === primaryAmbienteName);
 
                 const masterSistema =
                   freshSistemas.find((sys) => sys.id === s.sistemaId) ||
                   freshSistemas.find((sys) => sys.name === s.sistemaName);
 
+                // Get productIds from new or legacy format
+                const productIds = s.ambientes?.[0]?.productIds || s.productIds || [];
+
+                // Build products array from synced products
+                const sistemaProducts = syncedProducts
+                  .filter((p: ProposalProduct) => productIds.includes(p.productId))
+                  .map((p: ProposalProduct) => ({
+                    productId: p.productId,
+                    productName: p.productName,
+                    quantity: p.quantity,
+                  }));
+
                 return {
                   sistemaId: masterSistema?.id || (s.sistemaId as string) || "",
-                  sistemaName:
-                    masterSistema?.name || (s.sistemaName as string) || "",
-                  ambienteId:
-                    masterAmbiente?.id || (s.ambienteId as string) || "",
-                  ambienteName:
-                    masterAmbiente?.name || (s.ambienteName as string) || "",
+                  sistemaName: masterSistema?.name || (s.sistemaName as string) || "",
                   description: (s.description as string) || "",
-                  products: syncedProducts
-                    .filter((p: ProposalProduct) =>
-                      (s.productIds as string[] | undefined)?.includes(
-                        p.productId,
-                      ),
-                    )
-                    .map((p: ProposalProduct) => ({
-                      productId: p.productId,
-                      productName: p.productName,
-                      quantity: p.quantity,
-                    })),
+                  // New format - ambientes array
+                  ambientes: [{
+                    ambienteId: masterAmbiente?.id || primaryAmbienteId || "",
+                    ambienteName: masterAmbiente?.name || primaryAmbienteName || "",
+                    products: sistemaProducts,
+                  }],
+                  // Legacy fields for backward compat
+                  ambienteId: masterAmbiente?.id || primaryAmbienteId || "",
+                  ambienteName: masterAmbiente?.name || primaryAmbienteName || "",
+                  products: sistemaProducts,
                 };
               });
               setSelectedSistemas(sistemas);

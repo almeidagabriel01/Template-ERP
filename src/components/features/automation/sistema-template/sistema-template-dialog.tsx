@@ -15,11 +15,7 @@ import { Sistema, Ambiente } from "@/types/automation";
 import { useSistemaForm } from "./useSistemaForm";
 import { Spinner } from "@/components/ui/spinner";
 import { MasterDataAction } from "@/hooks/proposal/useMasterDataTransaction";
-import {
-  SistemaInfoSection,
-  AmbienteSelectorSection,
-  ProductSelectorSection,
-} from "./sections";
+import { SistemaInfoSection, AmbienteSelectorSection } from "./sections";
 
 interface SistemaTemplateDialogProps {
   isOpen: boolean;
@@ -114,18 +110,14 @@ export function SistemaTemplateDialog({
               onToggle={toggleAmbiente}
             />
 
-            <ProductSelectorSection
-              products={products}
-              selectedProducts={selectedProducts}
-              productSearch={productSearch}
-              showProductList={showProductList}
-              productListRef={productListRef}
-              onSearchChange={setProductSearch}
-              onShowList={() => setShowProductList(true)}
-              onAddProduct={addProduct}
-              onRemoveProduct={removeProduct}
-              onUpdateQuantity={updateProductQuantity}
-            />
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm text-blue-800">
+              <p className="font-medium mb-1">ℹ️ Configuração de Produtos</p>
+              <p>
+                Os produtos agora são configurados diretamente em cada Ambiente.
+                Vincule os ambientes acima e depois configure seus produtos no
+                menu de Ambientes.
+              </p>
+            </div>
           </div>
         )}
 

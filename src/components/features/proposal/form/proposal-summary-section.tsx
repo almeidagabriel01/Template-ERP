@@ -98,7 +98,15 @@ export function ProposalSummarySection({
                           className="p-2 font-semibold text-sm"
                           style={{ color: primaryColor }}
                         >
-                          📍 {sistema.ambienteName} → {sistema.sistemaName}
+                          \r\n{" "}
+                          <span className="font-bold">
+                            {sistema.sistemaName}
+                          </span>
+                          \r\n{" "}
+                          <span className="font-normal text-xs ml-2 opacity-75">
+                            📍 {sistema.ambienteName}
+                          </span>
+                          \r\n{" "}
                         </td>
                       </tr>
                       {sistemaProducts.map((product, idx) => (

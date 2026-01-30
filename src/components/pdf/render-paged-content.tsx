@@ -12,6 +12,7 @@ import {
 import {
   PdfSistemaBlock,
   PdfSistemaHeader,
+  PdfAmbienteHeader,
   PdfSistemaProduct,
   PdfSistemaFooter,
   PdfExtraProductsBlock,
@@ -43,10 +44,17 @@ interface Product {
 interface Sistema {
   sistemaId: string;
   sistemaName: string;
-  ambienteId: string;
-  ambienteName: string;
+  // Legacy fields (optional for backward compat)
+  ambienteId?: string;
+  ambienteName?: string;
   description?: string;
   productIds?: string[];
+  // New multi-ambiente format
+  ambientes?: {
+    ambienteId: string;
+    ambienteName: string;
+    productIds?: string[];
+  }[];
 }
 
 interface Proposal {
@@ -101,11 +109,17 @@ function buildContentItems(
   sections: PdfSection[],
   products: Product[],
   proposal: Proposal,
+  primaryColor: string,
   pdfDisplaySettings?: PdfDisplaySettings,
 ): ContentItem[] {
-  const settings = { ...defaultPdfDisplaySettings, ...pdfDisplaySettings };
+  const settings = {
+    ...defaultPdfDisplaySettings,
+    ...pdfDisplaySettings,
+    primaryColor,
+  };
   const items: ContentItem[] = [];
   const hasSistemas = proposal.sistemas && proposal.sistemas.length > 0;
+  let hasAddedPaymentTerms = false;
 
   // Check if proposal has dynamic payment options configured
   const hasDynamicPaymentOptions =
@@ -118,7 +132,7 @@ function buildContentItems(
 
   // Helper to add payment terms block
   const addPaymentTermsBlock = () => {
-    if (hasDynamicPaymentOptions) {
+    if (hasDynamicPaymentOptions && !hasAddedPaymentTerms) {
       items.push({
         type: "payment-terms",
         height: calculatePaymentTermsHeight(
@@ -130,13 +144,17 @@ function buildContentItems(
           proposal.installmentsEnabled ? proposal.installmentsCount || 0 : 0,
         ),
       });
+      hasAddedPaymentTerms = true;
     }
   };
 
   // Helper to check if a section is about payment terms and should be skipped
   const shouldSkipPaymentSection = (section: PdfSection): boolean => {
     if (!hasDynamicPaymentOptions) return false;
-    const content = (section.content || "").toLowerCase();
+    const content = (section.content || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
     return (
       content.includes("condies de pagamento") ||
       content.includes("condicoes de pagamento") ||
@@ -144,6 +162,72 @@ function buildContentItems(
       content.includes("entrada:") ||
       content.includes("saldo:")
     );
+  };
+
+  const renderAllSistemas = () => {
+    proposal.sistemas!.forEach((rawSistema: Record<string, unknown>) => {
+      const sistema = rawSistema as unknown as Sistema;
+
+      // Gather all products for this system across all environments
+      let productsForSistema: Product[] = [];
+
+      // Modern format: products have systemInstanceId
+      productsForSistema = products.filter((p) =>
+        p.systemInstanceId?.startsWith(`${sistema.sistemaId}-`),
+      );
+
+      // Fallback for legacy (no instanceId)
+      if (productsForSistema.length === 0) {
+        const legacyProductIds = sistema.productIds || [];
+        const ambientProductIds =
+          sistema.ambientes?.flatMap((a) => a.productIds || []) || [];
+        const allIds = [
+          ...new Set([...legacyProductIds, ...ambientProductIds]),
+        ];
+
+        productsForSistema = products.filter((p) =>
+          allIds.includes(p.productId),
+        );
+      }
+
+      if (productsForSistema.length > 0) {
+        addSistemaProducts(sistema, productsForSistema);
+      }
+    });
+
+    const sistemaProductIds = new Set(
+      proposal.sistemas!.flatMap((s: Record<string, unknown>) => {
+        const sistema = s as unknown as Sistema;
+        if (sistema.ambientes && sistema.ambientes.length > 0) {
+          return sistema.ambientes.flatMap((a) => a.productIds || []);
+        }
+        return (sistema.productIds as string[]) || [];
+      }),
+    );
+    const extraProducts = products.filter(
+      (p: Product) =>
+        !p.systemInstanceId && !sistemaProductIds.has(p.productId),
+    );
+
+    if (extraProducts.length > 0) {
+      // Logic for extra products block or header
+      // For now, mirroring previous logic which used extra-products-block or flat list
+      // The previous logic used extra-products-block in Loop 1 and extra-products-header in Loop 2.
+      // We should unify. Let's use extra-products-block if possible, or header if split.
+      // Actually, let's use the granular approach (header + rows) to align with page breaking.
+
+      items.push({ type: "extra-products-header", height: 60 });
+      extraProducts.forEach((product, idx) => {
+        const h = calculateProductHeight(product, 80, settings);
+        items.push({
+          type: "product-row",
+          data: { ...product, index: idx },
+          height: h,
+        });
+      });
+    }
+    items.push({ type: "totals", height: ESTIMATED_HEIGHTS.TOTALS });
+    addPaymentTermsBlock();
   };
 
   // Helper to check if section is "Garantia"
@@ -156,17 +240,64 @@ function buildContentItems(
     sistema: Sistema,
     productsForSistema: Product[],
   ) => {
-    const sortedProducts = [...productsForSistema].sort(
-      (a: Product, b: Product) => {
-        if (a.isExtra && !b.isExtra) return 1;
-        if (!a.isExtra && b.isExtra) return -1;
-        return 0;
-      },
-    );
+    // We need to organize products by environment for granular rendering
+    const environments =
+      sistema.ambientes && sistema.ambientes.length > 0
+        ? sistema.ambientes
+        : [
+            {
+              ambienteId: sistema.ambienteId || "",
+              ambienteName: sistema.ambienteName || "",
+            },
+          ];
 
-    const totalHeight = calculateSistemaBlockHeight(sortedProducts, settings);
+    // Calculate total height including all environments
+    let totalHeight = 100; // Header
+    totalHeight += 60; // Footer
 
-    // If the block is too large, split it into granular items for page flow
+    const envsWithProducts = environments
+      .map((env) => {
+        const currentInstanceId = `${sistema.sistemaId}-${env.ambienteId}`;
+        let envProducts = productsForSistema.filter(
+          (p) => p.systemInstanceId === currentInstanceId,
+        );
+
+        // Legacy fallback
+        if (
+          envProducts.length === 0 &&
+          (!sistema.ambientes || sistema.ambientes.length === 0)
+        ) {
+          envProducts = productsForSistema;
+        }
+
+        const sortedProducts = [...envProducts].sort(
+          (a: Product, b: Product) => {
+            if (a.isExtra && !b.isExtra) return 1;
+            if (!a.isExtra && b.isExtra) return -1;
+            return 0;
+          },
+        );
+
+        // Calculate height for this environment
+        let envHeight = 0;
+        if (sortedProducts.length > 0) {
+          // Ambiente header height (approx 40px)
+          envHeight += 40;
+          // Products height
+          envHeight +=
+            calculateSistemaBlockHeight(sortedProducts, settings) - 60 - 100; // Subtract footer/header base from helper
+        }
+
+        return {
+          env,
+          products: sortedProducts,
+          height: envHeight,
+        };
+      })
+      .filter((group) => group.products.length > 0);
+
+    totalHeight += envsWithProducts.reduce((sum, grp) => sum + grp.height, 0);
+
     // Threshold: if block would take more than 70% of page, split it
     const SPLIT_THRESHOLD = SAFE_HEIGHT * 0.7;
 
@@ -175,47 +306,63 @@ function buildContentItems(
       items.push({
         type: "sistema-header",
         data: { sistema },
-        height: 100, // Header height (reduced)
+        height: 100,
       });
 
-      // Add each product as a separate item
-      sortedProducts.forEach((product, idx) => {
-        const productHeight = calculateProductHeight(product, 80, settings); // Reduced base
+      // Add environments and their products
+      envsWithProducts.forEach((group, index) => {
+        // Add ambiente header
         items.push({
-          type: "sistema-product",
+          type: "ambiente-header",
           data: {
-            product,
-            sistema,
-            isFirst: idx === 0,
-            isLast: idx === sortedProducts.length - 1,
-            pdfDisplaySettings: settings,
+            ambienteName: group.env.ambienteName,
+            ambienteId: group.env.ambienteId,
+            primaryColor: primaryColor,
+            isFirst: index === 0,
           },
-          height: productHeight,
+          height: 40,
+        });
+
+        // Add products
+        group.products.forEach((product, idx) => {
+          const productHeight = calculateProductHeight(product, 80, settings);
+          items.push({
+            type: "sistema-product",
+            data: {
+              product,
+              sistema, // Parent sistema reference
+              isFirst: idx === 0, // Visual separation if needed
+              isLast: idx === group.products.length - 1,
+              pdfDisplaySettings: settings,
+            },
+            height: productHeight,
+          });
         });
       });
 
-      // Add sistema footer with subtotal
-      const sistemaSubtotal = sortedProducts.reduce(
+      // Add sistema footer
+      const sistemaSubtotal = productsForSistema.reduce(
         (sum: number, p: Product) => sum + p.total,
         0,
       );
       items.push({
         type: "sistema-footer",
         data: { sistema, sistemaSubtotal, pdfDisplaySettings: settings },
-        height: 60, // Footer height (reduced)
+        height: 60,
       });
     } else {
-      // Small block - render as single unit
+      // Small block - render as single nested unit
+      // We pass ALL products; the component handles environment filtering internally
       items.push({
         type: "sistema-block",
         data: {
           sistema,
-          products: sortedProducts,
+          products: productsForSistema,
           pdfDisplaySettings: settings,
         },
         height: totalHeight,
       });
-    }
+    } // close else
   };
 
   const addRegularProducts = (productsToAdd: Product[]) => {
@@ -233,6 +380,7 @@ function buildContentItems(
         });
       });
       items.push({ type: "totals", height: ESTIMATED_HEIGHTS.TOTALS });
+      addPaymentTermsBlock();
     }
   };
 
@@ -244,56 +392,7 @@ function buildContentItems(
     sections.forEach((section) => {
       if (section.type === "product-table") {
         if (hasSistemas) {
-          proposal.sistemas!.forEach((rawSistema: Record<string, unknown>) => {
-            const sistema = rawSistema as unknown as Sistema;
-            const systemInstanceId = `${sistema.sistemaId}-${sistema.ambienteId}`;
-            let productsForSistema = products.filter(
-              (p: Product) => p.systemInstanceId === systemInstanceId,
-            );
-
-            const isLegacy = !products.some((p: Product) => p.systemInstanceId);
-            if (productsForSistema.length === 0 && isLegacy) {
-              productsForSistema = products.filter((p: Product) =>
-                sistema.productIds?.includes(p.productId),
-              );
-            }
-
-            if (productsForSistema.length > 0) {
-              addSistemaProducts(sistema, productsForSistema);
-            }
-          });
-
-          const sistemaProductIds = new Set(
-            proposal.sistemas!.flatMap(
-              (s: Record<string, unknown>) => (s.productIds as string[]) || [],
-            ),
-          );
-          const extraProducts = products.filter(
-            (p: Product) =>
-              !p.systemInstanceId && !sistemaProductIds.has(p.productId),
-          );
-
-          if (extraProducts.length > 0) {
-            let blockHeight = 140;
-            extraProducts.forEach((product) => {
-              let h = 80;
-              if (
-                (product.productImages && product.productImages.length > 0) ||
-                product.productImage
-              ) {
-                h += 100;
-              }
-              blockHeight += h;
-            });
-            blockHeight += 60;
-
-            items.push({
-              type: "extra-products-block",
-              data: { products: extraProducts },
-              height: blockHeight,
-            });
-          }
-          items.push({ type: "totals", height: ESTIMATED_HEIGHTS.TOTALS });
+          renderAllSistemas();
         } else {
           addRegularProducts(products);
         }
@@ -301,9 +400,11 @@ function buildContentItems(
         // Skip static payment sections if dynamic payment options are configured
         if (shouldSkipPaymentSection(section)) return;
 
-        // Insert payment terms before "Garantia"
+        // Insert payment terms before "Garantia" if not already added
         if (isGarantiaSection(section)) {
-          addPaymentTermsBlock();
+          if (!hasAddedPaymentTerms) {
+            addPaymentTermsBlock();
+          }
         }
 
         const height = calculateSectionHeight(section);
@@ -337,62 +438,26 @@ function buildContentItems(
     for (let i = 0; i < sections.length; i++) {
       if (i === insertIndex) {
         if (hasSistemas) {
-          proposal.sistemas!.forEach((rawSistema: Record<string, unknown>) => {
-            const sistema = rawSistema as unknown as Sistema;
-            const systemInstanceId = `${sistema.sistemaId}-${sistema.ambienteId}`;
-            let productsForSistema = products.filter(
-              (p: Product) => p.systemInstanceId === systemInstanceId,
-            );
-
-            const isLegacy = !products.some((p: Product) => p.systemInstanceId);
-            if (productsForSistema.length === 0 && isLegacy) {
-              productsForSistema = products.filter((p: Product) =>
-                sistema.productIds?.includes(p.productId),
-              );
-            }
-
-            if (productsForSistema.length > 0) {
-              addSistemaProducts(sistema, productsForSistema);
-            }
-          });
-
-          const sistemaProductIds = new Set(
-            proposal.sistemas!.flatMap(
-              (s: Record<string, unknown>) => (s.productIds as string[]) || [],
-            ),
-          );
-          const extraProducts = products.filter(
-            (p: Product) =>
-              !p.systemInstanceId && !sistemaProductIds.has(p.productId),
-          );
-
-          if (extraProducts.length > 0) {
-            items.push({ type: "extra-products-header", height: 60 });
-            extraProducts.forEach((product, idx) => {
-              const h = calculateProductHeight(product, 80, settings);
-              items.push({
-                type: "product-row",
-                data: { ...product, index: idx },
-                height: h,
-              });
-            });
-          }
-          items.push({
-            type: "totals",
-            height: ESTIMATED_HEIGHTS.TOTALS,
-          });
+          renderAllSistemas();
         } else if (products.length > 0) {
           addRegularProducts(products);
         }
       }
 
       const section = sections[i];
-      // Skip static payment sections if dynamic payment options are configured
-      if (shouldSkipPaymentSection(section)) continue;
 
-      // Insert payment terms before "Garantia"
+      // Skip static payment sections if dynamic payment options are configured
+      // If this section is the payment terms placeholder, just skip it (since we added it after systems)
+      if (shouldSkipPaymentSection(section)) {
+        continue;
+      }
+
+      // Insert payment terms before "Garantia" ONLY if not already added
+      // This is a safety fallback
       if (isGarantiaSection(section)) {
-        addPaymentTermsBlock();
+        if (!hasAddedPaymentTerms) {
+          addPaymentTermsBlock();
+        }
       }
 
       const height = calculateSectionHeight(section);
@@ -401,16 +466,8 @@ function buildContentItems(
 
     if (insertIndex >= sections.length) {
       if (hasSistemas) {
-        proposal.sistemas!.forEach((rawSistema: Record<string, unknown>) => {
-          const sistema = rawSistema as unknown as Sistema;
-          const productsForSistema = products.filter((p: Product) =>
-            sistema.productIds?.includes(p.productId),
-          );
-          if (productsForSistema.length > 0) {
-            addSistemaProducts(sistema, productsForSistema);
-          }
-        });
-        items.push({ type: "totals", height: ESTIMATED_HEIGHTS.TOTALS });
+        renderAllSistemas();
+        // items.push({ type: "totals", height: ESTIMATED_HEIGHTS.TOTALS }); // handled in renderAllSistemas
       } else if (products.length > 0) {
         addRegularProducts(products);
       }
@@ -492,7 +549,13 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
   // Merge with defaults to ensure all settings have values
   const settings = { ...defaultPdfDisplaySettings, ...pdfDisplaySettings };
 
-  const items = buildContentItems(sections, products, proposal, settings);
+  const items = buildContentItems(
+    sections,
+    products,
+    proposal,
+    primaryColor,
+    settings,
+  );
   const pages = distributeIntoPages(items);
 
   const renderItem = (item: ContentItem) => {
@@ -602,12 +665,26 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
       case "sistema-header":
         return (
           <div
-            key={`sistema-header-${item.data.sistema.sistemaId}-${item.data.sistema.ambienteId}`}
+            key={`sistema-header-${item.data.sistema.sistemaId}`}
             style={{ width: "100%" }}
           >
             <PdfSistemaHeader
               sistema={item.data.sistema}
               primaryColor={primaryColor}
+            />
+          </div>
+        );
+
+      case "ambiente-header":
+        return (
+          <div
+            key={`ambiente-header-${item.data.ambienteId}`}
+            style={{ width: "100%" }}
+          >
+            <PdfAmbienteHeader
+              ambienteName={item.data.ambienteName}
+              primaryColor={primaryColor}
+              standalone={true}
             />
           </div>
         );
