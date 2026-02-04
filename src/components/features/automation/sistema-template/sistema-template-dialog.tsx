@@ -48,21 +48,23 @@ export function SistemaTemplateDialog({
     description,
     setDescription,
     selectedAmbientes,
-    selectedProducts,
-    productSearch,
-    setProductSearch,
-    showProductList,
-    setShowProductList,
     ambientes,
-    products,
+
+    // Let's check the dialog content usage.
+    // It uses `ambientes`, `selectedAmbientes` (line 50, 109).
+    // It uses `toggleAmbiente` (line 62, 110).
+    // It uses `name`, `setName`, `description`, `setDescription`.
+    // It uses `isLoading`, `isSaving`, `isEditing`, `handleSave`.
+    // It DOES NOT use `selectedProducts`, `productSearch`, `setProductSearch`, `showProductList`, `setShowProductList`, `products` (line 57? Check usage), `productListRef`, `addProduct`, `removeProduct`, `updateProductQuantity`.
+    // Wait, line 57 is `products`. Is it used?
+    // I don't see `products` used in `SistemaTemplateDialog` render.
+    // Lines 100-120: `SistemaInfoSection`, `AmbienteSelectorSection`, and a info box.
+    // It seems `products` is NOT used.
+
     isLoading,
     isSaving,
     isEditing,
-    productListRef,
     toggleAmbiente,
-    addProduct,
-    removeProduct,
-    updateProductQuantity,
     handleSave,
   } = useSistemaForm({
     isOpen,

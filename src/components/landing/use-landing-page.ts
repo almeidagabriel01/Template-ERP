@@ -6,7 +6,7 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { PlanService } from "@/services/plan-service";
-import { User } from "@/types";
+import { User, UserPlan } from "@/types";
 
 const INITIAL_PLANS = [
   {
@@ -78,7 +78,7 @@ export function useLandingPage() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">(
-    "monthly"
+    "monthly",
   );
   const [plans, setPlans] = useState(INITIAL_PLANS);
 
@@ -88,50 +88,66 @@ export function useLandingPage() {
   // Fetch plans on mount
   useEffect(() => {
     const fetchPlans = async () => {
+      // 1. Fetch from Firestore (fast)
       try {
         const fetchedPlans = await PlanService.getPlans();
         if (fetchedPlans && fetchedPlans.length > 0) {
-          const mappedPlans = fetchedPlans.map((p) => ({
-            name: p.name,
-            tier: p.tier,
-            prices: p.pricing || { monthly: p.price, yearly: p.price * 12 },
-            description: p.description,
-            features: [
-              p.features.maxProposals === -1
-                ? "Propostas ilimitadas"
-                : `Crie até ${p.features.maxProposals} propostas por mês`,
-              p.features.maxUsers === -1
-                ? "Membros ilimitados"
-                : `Cadastre até ${p.features.maxUsers} membros na equipe`,
-              p.features.maxClients === -1
-                ? "Clientes ilimitados"
-                : `Cadastre até ${p.features.maxClients} clientes`,
-              p.features.maxProducts === -1
-                ? "Produtos ilimitados"
-                : `Cadastre até ${p.features.maxProducts} produtos para venda`,
-              p.features.hasFinancial ? "Controle financeiro completo" : null,
-              p.features.canCustomizeTheme ? "Cores personalizadas" : null,
-              p.features.maxPdfTemplates === -1
-                ? "Todos os layouts de PDF"
-                : p.features.maxPdfTemplates > 1
-                  ? `${p.features.maxPdfTemplates} layouts de proposta em PDF`
-                  : "1 layout de proposta em PDF",
-              p.features.canEditPdfSections ? "Editor de PDF avançado" : null,
-              p.features.maxStorageMB === -1
-                ? "Armazenamento ilimitado"
-                : p.features.maxStorageMB >= 1000
-                  ? `${(p.features.maxStorageMB / 1024).toFixed(1)} GB de armazenamento`
-                  : `${p.features.maxStorageMB} MB para armazenar arquivos`,
-            ].filter((f): f is string => Boolean(f)),
-            cta: "Assinar Agora",
-            popular: p.highlighted ?? false,
-          }));
-          setPlans(mappedPlans);
+          mapAndSetPlans(fetchedPlans);
         }
       } catch (error) {
         console.error("Failed to fetch plans:", error);
       }
+
+      // 2. Fetch live data from Stripe (slower but accurate)
+      try {
+        const livePlans = await PlanService.getLivePlans();
+        if (livePlans && livePlans.length > 0) {
+          mapAndSetPlans(livePlans);
+        }
+      } catch (error) {
+        console.warn("Failed to fetch live plans:", error);
+      }
     };
+
+    const mapAndSetPlans = (sourcePlans: UserPlan[]) => {
+      const mappedPlans = sourcePlans.map((p) => ({
+        name: p.name,
+        tier: p.tier,
+        prices: p.pricing || { monthly: p.price, yearly: p.price * 12 },
+        description: p.description,
+        features: [
+          p.features.maxProposals === -1
+            ? "Propostas ilimitadas"
+            : `Crie até ${p.features.maxProposals} propostas por mês`,
+          p.features.maxUsers === -1
+            ? "Membros ilimitados"
+            : `Cadastre até ${p.features.maxUsers} membros na equipe`,
+          p.features.maxClients === -1
+            ? "Clientes ilimitados"
+            : `Cadastre até ${p.features.maxClients} clientes`,
+          p.features.maxProducts === -1
+            ? "Produtos ilimitados"
+            : `Cadastre até ${p.features.maxProducts} produtos para venda`,
+          p.features.hasFinancial ? "Controle financeiro completo" : null,
+          p.features.canCustomizeTheme ? "Cores personalizadas" : null,
+          p.features.maxPdfTemplates === -1
+            ? "Todos os layouts de PDF"
+            : p.features.maxPdfTemplates > 1
+              ? `${p.features.maxPdfTemplates} layouts de proposta em PDF`
+              : "1 layout de proposta em PDF",
+          p.features.canEditPdfSections ? "Editor de PDF avançado" : null,
+          p.features.maxStorageMB === -1
+            ? "Armazenamento ilimitado"
+            : p.features.maxStorageMB >= 1000
+              ? `${(p.features.maxStorageMB / 1024).toFixed(1)} GB de armazenamento`
+              : `${p.features.maxStorageMB} MB para armazenar arquivos`,
+        ].filter((f): f is string => Boolean(f)),
+        cta: "Assinar Agora",
+        popular: p.highlighted ?? false,
+      }));
+      setPlans(mappedPlans);
+    };
+
     fetchPlans();
   }, []);
 
@@ -153,7 +169,7 @@ export function useLandingPage() {
               }
 
               const isAdmin = ["admin", "superadmin", "MASTER"].includes(
-                userData.role
+                userData.role,
               );
               const perms = userData.permissions || {};
               const canViewDashboard =
@@ -168,7 +184,7 @@ export function useLandingPage() {
                 };
                 localStorage.setItem(
                   "erp_user_cache",
-                  JSON.stringify(cachedData)
+                  JSON.stringify(cachedData),
                 );
               } catch {
                 // Ignore storage errors
@@ -185,7 +201,7 @@ export function useLandingPage() {
                   "profile",
                 ];
                 const firstAllowed = pages.find(
-                  (page) => perms[page]?.canView === true || page === "profile"
+                  (page) => perms[page]?.canView === true || page === "profile",
                 );
                 router.replace(firstAllowed ? `/${firstAllowed}` : "/403");
               }
@@ -195,7 +211,7 @@ export function useLandingPage() {
           } else {
             // User document not found in Firestore - treat as free user with basic auth data
             console.warn(
-              "User document not found in Firestore, treating as free user"
+              "User document not found in Firestore, treating as free user",
             );
             setCurrentUser({
               id: user.uid,

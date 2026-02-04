@@ -1,6 +1,4 @@
-import React from "react";
 import { formatCurrency } from "@/utils/format-utils";
-import { getContrastTextColor } from "@/utils/color-utils";
 import {
   PdfDisplaySettings,
   defaultPdfDisplaySettings,
@@ -274,13 +272,42 @@ export function PdfSistemaBlock({
                                       height: "20px",
                                     }}
                                   >
-                                    <img
-                                      src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='18'%3E%3Crect width='50' height='18' rx='4' fill='%23dbeafe' stroke='%23bfdbfe' stroke-width='1'/%3E%3Ctext x='25' y='13' font-family='system-ui,sans-serif' font-size='9' font-weight='bold' fill='%231d4ed8' text-anchor='middle' letter-spacing='0.5'%3EEXTRA%3C/text%3E%3C/svg%3E"
-                                      alt="EXTRA"
-                                      width="50"
-                                      height="18"
-                                      style={{ display: "block" }}
-                                    />
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        height: "20px",
+                                      }}
+                                    >
+                                      <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="50"
+                                        height="18"
+                                        viewBox="0 0 50 18"
+                                        style={{ display: "block" }}
+                                      >
+                                        <rect
+                                          width="50"
+                                          height="18"
+                                          rx="4"
+                                          fill="#dbeafe"
+                                          stroke="#bfdbfe"
+                                          strokeWidth="1"
+                                        />
+                                        <text
+                                          x="25"
+                                          y="13"
+                                          fontFamily="system-ui,sans-serif"
+                                          fontSize="9"
+                                          fontWeight="bold"
+                                          fill="#1d4ed8"
+                                          textAnchor="middle"
+                                          letterSpacing="0.5"
+                                        >
+                                          EXTRA
+                                        </text>
+                                      </svg>
+                                    </div>
                                   </div>
                                 )}
                               </div>
@@ -379,11 +406,9 @@ export function PdfSistemaBlock({
 export function PdfSistemaHeader({
   sistema,
   primaryColor,
-  isFirstOnPage = false,
 }: {
   sistema: PdfSistema;
   primaryColor: string;
-  isFirstOnPage?: boolean;
 }) {
   return (
     <div className="">
