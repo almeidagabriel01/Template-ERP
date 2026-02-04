@@ -54,7 +54,7 @@ export function AddonCard({
   const { tenant } = useTenant();
   const IconComponent = iconMap[addon.icon] || DollarSign;
 
-  // Price comes from Stripe in UNITS (BRL), not cents
+  // Price comes from Stripe in CENTS
   const monthlyPrice =
     dynamicPriceMonthly !== undefined ? dynamicPriceMonthly : null;
 
@@ -75,8 +75,9 @@ export function AddonCard({
 
   return (
     <Card
-      className={`relative overflow-hidden transition-all hover:shadow-lg h-full flex flex-col ${isPurchased ? "ring-2" : ""
-        }`}
+      className={`relative overflow-hidden transition-all hover:shadow-lg h-full flex flex-col ${
+        isPurchased ? "ring-2" : ""
+      }`}
       style={{
         borderColor: isPurchased ? primaryColor : undefined,
       }}
@@ -84,7 +85,9 @@ export function AddonCard({
       {isPurchased && (
         <div
           className={`absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium text-white`}
-          style={{ backgroundColor: isScheduledCancel ? '#ef4444' : primaryColor }}
+          style={{
+            backgroundColor: isScheduledCancel ? "#ef4444" : primaryColor,
+          }}
         >
           {isScheduledCancel ? (
             <>
@@ -127,7 +130,7 @@ export function AddonCard({
                     className="text-2xl font-bold"
                     style={{ color: primaryColor }}
                   >
-                    R$ {monthlyPrice.toFixed(0)}
+                    R$ {(monthlyPrice / 100).toFixed(0)}
                   </span>
                   <span className="text-muted-foreground">/mês</span>
                 </>
