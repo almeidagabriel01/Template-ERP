@@ -171,14 +171,29 @@ export function SistemaSelector({
 
     if (sistema && ambiente) {
       // Get products from ambiente or fall back to sistema's legacy defaultProducts
-      const products: AmbienteProduct[] = ambiente.defaultProducts?.length
-        ? [...ambiente.defaultProducts]
-        : (sistema.defaultProducts || []).map((p) => ({
-            productId: p.productId,
-            productName: p.productName,
-            quantity: p.quantity,
-            notes: p.notes,
-          }));
+      // Get products from System Configuration (New) or fallback to Environment Defaults (Legacy)
+      // Check if this specific ambiente is configured in the system
+      const systemEnvConfig = sistema.ambientes?.find(
+        (a) => a.ambienteId === ambiente.id,
+      );
+
+      let products: AmbienteProduct[] = [];
+
+      if (systemEnvConfig && systemEnvConfig.products?.length > 0) {
+        // Priority 1: System-specific configuration (The new feature)
+        products = [...systemEnvConfig.products];
+      } else if (ambiente.defaultProducts?.length) {
+        // Priority 2: Global Environment Defaults (Backward compatibility / Fallback)
+        products = [...ambiente.defaultProducts];
+      } else {
+        // Priority 3: System Global Defaults (Legacy)
+        products = (sistema.defaultProducts || []).map((p) => ({
+          productId: p.productId,
+          productName: p.productName,
+          quantity: p.quantity,
+          notes: p.notes,
+        }));
+      }
 
       const proposalSistema = createProposalSistema(
         sistema.id,

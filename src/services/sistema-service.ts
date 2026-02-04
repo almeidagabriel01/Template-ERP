@@ -10,7 +10,7 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import { Sistema, SistemaProduct } from "@/types/automation";
+import { Sistema, SistemaProduct, SistemaAmbienteTemplate } from "@/types/automation";
 
 const COLLECTION_NAME = "sistemas";
 
@@ -24,16 +24,29 @@ function normalizeSistema(id: string, data: Record<string, unknown>): Sistema {
     (data.ambienteIds as string[]) || 
     [];
 
+  // New field: detailed configuration
+  // If not present, we migrate in-memory from the ID list
+  let ambientes = (data.ambientes as SistemaAmbienteTemplate[]) || [];
+  
+  if (ambientes.length === 0 && availableAmbienteIds.length > 0) {
+    ambientes = availableAmbienteIds.map(aid => ({
+      ambienteId: aid,
+      products: [] // Default to empty if migrating from ID list
+    }));
+  }
+
   return {
     id,
     tenantId: data.tenantId as string,
     name: data.name as string,
     description: (data.description as string) || "",
     icon: data.icon as string | undefined,
-    availableAmbienteIds,
+    ambientes,
     createdAt: data.createdAt as string,
     updatedAt: data.updatedAt as string,
-    // Deprecated fields kept for backward compatibility
+    
+    // Deprecated fields kept for backward compatibility and migration
+    availableAmbienteIds,
     defaultProducts: (data.defaultProducts as SistemaProduct[]) || [],
     ambienteIds: availableAmbienteIds,
   };
@@ -66,9 +79,10 @@ export const SistemaService = {
     try {
       const sistemas = await SistemaService.getSistemas(tenantId);
       return sistemas.filter((s) => 
-        s.availableAmbienteIds.includes(ambienteId) ||
-        // Fallback for legacy data
-        s.ambienteIds?.includes(ambienteId)
+        // Check new structure
+        s.ambientes.some(a => a.ambienteId === ambienteId) ||
+        // Check legacy
+        s.availableAmbienteIds?.includes(ambienteId)
       );
     } catch (error) {
       console.error("Error fetching sistemas by ambiente:", error);
@@ -85,7 +99,7 @@ export const SistemaService = {
     try {
       const sistema = await SistemaService.getSistemaById(sistemaId);
       if (!sistema) return [];
-      return sistema.availableAmbienteIds || sistema.ambienteIds || [];
+      return sistema.ambientes.map(a => a.ambienteId);
     } catch (error) {
       console.error("Error fetching ambientes by sistema:", error);
       throw error;
@@ -109,15 +123,19 @@ export const SistemaService = {
 
   createSistema: async (data: Omit<Sistema, "id">): Promise<Sistema> => {
     try {
-      // For new sistemas, use availableAmbienteIds
+      // Sync legacy fields
+      const legacyIds = data.ambientes.map(a => a.ambienteId);
+      
       const payload = {
         name: data.name,
         description: data.description,
         icon: data.icon,
-        availableAmbienteIds: data.availableAmbienteIds || data.ambienteIds || [],
+        ambientes: data.ambientes,
         tenantId: data.tenantId,
-        // Legacy: still send defaultProducts if present (for backward compat)
-        ...(data.defaultProducts?.length ? { defaultProducts: data.defaultProducts } : {}),
+        // Legacy fields for backward compat
+        availableAmbienteIds: legacyIds,
+        ambienteIds: legacyIds,
+        defaultProducts: data.defaultProducts || [],
       };
 
       const result = await callApi<{ success: boolean; id: string; message: string }>(
@@ -129,7 +147,7 @@ export const SistemaService = {
       return {
         id: result.id,
         ...data,
-        availableAmbienteIds: payload.availableAmbienteIds,
+        availableAmbienteIds: legacyIds,
       };
     } catch (error) {
       console.error("Error creating sistema:", error);
@@ -143,11 +161,15 @@ export const SistemaService = {
   ): Promise<void> => {
     try {
       // Normalize field names before sending
-      const payload = { ...data };
-      if (data.availableAmbienteIds) {
-        // Also set ambienteIds for backward compat
-        payload.ambienteIds = data.availableAmbienteIds;
+      const payload: Record<string, any> = { ...data };
+      
+      // If updating configured environments, sync legacy fields
+      if (data.ambientes) {
+        const legacyIds = data.ambientes.map(a => a.ambienteId);
+        payload.availableAmbienteIds = legacyIds;
+        payload.ambienteIds = legacyIds;
       }
+      
       await callApi(`/v1/aux/sistemas/${id}`, "PUT", payload);
     } catch (error) {
       console.error("Error updating sistema:", error);
