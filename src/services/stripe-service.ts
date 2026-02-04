@@ -321,13 +321,13 @@ export const StripeService = {
   },
 
   getPlans: async (): Promise<Plan[]> => {
-    const result = await callPublicApi<{ plans: any[] }>(
+    const result = await callPublicApi<{ plans: Record<string, unknown>[] }>(
       "/v1/stripe/plans",
       "GET",
       undefined,
       { cache: "no-store" }, // Ensure no cache here as well
     );
-    return result.plans || [];
+    return (result.plans || []) as unknown as Plan[];
   },
 
   // Aliases for compatibility

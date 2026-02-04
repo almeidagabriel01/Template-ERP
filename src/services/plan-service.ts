@@ -1,5 +1,5 @@
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { UserPlan } from "@/types";
 
 const COLLECTION_NAME = "plans";
@@ -107,7 +107,7 @@ export const PlanService = {
       if (stripePlans && stripePlans.length > 0) {
         console.log("[PlanService] Returning strict Stripe API data");
         // The API returns the exact structure we need, just force the type
-        return stripePlans as any as UserPlan[];
+        return stripePlans as unknown as UserPlan[];
       }
 
       console.warn(
