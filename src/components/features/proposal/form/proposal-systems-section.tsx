@@ -269,6 +269,7 @@ export function ProposalSystemsSection({
             onSistemaAction={onSistemaAction}
             sistemas={sistemas}
             ambientes={ambientes}
+            selectedSistemas={selectedSistemas}
           />
         </div>
       </CardContent>
