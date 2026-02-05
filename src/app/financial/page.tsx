@@ -183,11 +183,12 @@ export default function FinancialPage() {
 
   // Use total wallet balance OR calculation from selected items
   const balance = React.useMemo(() => {
-    if (selectedIds.size > 0 && selectionSummary) {
-      return selectionSummary.paidIncome - selectionSummary.paidExpense;
-    }
+    // User requested that balance NEVER filters/changes with selection
+    // if (selectedIds.size > 0 && selectionSummary) {
+    //   return selectionSummary.paidIncome - selectionSummary.paidExpense;
+    // }
     return totalWalletBalance;
-  }, [selectedIds.size, selectionSummary, totalWalletBalance]);
+  }, [totalWalletBalance]);
 
   // Show loading first - before checking plan access to avoid flash
   if (isLoading) {
