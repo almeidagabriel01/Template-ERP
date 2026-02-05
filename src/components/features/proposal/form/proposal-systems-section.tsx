@@ -412,9 +412,6 @@ function SystemCard({
                   <strong>{sistema.sistemaName}</strong> ({sistema.ambienteName}
                   ) desta proposta?
                   <br />
-                  <span className="text-amber-600 dark:text-amber-400">
-                    Todos os produtos deste sistema serão removidos.
-                  </span>
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
