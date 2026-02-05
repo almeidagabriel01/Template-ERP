@@ -959,6 +959,7 @@ export function SimpleProposalForm({
                 sistemas={mergedSistemas}
                 onAmbienteAction={handleAmbienteAction}
                 onSistemaAction={handleSistemaAction}
+                selectedSistemas={selectedSistemas}
               />
             )}
         </DialogContent>

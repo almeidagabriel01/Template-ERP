@@ -35,6 +35,8 @@ export interface SistemaSelectorProps {
   onAmbienteAction?: (action: MasterDataAction) => Promise<void> | void;
   onSistemaAction?: (action: MasterDataAction) => Promise<void> | void;
   resetAmbienteAfterSelect?: boolean;
+  // Selected systems to filter out already selected ambientes
+  selectedSistemas?: ProposalSistema[];
 }
 
 export function SistemaSelector({
@@ -47,6 +49,7 @@ export function SistemaSelector({
   onAmbienteAction,
   onSistemaAction,
   resetAmbienteAfterSelect,
+  selectedSistemas,
 }: SistemaSelectorProps) {
   const { tenant } = useTenant();
 
@@ -114,20 +117,37 @@ export function SistemaSelector({
         const availableIds =
           sistema.availableAmbienteIds || sistema.ambienteIds || [];
 
+        let filtered: Ambiente[] = [];
         if (availableIds.length > 0) {
-          const filtered = ambientes.filter((a) => availableIds.includes(a.id));
-          setFilteredAmbientes(filtered);
+          filtered = ambientes.filter((a) => availableIds.includes(a.id));
         } else {
           // If no restrictions defined (legacy or new unbounded), show all
-          setFilteredAmbientes(ambientes);
+          filtered = ambientes;
         }
+
+        // Remove ambientes already selected for this system
+        if (selectedSistemas && selectedSistemas.length > 0) {
+          const currentSystem = selectedSistemas.find(
+            (s) => s.sistemaId === selectedSistemaId
+          );
+          if (currentSystem && currentSystem.ambientes) {
+            const selectedAmbienteIds = currentSystem.ambientes.map(
+              (a) => a.ambienteId
+            );
+            filtered = filtered.filter(
+              (a) => !selectedAmbienteIds.includes(a.id)
+            );
+          }
+        }
+
+        setFilteredAmbientes(filtered);
       } else {
         setFilteredAmbientes([]);
       }
     } else {
       setFilteredAmbientes([]);
     }
-  }, [selectedSistemaId, sistemas, ambientes]);
+  }, [selectedSistemaId, sistemas, ambientes, selectedSistemas]);
 
   // Initialize from value (Legacy handling + New Format)
   React.useEffect(() => {
