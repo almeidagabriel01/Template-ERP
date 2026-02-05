@@ -126,17 +126,54 @@ function buildContentItems(
   let hasAddedPaymentTerms = false;
 
   // Check if proposal has dynamic payment options configured
-  const hasDynamicPaymentOptions =
+  const hasDynamicPaymentOptions = !!(
     (proposal.installmentsEnabled &&
       proposal.installmentsCount &&
       proposal.installmentsCount >= 1) ||
     (proposal.downPaymentEnabled &&
       proposal.downPaymentValue &&
-      proposal.downPaymentValue > 0);
+      proposal.downPaymentValue > 0)
+  );
 
-  // Helper to add payment terms block
-  const addPaymentTermsBlock = () => {
-    if (hasDynamicPaymentOptions && !hasAddedPaymentTerms) {
+  // Helper to identify payment sections based on keywords
+  const isPaymentSection = (section: PdfSection): boolean => {
+    const content = (section.content || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+    return (
+      content.includes("condies de pagamento") ||
+      content.includes("condicoes de pagamento") ||
+      content.includes("formas de pagamento") ||
+      (hasDynamicPaymentOptions &&
+        (content.includes("entrada:") || content.includes("saldo:")))
+    );
+  };
+
+  // Pre-process sections: Extract payment sections to ensure correct placement
+  const manualPaymentSections: PdfSection[] = [];
+  const processedSections = sections.filter((section) => {
+    if (section.type !== "text" && section.type !== "title") return true;
+
+    if (isPaymentSection(section)) {
+      if (hasDynamicPaymentOptions) {
+        // Dynamic mode: Skip manual section (replaced by dynamic block)
+        return false;
+      } else {
+        // Manual mode: Extract to render in forced position (after totals)
+        manualPaymentSections.push(section);
+        return false;
+      }
+    }
+    return true;
+  });
+
+  // Helper to add payment terms block (Dynamic or Manual)
+  const addUnifiedPaymentBlock = () => {
+    if (hasAddedPaymentTerms) return;
+
+    // 1. Add Dynamic Payment Terms if enabled
+    if (hasDynamicPaymentOptions) {
       items.push({
         type: "payment-terms",
         id: generateId("payment-terms"),
@@ -149,24 +186,23 @@ function buildContentItems(
           proposal.installmentsEnabled ? proposal.installmentsCount || 0 : 0,
         ),
       });
-      hasAddedPaymentTerms = true;
     }
-  };
 
-  // Helper to check if a section is about payment terms and should be skipped
-  const shouldSkipPaymentSection = (section: PdfSection): boolean => {
-    if (!hasDynamicPaymentOptions) return false;
-    const content = (section.content || "")
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-    return (
-      content.includes("condies de pagamento") ||
-      content.includes("condicoes de pagamento") ||
-      content.includes("formas de pagamento") ||
-      content.includes("entrada:") ||
-      content.includes("saldo:")
-    );
+    // 2. Add extracted Manual Payment Sections if Dynamic is NOT enabled
+    // (If dynamic is enabled, we skipped them in pre-process, so this is empty)
+    if (!hasDynamicPaymentOptions && manualPaymentSections.length > 0) {
+      manualPaymentSections.forEach((section) => {
+        const height = calculateSectionHeight(section);
+        items.push({
+          type: "section",
+          id: generateId("section-payment"),
+          data: section,
+          height,
+        });
+      });
+    }
+
+    hasAddedPaymentTerms = true;
   };
 
   const renderAllSistemas = () => {
@@ -215,12 +251,6 @@ function buildContentItems(
     );
 
     if (extraProducts.length > 0) {
-      // Logic for extra products block or header
-      // For now, mirroring previous logic which used extra-products-block or flat list
-      // The previous logic used extra-products-block in Loop 1 and extra-products-header in Loop 2.
-      // We should unify. Let's use extra-products-block if possible, or header if split.
-      // Actually, let's use the granular approach (header + rows) to align with page breaking.
-
       items.push({
         type: "extra-products-header",
         id: generateId("extra-products-header"),
@@ -241,7 +271,7 @@ function buildContentItems(
       id: generateId("totals"),
       height: ESTIMATED_HEIGHTS.TOTALS,
     });
-    addPaymentTermsBlock();
+    addUnifiedPaymentBlock();
   };
 
   // Helper to check if section is "Garantia"
@@ -313,7 +343,6 @@ function buildContentItems(
     totalHeight += envsWithProducts.reduce((sum, grp) => sum + grp.height, 0);
 
     // Threshold: if block would take more than 40% of page, split it
-    // Reduced from 0.7 to 0.4 to prevent large gaps when a medium block follows a title
     const SPLIT_THRESHOLD = SAFE_HEIGHT * 0.4;
 
     if (totalHeight > SPLIT_THRESHOLD) {
@@ -371,7 +400,6 @@ function buildContentItems(
       });
     } else {
       // Small block - render as single nested unit
-      // We pass ALL products; the component handles environment filtering internally
       items.push({
         type: "sistema-block",
         id: generateId("sistema-block"),
@@ -406,16 +434,16 @@ function buildContentItems(
         id: generateId("totals"),
         height: ESTIMATED_HEIGHTS.TOTALS,
       });
-      addPaymentTermsBlock();
+      addUnifiedPaymentBlock();
     }
   };
 
-  const productSectionIndex = sections.findIndex(
+  const productSectionIndex = processedSections.findIndex(
     (s) => s.type === "product-table",
   );
 
   if (productSectionIndex !== -1) {
-    sections.forEach((section) => {
+    processedSections.forEach((section) => {
       if (section.type === "product-table") {
         if (hasSistemas) {
           renderAllSistemas();
@@ -423,14 +451,9 @@ function buildContentItems(
           addRegularProducts(products);
         }
       } else {
-        // Skip static payment sections if dynamic payment options are configured
-        if (shouldSkipPaymentSection(section)) return;
-
         // Insert payment terms before "Garantia" if not already added
         if (isGarantiaSection(section)) {
-          if (!hasAddedPaymentTerms) {
-            addPaymentTermsBlock();
-          }
+          addUnifiedPaymentBlock();
         }
 
         const height = calculateSectionHeight(section);
@@ -454,8 +477,8 @@ function buildContentItems(
       "validade",
     ];
 
-    for (let i = 0; i < sections.length; i++) {
-      const text = (sections[i].content || "").toLowerCase();
+    for (let i = 0; i < processedSections.length; i++) {
+      const text = (processedSections[i].content || "").toLowerCase();
       if (footerKeywords.some((k) => text.includes(k))) {
         insertIndex = i;
         break;
@@ -463,10 +486,10 @@ function buildContentItems(
     }
 
     if (insertIndex === -1) {
-      insertIndex = sections.length > 1 ? 1 : sections.length;
+      insertIndex = processedSections.length > 1 ? 1 : processedSections.length;
     }
 
-    for (let i = 0; i < sections.length; i++) {
+    for (let i = 0; i < processedSections.length; i++) {
       if (i === insertIndex) {
         if (hasSistemas) {
           renderAllSistemas();
@@ -475,20 +498,11 @@ function buildContentItems(
         }
       }
 
-      const section = sections[i];
+      const section = processedSections[i];
 
-      // Skip static payment sections if dynamic payment options are configured
-      // If this section is the payment terms placeholder, just skip it (since we added it after systems)
-      if (shouldSkipPaymentSection(section)) {
-        continue;
-      }
-
-      // Insert payment terms before "Garantia" ONLY if not already added
-      // This is a safety fallback
+      // Insert payment terms before "Garantia" if not already added
       if (isGarantiaSection(section)) {
-        if (!hasAddedPaymentTerms) {
-          addPaymentTermsBlock();
-        }
+        addUnifiedPaymentBlock();
       }
 
       const height = calculateSectionHeight(section);
@@ -500,15 +514,17 @@ function buildContentItems(
       });
     }
 
-    if (insertIndex >= sections.length) {
+    if (insertIndex >= processedSections.length) {
       if (hasSistemas) {
         renderAllSistemas();
-        // items.push({ type: "totals", height: ESTIMATED_HEIGHTS.TOTALS }); // handled in renderAllSistemas
       } else if (products.length > 0) {
         addRegularProducts(products);
       }
     }
   }
+
+  // Final fallback: If payment terms still haven't been added (e.g. no Garantia section), add them at the end
+  addUnifiedPaymentBlock();
 
   return items;
 }
@@ -680,9 +696,16 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
       if (item.id) {
         const el = measureRef.current?.querySelector(
           `[data-measure-id="${item.id}"]`,
-        );
+        ) as HTMLElement;
         if (el) {
-          const height = el.getBoundingClientRect().height;
+          const rect = el.getBoundingClientRect();
+          // Calculate scale factor by comparing rendered width vs layout width
+          // This handles the case where the parent container is scaled (e.g. in Edit PDF zoom)
+          // Default to 1 if offsetWidth is 0 to avoid division by zero
+          const scale = el.offsetWidth > 0 ? rect.width / el.offsetWidth : 1;
+
+          // Use unscaled height for pagination logic
+          const height = rect.height / scale;
           const currentHeight = measuredHeights[item.id] || 0;
 
           // Only update if difference > 0.5px to avoid infinite loops from micro-adjustments

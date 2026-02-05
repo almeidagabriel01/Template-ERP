@@ -37,14 +37,33 @@ export type Sistema = {
   description: string; // Descrição que aparece no PDF
   icon?: string; // Emoji ou nome de ícone lucide
   // IDs dos ambientes disponíveis para este sistema
-  availableAmbienteIds: string[];
+  // availableAmbienteIds: string[]; -> Deprecated in favor of configured environments
+  
+  /**
+   * Main configuration: Environments within this system, each with its own product list.
+   * This is the SOURCE OF TRUTH for products when adding a system to a proposal.
+   */
+  ambientes: SistemaAmbienteTemplate[];
+
   createdAt: string;
   updatedAt: string;
+  
   // DEPRECATED: Mantido temporariamente para migração
+  /** @deprecated Use ambientes field instead */
+  availableAmbienteIds?: string[];
   /** @deprecated Use Ambiente.defaultProducts instead */
   defaultProducts?: SistemaProduct[];
   /** @deprecated Use availableAmbienteIds instead */
   ambienteIds?: string[];
+};
+
+/**
+ * Configuration of an Environment within a System Template.
+ * Defines which products are standard for this Room in this System.
+ */
+export type SistemaAmbienteTemplate = {
+  ambienteId: string; // Reference to the generic Ambiente (Name/Icon)
+  products: AmbienteProduct[];
 };
 
 /**
