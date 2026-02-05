@@ -6,6 +6,7 @@ import {
   Wallet,
   Shield,
   FileSpreadsheet,
+  Cpu,
 } from "lucide-react";
 
 // ============================================
@@ -76,6 +77,11 @@ export const menuItems: MenuItem[] = [
         href: "/financial/wallets",
       },
     ],
+  },
+  {
+    icon: Cpu,
+    label: "Automação",
+    href: "/automation",
   },
   {
     icon: Shield,
