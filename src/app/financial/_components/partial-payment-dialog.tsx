@@ -97,7 +97,7 @@ export function PartialPaymentDialog({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="amount">Valor a Pagar</Label>
+            <Label htmlFor="amount">Valor Pago</Label>
             <CurrencyInput
               value={amount}
               onChange={(e) => setAmount(Number(e.target.value))}
@@ -106,7 +106,7 @@ export function PartialPaymentDialog({
               autoFocus
             />
             <p className="text-xs text-muted-foreground">
-              Restante após pagamento:{" "}
+              Restante a pagar:{" "}
               <span className="font-bold text-primary">
                 {formatCurrency(Math.max(0, transaction.amount - amount))}
               </span>
