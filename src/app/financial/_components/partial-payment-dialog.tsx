@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Transaction } from "@/services/transaction-service";
 import { formatCurrency } from "@/utils/format";
+import { getTodayISO } from "@/utils/date-utils";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
@@ -31,16 +32,14 @@ export function PartialPaymentDialog({
   onConfirm,
 }: PartialPaymentDialogProps) {
   const [amount, setAmount] = React.useState<number>(0);
-  const [date, setDate] = React.useState<string>(
-    new Date().toISOString().split("T")[0],
-  );
+  const [date, setDate] = React.useState<string>(getTodayISO());
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // Reset state when dialog opens
   React.useEffect(() => {
     if (open) {
       setAmount(0);
-      setDate(new Date().toISOString().split("T")[0]);
+      setDate(getTodayISO());
     }
   }, [open]);
 
