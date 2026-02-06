@@ -14,6 +14,7 @@ import { usePagePermission } from "@/hooks/usePagePermission";
 import { useFormValidation, FormErrors } from "@/hooks/useFormValidation";
 import { transactionSchema } from "@/lib/validations";
 import { useWalletsData } from "../wallets/_hooks/useWalletsData";
+import { getTodayISO } from "@/utils/date-utils";
 
 export type PaymentMode = "total" | "installmentValue";
 
@@ -91,6 +92,7 @@ interface UseTransactionFormReturn {
   isSaving: boolean;
   canCreate: boolean;
   isLoading: boolean;
+  isTransactionLoading?: boolean;
 }
 
 export function useTransactionForm(): UseTransactionFormReturn {
@@ -99,11 +101,9 @@ export function useTransactionForm(): UseTransactionFormReturn {
   const { canCreate, isLoading: permLoading } = usePagePermission("financial");
   const { createClient } = useClientActions();
   const [formData, setFormData] = React.useState<TransactionFormData>(() => {
-    const today = new Date();
-    const localDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     return {
       ...initialFormData,
-      date: localDate,
+      date: getTodayISO(),
     };
   });
   const [isSaving, setIsSaving] = React.useState(false);
