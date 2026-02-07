@@ -63,11 +63,15 @@ interface TransactionCardProps {
     amount: number,
     date: string,
   ) => Promise<void>;
+  onReload?: () => Promise<void>;
   defaultExpanded?: boolean;
   isSelected?: boolean;
   onToggleSelection?: (id: string) => void;
   onToggleGroupSelection?: (transaction: Transaction) => void;
   selectedIds?: Set<string>;
+  // Controlled expansion props
+  isExpanded?: boolean;
+  onToggleExpand?: (collapsed: boolean) => void;
 }
 
 const statusOptions: {
@@ -91,15 +95,34 @@ export function TransactionCard({
   onUpdate,
   onUpdateBatch,
   onRegisterPartialPayment,
+  onReload,
   defaultExpanded = false,
   isSelected = false,
   onToggleSelection,
   onToggleGroupSelection,
   selectedIds,
+  isExpanded: controlledIsExpanded,
+  onToggleExpand,
 }: TransactionCardProps) {
   const [isUpdating, setIsUpdating] = React.useState(false);
   const [updatingIds, setUpdatingIds] = React.useState<Set<string>>(new Set());
-  const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
+
+  // Local state purely for fallback if not controlled
+  const [localIsExpanded, setLocalIsExpanded] = React.useState(defaultExpanded);
+
+  // Derived state: Use controlled if provided, else local
+  const isExpanded =
+    controlledIsExpanded !== undefined ? controlledIsExpanded : localIsExpanded;
+
+  const handleToggleExpand = () => {
+    const newState = !isExpanded;
+    if (onToggleExpand) {
+      onToggleExpand(newState);
+    } else {
+      setLocalIsExpanded(newState);
+    }
+  };
+
   const [showEditBlockDialog, setShowEditBlockDialog] = React.useState(false);
   const [isEditingAmount, setIsEditingAmount] = React.useState(false);
   const [editAmountValue, setEditAmountValue] = React.useState<number>(0);
@@ -415,13 +438,71 @@ export function TransactionCard({
         toast.success("Pagamento parcial registrado com sucesso!");
 
         // Refresh the page/view with a small delay to ensure propagation
-        setTimeout(() => {
+        if (onReload) {
+          await onReload();
+        } else {
           router.refresh();
-        }, 500);
+        }
       }
     } catch (error) {
       console.error(error);
       throw error; // Dialog handles error toast
+    }
+  };
+
+  const handleUndoPartial = async (partialTx: Transaction) => {
+    try {
+      // 1. Find the remainder (pending) transaction
+      // It should share the same parentTransactionId or have some link.
+      // Usually, partial has isPartialPayment=true. The remainder has isPartialPayment=false (or undefined)
+      // and shares the same installmentNumber and installmentGroupId/proposalId if applicable.
+      // BUT, checking `relatedInstallments` is safer.
+
+      const remainder = relatedInstallments.find(
+        (t) =>
+          !t.isPartialPayment &&
+          !t.isDownPayment &&
+          t.installmentNumber === partialTx.installmentNumber &&
+          t.id !== partialTx.id,
+      );
+
+      if (!remainder) {
+        toast.error(
+          "Não foi possível encontrar a parcela restante para desfazer.",
+        );
+        return;
+      }
+
+      // 2. Delete the remainder
+      await TransactionService.deleteTransaction(remainder.id);
+
+      // 3. Update the partial to be full again
+      // Status -> Pending
+      // Amount -> Partial + Remainder
+      // isPartialPayment -> false
+      const originalAmount = partialTx.amount + remainder.amount;
+      await TransactionService.updateTransaction(partialTx.id, {
+        amount: originalAmount,
+        status: "pending",
+        isPartialPayment: false,
+        // parentTransactionId: null, // Depending on backend, might need to clear this.
+        // Sending null might not be supported by type, but undefined skips update.
+        // If we can't clear it easily, it's fine, as long as isPartialPayment is false.
+      });
+
+      toast.success("Pagamento parcial desfeito com sucesso!");
+
+      if (onReload) {
+        setIsUpdating(true); // Show some loading state if needed, or just wait
+        await onReload();
+        setIsUpdating(false);
+      } else {
+        // Fallback
+        router.refresh();
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao desfazer pagamento parcial.");
     }
   };
 
@@ -446,7 +527,7 @@ export function TransactionCard({
               ) {
                 return;
               }
-              setIsExpanded(!isExpanded);
+              handleToggleExpand();
             }}
           >
             {/* Selection Checkbox - use group selection for the main card */}
@@ -1044,7 +1125,7 @@ export function TransactionCard({
 
           {/* Expanded section for standalone installment groups */}
           {isExpanded && !isProposalGroup && relatedInstallments.length > 0 && (
-            <div className="border-t px-4 py-3 bg-muted/30 space-y-3">
+            <div className="px-4 pb-4 pt-0">
               <TransactionInstallmentsList
                 installments={relatedInstallments}
                 onStatusChange={onStatusChange!}
@@ -1053,6 +1134,7 @@ export function TransactionCard({
                 selectedIds={selectedIds}
                 onToggleSelection={onToggleSelection}
                 onPartialPayment={handlePartialPayment}
+                onUndoPartial={handleUndoPartial}
               />
             </div>
           )}

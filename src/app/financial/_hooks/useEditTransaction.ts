@@ -114,6 +114,111 @@ export function useEditTransaction() {
     installmentValue: {},
   });
 
+  const fetchTransaction = React.useCallback(async () => {
+    if (!transactionId) return;
+
+    try {
+      if (
+        params.id === "new" ||
+        (typeof params.id === "string" && params.id.startsWith("new?"))
+      ) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+
+      const data = await TransactionService.getTransactionById(transactionId);
+      // Ensure numeric fields are strings for the form
+      const safeData = {
+        ...data,
+      } as any;
+
+      setTransaction(safeData);
+
+      // If it's an installment, fetch related ones
+      if (
+        safeData.isInstallment &&
+        safeData.installmentGroupId &&
+        safeData.installmentGroupId !== "stub-group-id"
+      ) {
+        try {
+          const group = await TransactionService.getInstallmentsByGroupId(
+            safeData.installmentGroupId,
+          );
+          // Sort by installment number
+          const sorted = group.sort(
+            (a: Transaction, b: Transaction) =>
+              (a.installmentNumber || 0) - (b.installmentNumber || 0),
+          );
+          setRelatedInstallments(sorted);
+        } catch (error) {
+          console.error("Error fetching related installments:", error);
+          setRelatedInstallments([]);
+        }
+      } else {
+        setRelatedInstallments([]);
+      }
+
+      // Initialize form data
+      setFormData((prev) => ({
+        ...prev,
+        type: safeData.type,
+        description: safeData.description,
+        amount: safeData.amount.toString(),
+        // Use displayed date (dueDate if expense, date if income/other preferences)
+        // But for editing, we usually want the core date or due date fields separate.
+        // Let's stick to: date -> data.date, dueDate -> data.dueDate
+        date: safeData.date ? safeData.date.split("T")[0] : "",
+        dueDate: safeData.dueDate ? safeData.dueDate.split("T")[0] : "",
+        status: safeData.status,
+        clientId: safeData.clientId,
+        clientName: safeData.clientName || "",
+        category: safeData.category,
+        wallet: safeData.wallet || "",
+        notes: safeData.notes || "",
+
+        // Installment/Recurrence logic
+        isInstallment: safeData.isInstallment,
+        installmentCount: safeData.installmentCount || 1,
+
+        // Payment Mode Logic for Edit
+        // If it has installments, we probably want "installmentValue" mode or "total" mode?
+        // Let's infer:
+        paymentMode: safeData.isInstallment ? "total" : "total", // Defaulting to total is safer for now
+
+        // Check for down payment (needs heuristic if not explicitly flagged)
+        downPaymentEnabled: safeData.hasDownPayment || false,
+        downPaymentValue: safeData.downPaymentAmount
+          ? safeData.downPaymentAmount.toString()
+          : "",
+        downPaymentWallet: safeData.downPaymentWallet || "",
+        downPaymentDueDate: safeData.downPaymentDate
+          ? safeData.downPaymentDate.split("T")[0]
+          : "",
+
+        installmentValue:
+          safeData.isInstallment && safeData.amount
+            ? (safeData.amount / (safeData.installmentCount || 1)).toString() // Approximation
+            : "",
+        installmentsWallet: safeData.isInstallment ? safeData.wallet || "" : "",
+        firstInstallmentDate: safeData.firstInstallmentDate
+          ? safeData.firstInstallmentDate.split("T")[0]
+          : "",
+      }));
+    } catch (error) {
+      console.error("Error fetching transaction:", error);
+      toast.error("Erro ao carregar lançamento.");
+      router.push("/financial");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [transactionId, params.id, router]);
+
+  React.useEffect(() => {
+    fetchTransaction();
+  }, [fetchTransaction]);
+
   const switchPaymentMode = (newMode: "total" | "installmentValue") => {
     if (newMode === formData.paymentMode) return;
 
@@ -297,156 +402,6 @@ export function useEditTransaction() {
           }),
     }));
   };
-
-  React.useEffect(() => {
-    async function loadTransaction() {
-      if (!transactionId) return;
-
-      try {
-        const data = await TransactionService.getTransactionById(transactionId);
-        if (data) {
-          setTransaction(data);
-          const isPartOfGroup = !!(
-            data.installmentGroupId && !data.proposalGroupId
-          );
-          const effectiveIsInstallment = data.isInstallment || isPartOfGroup;
-
-          // Default: Total Mode
-          const initialData: EditTransactionFormData = {
-            type: data.type,
-            description: data.description,
-            amount: "",
-            date: data.date.split("T")[0],
-            dueDate: data.dueDate?.split("T")[0] || "",
-            status: data.status,
-            clientId: data.clientId,
-            clientName: data.clientName || "",
-            category: data.category || "",
-            wallet: data.wallet || "",
-            notes: data.notes || "",
-            isInstallment: effectiveIsInstallment,
-            installmentCount: data.installmentCount || 1,
-            paymentMode: "total",
-            installmentValue: "",
-            firstInstallmentDate: "",
-            installmentsWallet: "",
-            downPaymentEnabled: false,
-            downPaymentValue: "",
-            downPaymentWallet: "",
-            downPaymentDueDate: "",
-          };
-
-          // Data for buffers
-          let totalBuffer: Partial<EditTransactionFormData> = {};
-          let installmentBuffer: Partial<EditTransactionFormData> = {};
-
-          if (effectiveIsInstallment && data.installmentGroupId) {
-            const all = await TransactionService.getTransactions(data.tenantId);
-            const related = all
-              .filter((t) => t.installmentGroupId === data.installmentGroupId)
-              .sort(
-                (a, b) =>
-                  (a.installmentNumber || 0) - (b.installmentNumber || 0),
-              );
-            setRelatedInstallments(related);
-
-            const realInstallments = related.filter((t) => !t.isDownPayment);
-            if (realInstallments.length > 0) {
-              initialData.installmentCount = realInstallments.length;
-            }
-
-            const downPayment = related.find(
-              (t) => t.isDownPayment || t.installmentNumber === 0,
-            );
-
-            // Common Down Payment Data
-            const dpData = downPayment
-              ? {
-                  downPaymentEnabled: true,
-                  downPaymentValue: downPayment.amount.toFixed(2),
-                  downPaymentWallet: downPayment.wallet || "",
-                  downPaymentDueDate:
-                    downPayment.dueDate?.split("T")[0] ||
-                    downPayment.date.split("T")[0],
-                }
-              : {};
-
-            Object.assign(initialData, dpData);
-
-            const firstInstallment = realInstallments.find(
-              (t) => (t.installmentNumber || 0) > 0,
-            );
-
-            // Mode Detection Logic (Conservative: Default to Total)
-            // User prefers Total. Only use InstallmentValue if explicitly needed?
-            // Actually, if we load data, we populate ONE buffer and generate the other or leave it empty?
-            // If the user saved it, we don't know which mode validly generated it (could be either).
-            // But we must populate the ACTIVE mode.
-
-            // WE WILL DEFAULT TO TOTAL.
-            // AND POPULATE TOTAL DATA.
-
-            // Total Data Calculation
-            if (!data.proposalGroupId) {
-              const total = related.reduce((sum, t) => sum + t.amount, 0);
-
-              // Populate Total Logic
-              initialData.paymentMode = "total";
-              initialData.amount = total.toFixed(2);
-              if (firstInstallment) {
-                initialData.wallet =
-                  firstInstallment.wallet || initialData.wallet;
-              }
-
-              // We ALSO populate the buffer for THIS mode
-              totalBuffer = {
-                ...initialData,
-                ...getTotalFields(initialData as any),
-              };
-
-              // Installment Buffer remains empty (as requested: "ir zerado")
-              // Or should we infer it? No, user wants it distinct.
-              // Creating a clean slate for the alternative mode is safer.
-            }
-          } else if (data.proposalGroupId) {
-            // Proposal Group Logic
-            const all = await TransactionService.getTransactions(data.tenantId);
-            const related = all
-              .filter((t) => t.proposalGroupId === data.proposalGroupId)
-              .sort((a, b) => {
-                if (a.isDownPayment) return -1;
-                if (b.isDownPayment) return 1;
-                return new Date(a.date).getTime() - new Date(b.date).getTime();
-              });
-            setRelatedInstallments(related);
-            const total = related.reduce((sum, t) => sum + t.amount, 0);
-
-            initialData.amount = total.toFixed(2);
-            initialData.paymentMode = "total";
-            totalBuffer = { ...initialData };
-          } else {
-            // Single Transaction
-            initialData.amount = data.amount.toFixed(2);
-            initialData.paymentMode = "total";
-            totalBuffer = { ...initialData };
-          }
-
-          setFormData(initialData);
-          setModeBuffers({
-            total: totalBuffer,
-            installmentValue: installmentBuffer,
-          });
-        }
-      } catch (error) {
-        console.error("Error loading transaction:", error);
-        toast.error("Erro ao carregar lançamento");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    loadTransaction();
-  }, [transactionId]);
 
   const addMonths = (dateStr: string, months: number): string => {
     if (!dateStr) return "";
@@ -753,5 +708,6 @@ export function useEditTransaction() {
       transaction?.proposalGroupId && relatedInstallments.length > 0
         ? relatedInstallments.reduce((sum, t) => sum + t.amount, 0)
         : null,
+    refetch: fetchTransaction,
   };
 }
