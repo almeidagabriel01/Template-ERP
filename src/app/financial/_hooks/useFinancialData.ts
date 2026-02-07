@@ -124,7 +124,7 @@ interface UseFinancialDataReturn {
     amount: number,
     date: string,
   ) => Promise<void>;
-  refreshData: () => Promise<void>;
+  refreshData: (background?: boolean) => Promise<void>;
 }
 
 export function useFinancialData(): UseFinancialDataReturn {
@@ -798,6 +798,6 @@ export function useFinancialData(): UseFinancialDataReturn {
     updateBatchTransactions,
     updateGroupStatus,
     registerPartialPayment,
-    refreshData: fetchData,
+    refreshData: (background?: boolean) => fetchData(background),
   };
 }

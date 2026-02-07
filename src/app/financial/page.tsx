@@ -54,6 +54,7 @@ export default function FinancialPage() {
     updateBatchTransactions,
     registerPartialPayment,
     transactions,
+    refreshData,
   } = useFinancialData();
 
   const isLoading = tenantLoading || dataLoading || isPlanLoading;
@@ -66,6 +67,27 @@ export default function FinancialPage() {
 
   // Selection state
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+  const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set());
+
+  // Helper to get stable ID for expansion
+  const getExpansionKey = React.useCallback((t: Transaction) => {
+    if (t.proposalGroupId) return `proposal-${t.proposalGroupId}`;
+    if (t.installmentGroupId) return `installment-${t.installmentGroupId}`;
+    return `transaction-${t.id}`;
+  }, []);
+
+  // Toggle expand for a transaction using stable key
+  const toggleExpand = React.useCallback((key: string, isOpen: boolean) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (isOpen) {
+        next.add(key);
+      } else {
+        next.delete(key);
+      }
+      return next;
+    });
+  }, []);
 
   // Toggle selection for a single transaction (used for individual installments)
   const toggleSelection = React.useCallback((id: string) => {
@@ -422,6 +444,11 @@ export default function FinancialPage() {
                   onToggleSelection={toggleSelection}
                   onToggleGroupSelection={toggleGroupSelection}
                   selectedIds={selectedIds}
+                  isExpanded={expandedIds.has(getExpansionKey(transaction))}
+                  onToggleExpand={(isOpen) =>
+                    toggleExpand(getExpansionKey(transaction), isOpen)
+                  }
+                  onReload={() => refreshData(true)} // Background refresh
                 />
               );
             }
@@ -444,6 +471,11 @@ export default function FinancialPage() {
                 onToggleSelection={toggleSelection}
                 onToggleGroupSelection={toggleGroupSelection}
                 selectedIds={selectedIds}
+                isExpanded={expandedIds.has(getExpansionKey(transaction))}
+                onToggleExpand={(isOpen) =>
+                  toggleExpand(getExpansionKey(transaction), isOpen)
+                }
+                onReload={() => refreshData(true)} // Background refresh
               />
             );
           })}

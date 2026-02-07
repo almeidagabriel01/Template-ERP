@@ -3,7 +3,10 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Wallet, AlertCircle } from "lucide-react";
-import { useEditTransaction } from "../_hooks/useEditTransaction";
+import {
+  useEditTransaction,
+  EditTransactionFormData,
+} from "../_hooks/useEditTransaction";
 import { FormContainer, FormHeader } from "@/components/ui/form-components";
 import {
   StepWizard,
@@ -67,6 +70,7 @@ export default function EditTransactionPage() {
     isProposalTransaction,
     groupTotalValue,
     switchPaymentMode,
+    refetch,
   } = useEditTransaction();
 
   // Adapt formData type for shared components
@@ -246,16 +250,18 @@ export default function EditTransactionPage() {
 
                   const result = updater(prevAsTransactionFormData);
 
-                  return {
-                    ...result,
-                    // Map back to EditTransactionFormData (result has string clientId which is fine)
-                  };
+                  return result as unknown as EditTransactionFormData;
                 });
+              } else {
+                setFormData(updater as unknown as EditTransactionFormData);
               }
             }}
             onChange={handleChange}
             isProposalTransaction={!!isProposalTransaction}
             onPaymentModeChange={switchPaymentMode}
+            transaction={transaction}
+            relatedInstallments={relatedInstallments}
+            onReload={refetch}
           />
 
           <StepNavigation />
