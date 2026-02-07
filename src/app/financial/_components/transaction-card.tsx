@@ -146,6 +146,61 @@ export function TransactionCard({
     transaction.amount,
   ]);
 
+  // Calculate paid installments count (handling partial payments)
+  const installmentStatusCounts = React.useMemo(() => {
+    if (isProposalGroup) {
+      // For proposal groups, we can just count paid installments directly?
+      // Or do they also have splits? Assuming similar logic.
+      const installmentsOnly = installments.filter((t) => t.isInstallment);
+      const uniqueNumbers = new Set(
+        installmentsOnly.map((t) => t.installmentNumber || 0),
+      );
+      let paidCount = 0;
+
+      uniqueNumbers.forEach((num) => {
+        const txs = installmentsOnly.filter(
+          (t) => (t.installmentNumber || 0) === num,
+        );
+        if (txs.length > 0 && txs.every((t) => t.status === "paid")) {
+          paidCount++;
+        }
+      });
+      return { paid: paidCount, total: uniqueNumbers.size };
+    }
+
+    if (relatedInstallments.length > 0) {
+      const installmentsOnly = relatedInstallments.filter(
+        (t) => !t.isDownPayment && t.isInstallment,
+      );
+
+      const uniqueNumbers = new Set(
+        installmentsOnly.map((t) => t.installmentNumber || 0),
+      );
+      let paidCount = 0;
+
+      uniqueNumbers.forEach((num) => {
+        const txs = installmentsOnly.filter(
+          (t) => (t.installmentNumber || 0) === num,
+        );
+        // If all parts of this installment are paid, it counts as paid
+        if (txs.length > 0 && txs.every((t) => t.status === "paid")) {
+          paidCount++;
+        }
+      });
+
+      // Use the explicitly separate total count from the first item if available,
+      // otherwise use the number of unique installments found.
+      const total =
+        installmentsOnly.length > 0
+          ? installmentsOnly[0].installmentCount || uniqueNumbers.size
+          : uniqueNumbers.size;
+
+      return { paid: paidCount, total };
+    }
+
+    return null;
+  }, [isProposalGroup, installments, relatedInstallments]);
+
   // Determine which wallet to display
   // Prioritize Installment Wallet over Down Payment Wallet for groups
   const displayWallet = React.useMemo(() => {
@@ -454,27 +509,45 @@ export function TransactionCard({
                       {installments.length > 0 && (
                         <span className="text-primary font-medium flex items-center gap-1">
                           <CreditCard className="w-3 h-3" />
-                          {installments.length}x
+                          {installmentStatusCounts ? (
+                            <>
+                              {installmentStatusCounts.paid}/
+                              {installmentStatusCounts.total}x
+                            </>
+                          ) : (
+                            <>{installments.length}x</>
+                          )}
                         </span>
                       )}
                     </div>
                   </>
                 )}
-                {/* Show installment info for standalone installments */}
+                {/* Show installment info for standalone installments - UPDATED per user request */}
                 {!isProposalGroup && transaction.isInstallment && (
                   <>
                     <span>•</span>
                     <div className="flex items-center gap-2">
                       <span className="text-primary font-medium">
-                        {transaction.installmentNumber}/
-                        {transaction.installmentCount}x
+                        {installmentStatusCounts ? (
+                          <>
+                            {installmentStatusCounts.paid}/
+                            {installmentStatusCounts.total}x
+                          </>
+                        ) : (
+                          <>
+                            {transaction.installmentNumber}/
+                            {transaction.installmentCount}x
+                          </>
+                        )}
                       </span>
                       {/* Mini Progress Bar */}
                       <div className="h-1.5 w-12 bg-muted rounded-full overflow-hidden hidden sm:block">
                         <div
                           className={`h-full ${typeInfo.color.replace("text-", "bg-")}`}
                           style={{
-                            width: `${Math.min(((transaction.installmentNumber || 1) / (transaction.installmentCount || 1)) * 100, 100)}%`,
+                            width: installmentStatusCounts
+                              ? `${Math.min((installmentStatusCounts.paid / installmentStatusCounts.total) * 100, 100)}%`
+                              : `${Math.min(((transaction.installmentNumber || 1) / (transaction.installmentCount || 1)) * 100, 100)}%`,
                           }}
                         />
                       </div>
@@ -482,30 +555,55 @@ export function TransactionCard({
                   </>
                 )}
                 {/* Manual Installment Group Badges */}
-                {!isProposalGroup && relatedInstallments.length > 0 && (
-                  <>
-                    <span>•</span>
-                    <div className="flex items-center gap-2">
-                      {/* Show Down Payment Badge if present */}
-                      {relatedInstallments.some((t) => t.isDownPayment) && (
-                        <span className="text-blue-500 font-medium flex items-center gap-1">
-                          <Banknote className="w-3 h-3" />
-                          Entrada
-                        </span>
-                      )}
+                {!isProposalGroup &&
+                  relatedInstallments.length > 0 &&
+                  !transaction.isInstallment && (
+                    <>
+                      <span>•</span>
+                      <div className="flex items-center gap-2">
+                        {/* Show Down Payment Badge if present */}
+                        {relatedInstallments.some((t) => t.isDownPayment) && (
+                          <span className="text-blue-500 font-medium flex items-center gap-1">
+                            <Banknote className="w-3 h-3" />
+                            Entrada
+                          </span>
+                        )}
 
-                      {/* Show Installment Count Badge */}
-                      <span className="text-primary font-medium flex items-center gap-1">
-                        <CreditCard className="w-3 h-3" />
-                        {
-                          relatedInstallments.filter((t) => !t.isDownPayment)
-                            .length
-                        }
-                        x
+                        {/* Show Installment Count Badge */}
+                        <span className="text-primary font-medium flex items-center gap-1">
+                          <CreditCard className="w-3 h-3" />
+                          {installmentStatusCounts ? (
+                            <>
+                              {installmentStatusCounts.paid}/
+                              {installmentStatusCounts.total}x
+                            </>
+                          ) : (
+                            <>
+                              {
+                                relatedInstallments.filter(
+                                  (t) => !t.isDownPayment,
+                                ).length
+                              }
+                              x
+                            </>
+                          )}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                {/* Manual Installment Group Badges - Down Payment ONLY (if main is installment) */}
+                {!isProposalGroup &&
+                  relatedInstallments.length > 0 &&
+                  transaction.isInstallment &&
+                  relatedInstallments.some((t) => t.isDownPayment) && (
+                    <>
+                      <span>•</span>
+                      <span className="text-blue-500 font-medium flex items-center gap-1">
+                        <Banknote className="w-3 h-3" />
+                        Entrada
                       </span>
-                    </div>
-                  </>
-                )}
+                    </>
+                  )}
                 {transaction.clientName && (
                   <>
                     <span>•</span>
