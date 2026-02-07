@@ -16,7 +16,7 @@ import {
   PaymentStep,
   ReviewStep,
 } from "../_components/form-steps";
-import { InstallmentsCard } from "../_components";
+
 import { TransactionFormData } from "../_hooks/useTransactionForm";
 import { TrendingUp, FileText, CreditCard, CheckCircle } from "lucide-react";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
@@ -60,12 +60,13 @@ export default function EditTransactionPage() {
     handleSubmit,
     transaction,
     relatedInstallments,
-    previewInstallments, // Use from hook
+
     isLoading,
     isSaving,
     canEdit,
     isProposalTransaction,
     groupTotalValue,
+    switchPaymentMode,
   } = useEditTransaction();
 
   // Adapt formData type for shared components
@@ -180,13 +181,6 @@ export default function EditTransactionPage() {
           totalOverride={totalValueOverride}
         />
 
-        {previewInstallments.length > 0 && (
-          <InstallmentsCard
-            installments={previewInstallments} // No currentTransactionId passed here to avoid "Editing" highlight
-            disableLinks
-          />
-        )}
-
         <div className="flex justify-end pt-6">
           <button
             onClick={() => router.push("/financial")}
@@ -261,16 +255,8 @@ export default function EditTransactionPage() {
             }}
             onChange={handleChange}
             isProposalTransaction={!!isProposalTransaction}
+            onPaymentModeChange={switchPaymentMode}
           />
-
-          {previewInstallments.length > 0 && (
-            <div className="mt-6">
-              <InstallmentsCard
-                installments={previewInstallments}
-                disableLinks
-              />
-            </div>
-          )}
 
           <StepNavigation />
         </StepCard>

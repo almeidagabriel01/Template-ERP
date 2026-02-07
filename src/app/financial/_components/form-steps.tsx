@@ -261,6 +261,7 @@ interface PaymentStepProps {
   onBlur?: (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => void;
   errors?: FormErrors<TransactionFormData>;
   isProposalTransaction?: boolean;
+  onPaymentModeChange?: (mode: PaymentMode) => void;
 }
 
 export function PaymentStep({
@@ -270,6 +271,7 @@ export function PaymentStep({
   onBlur,
   errors = {},
   isProposalTransaction = false,
+  onPaymentModeChange,
 }: PaymentStepProps) {
   // Calculate total based on mode
   const calculateTotal = (): number => {
@@ -281,7 +283,7 @@ export function PaymentStep({
       const downPayment = formData.downPaymentEnabled
         ? parseFloat(formData.downPaymentValue || "0")
         : 0;
-      return installmentValue * formData.installmentCount + downPayment;
+      return installmentValue * (formData.installmentCount || 1) + downPayment;
     }
   };
 
@@ -292,28 +294,20 @@ export function PaymentStep({
       ? parseFloat(formData.downPaymentValue || "0")
       : 0;
     const remaining = total - downPayment;
-    if (remaining <= 0 || formData.installmentCount <= 0) return "0,00";
-    return (remaining / formData.installmentCount).toFixed(2);
+    const count = formData.installmentCount || 1;
+    if (remaining <= 0 || count <= 0) return "0,00";
+    return (remaining / count).toFixed(2);
   };
 
   const handlePaymentModeChange = (mode: PaymentMode) => {
-    onFormDataChange((prev) => ({
-      ...prev,
-      paymentMode: mode,
-      // Reset relevant fields when switching modes
-      ...(mode === "total"
-        ? {
-            installmentValue: "",
-            downPaymentEnabled: false,
-            downPaymentValue: "",
-            isInstallment: false,
-          }
-        : {
-            amount: "",
-            wallet: "",
-            isInstallment: true,
-          }),
-    }));
+    if (onPaymentModeChange) {
+      onPaymentModeChange(mode);
+    } else {
+      onFormDataChange((prev) => ({
+        ...prev,
+        paymentMode: mode,
+      }));
+    }
   };
 
   const handlePaymentToggle = (field: string, value: boolean) => {
