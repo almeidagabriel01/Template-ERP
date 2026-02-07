@@ -146,6 +146,27 @@ export function TransactionCard({
     transaction.amount,
   ]);
 
+  // Determine which wallet to display
+  // Prioritize Installment Wallet over Down Payment Wallet for groups
+  const displayWallet = React.useMemo(() => {
+    // 1. Proposal Group
+    if (isProposalGroup) {
+      const firstInstallment = installments.find((t) => t.wallet);
+      if (firstInstallment) return firstInstallment.wallet;
+    }
+
+    // 2. Installment Group
+    if (relatedInstallments.length > 0) {
+      const firstInstallment = relatedInstallments.find(
+        (t) => !t.isDownPayment && t.wallet,
+      );
+      if (firstInstallment) return firstInstallment.wallet;
+    }
+
+    // 3. Fallback
+    return transaction.wallet;
+  }, [isProposalGroup, installments, relatedInstallments, transaction.wallet]);
+
   // Check how many items are expandable
   const hasExpandableContent =
     isProposalGroup || relatedInstallments.length > 0;
@@ -413,10 +434,10 @@ export function TransactionCard({
               </div>
               <div className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
                 <span>{formatDate(transaction.date)}</span>
-                {transaction.wallet && (
+                {displayWallet && (
                   <>
                     <span>•</span>
-                    <span>{transaction.wallet}</span>
+                    <span>{displayWallet}</span>
                   </>
                 )}
                 {/* Show proposal group summary */}

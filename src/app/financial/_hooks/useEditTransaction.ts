@@ -36,6 +36,32 @@ export interface EditTransactionFormData {
   downPaymentDueDate: string;
 }
 
+// Helper to extract fields relevant to Total Mode
+const getTotalFields = (data: EditTransactionFormData) => ({
+  amount: data.amount,
+  wallet: data.wallet,
+  dueDate: data.dueDate,
+  isInstallment: data.isInstallment,
+  installmentCount: data.installmentCount,
+  downPaymentEnabled: data.downPaymentEnabled,
+  downPaymentValue: data.downPaymentValue,
+  downPaymentWallet: data.downPaymentWallet,
+  downPaymentDueDate: data.downPaymentDueDate,
+});
+
+// Helper to extract fields relevant to Installment Value Mode
+const getInstallmentFields = (data: EditTransactionFormData) => ({
+  installmentValue: data.installmentValue,
+  installmentsWallet: data.installmentsWallet,
+  firstInstallmentDate: data.firstInstallmentDate,
+  isInstallment: data.isInstallment,
+  installmentCount: data.installmentCount,
+  downPaymentEnabled: data.downPaymentEnabled,
+  downPaymentValue: data.downPaymentValue,
+  downPaymentWallet: data.downPaymentWallet,
+  downPaymentDueDate: data.downPaymentDueDate,
+});
+
 export function useEditTransaction() {
   const router = useRouter();
   const params = useParams();
@@ -79,6 +105,199 @@ export function useEditTransaction() {
     downPaymentDueDate: "",
   });
 
+  // Independent buffers for each mode
+  const [modeBuffers, setModeBuffers] = React.useState<{
+    total: Partial<EditTransactionFormData>;
+    installmentValue: Partial<EditTransactionFormData>;
+  }>({
+    total: {},
+    installmentValue: {},
+  });
+
+  const switchPaymentMode = (newMode: "total" | "installmentValue") => {
+    if (newMode === formData.paymentMode) return;
+
+    setFormData((prev) => {
+      // 1. Snapshot current state to the buffer of the OLD mode
+      const currentMode = prev.paymentMode;
+      const currentBuffer =
+        currentMode === "total"
+          ? getTotalFields(prev)
+          : getInstallmentFields(prev);
+
+      // 2. Load from buffer of the NEW mode (or use empty defaults)
+      const nextBuffer = modeBuffers[newMode];
+
+      // 3. Update Buffers State synchronously (conceptually)
+      // Since we are inside setFormData, we need to call setModeBuffers too
+      // But we can't do it inside here. We should do it outside.
+      // Refactoring: Let's do state updates in standard order outside.
+      return prev;
+    });
+
+    // Correct Implementation:
+    const currentMode = formData.paymentMode;
+    const currentFields =
+      currentMode === "total"
+        ? getTotalFields(formData)
+        : getInstallmentFields(formData);
+
+    // Update Buffer with current values
+    setModeBuffers((prev) => ({
+      ...prev,
+      [currentMode]: currentFields,
+    }));
+
+    // Get Target values
+    // Hybrid Sync Logic:
+    // If target buffer is empty, calculate defaults. Otherwise, use buffer.
+    const targetBuffer = modeBuffers[newMode];
+    const isTargetEmpty =
+      newMode === "total"
+        ? !targetBuffer.amount
+        : !targetBuffer.installmentValue;
+
+    let computedValues = {};
+
+    if (isTargetEmpty) {
+      if (newMode === "installmentValue") {
+        // Total -> Installment
+        const total = parseFloat(formData.amount || "0");
+        const downPayment = formData.downPaymentEnabled
+          ? parseFloat(formData.downPaymentValue || "0")
+          : 0;
+        const count = formData.installmentCount || 1;
+        const remaining = Math.max(0, total - downPayment);
+        const installmentVal =
+          count > 0 ? (remaining / count).toFixed(2) : "0.00";
+
+        computedValues = {
+          installmentValue: installmentVal,
+          installmentsWallet: formData.wallet,
+          firstInstallmentDate: formData.date, // Default
+          isInstallment: true,
+          installmentCount: count,
+          downPaymentEnabled: formData.downPaymentEnabled,
+          downPaymentValue: formData.downPaymentValue,
+          downPaymentWallet: formData.wallet,
+          downPaymentDueDate: formData.date,
+        };
+      } else {
+        // Installment -> Total
+        const instVal = parseFloat(formData.installmentValue || "0");
+        const count = formData.installmentCount || 1;
+        const downPayment = formData.downPaymentEnabled
+          ? parseFloat(formData.downPaymentValue || "0")
+          : 0;
+        const total = instVal * count + downPayment;
+
+        computedValues = {
+          amount: total.toFixed(2),
+          wallet: formData.installmentsWallet || formData.wallet,
+          dueDate: formData.firstInstallmentDate || formData.date,
+          // Keep these for potential switch back
+          isInstallment: true,
+          installmentCount: count,
+          downPaymentEnabled: formData.downPaymentEnabled,
+          downPaymentValue: formData.downPaymentValue,
+          downPaymentWallet: formData.downPaymentWallet,
+          downPaymentDueDate: formData.downPaymentDueDate,
+        };
+      }
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      paymentMode: newMode,
+
+      ...(newMode === "total"
+        ? {
+            // Restore Total Fields (or Computed)
+            amount: isTargetEmpty
+              ? (computedValues as any).amount
+              : targetBuffer.amount || "",
+            wallet: isTargetEmpty
+              ? (computedValues as any).wallet
+              : targetBuffer.wallet || "",
+            dueDate: isTargetEmpty
+              ? (computedValues as any).dueDate
+              : targetBuffer.dueDate || "",
+
+            isInstallment:
+              targetBuffer.isInstallment ??
+              (computedValues as any).isInstallment ??
+              false,
+            installmentCount:
+              targetBuffer.installmentCount ??
+              (computedValues as any).installmentCount ??
+              1,
+            downPaymentEnabled:
+              targetBuffer.downPaymentEnabled ??
+              (computedValues as any).downPaymentEnabled ??
+              false,
+            downPaymentValue:
+              targetBuffer.downPaymentValue ??
+              (computedValues as any).downPaymentValue ??
+              "",
+            downPaymentWallet:
+              targetBuffer.downPaymentWallet ??
+              (computedValues as any).downPaymentWallet ??
+              "",
+            downPaymentDueDate:
+              targetBuffer.downPaymentDueDate ??
+              (computedValues as any).downPaymentDueDate ??
+              "",
+
+            // Clear Installment Fields
+            installmentValue: "",
+            installmentsWallet: "",
+            firstInstallmentDate: "",
+          }
+        : {
+            // Restore Installment Fields (or Computed)
+            installmentValue: isTargetEmpty
+              ? (computedValues as any).installmentValue
+              : targetBuffer.installmentValue || "",
+            installmentsWallet: isTargetEmpty
+              ? (computedValues as any).installmentsWallet
+              : targetBuffer.installmentsWallet || "",
+            firstInstallmentDate: isTargetEmpty
+              ? (computedValues as any).firstInstallmentDate
+              : targetBuffer.firstInstallmentDate || "",
+
+            isInstallment:
+              targetBuffer.isInstallment ??
+              (computedValues as any).isInstallment ??
+              true,
+            installmentCount:
+              targetBuffer.installmentCount ??
+              (computedValues as any).installmentCount ??
+              1,
+            downPaymentEnabled:
+              targetBuffer.downPaymentEnabled ??
+              (computedValues as any).downPaymentEnabled ??
+              false,
+            downPaymentValue:
+              targetBuffer.downPaymentValue ??
+              (computedValues as any).downPaymentValue ??
+              "",
+            downPaymentWallet:
+              targetBuffer.downPaymentWallet ??
+              (computedValues as any).downPaymentWallet ??
+              "",
+            downPaymentDueDate:
+              targetBuffer.downPaymentDueDate ??
+              (computedValues as any).downPaymentDueDate ??
+              "",
+
+            // Clear Total Fields
+            amount: "",
+            wallet: "",
+            dueDate: "",
+          }),
+    }));
+  };
+
   React.useEffect(() => {
     async function loadTransaction() {
       if (!transactionId) return;
@@ -92,10 +311,11 @@ export function useEditTransaction() {
           );
           const effectiveIsInstallment = data.isInstallment || isPartOfGroup;
 
+          // Default: Total Mode
           const initialData: EditTransactionFormData = {
             type: data.type,
             description: data.description,
-            amount: data.amount.toFixed(2),
+            amount: "",
             date: data.date.split("T")[0],
             dueDate: data.dueDate?.split("T")[0] || "",
             status: data.status,
@@ -116,6 +336,10 @@ export function useEditTransaction() {
             downPaymentDueDate: "",
           };
 
+          // Data for buffers
+          let totalBuffer: Partial<EditTransactionFormData> = {};
+          let installmentBuffer: Partial<EditTransactionFormData> = {};
+
           if (effectiveIsInstallment && data.installmentGroupId) {
             const all = await TransactionService.getTransactions(data.tenantId);
             const related = all
@@ -134,37 +358,58 @@ export function useEditTransaction() {
             const downPayment = related.find(
               (t) => t.isDownPayment || t.installmentNumber === 0,
             );
-            if (downPayment) {
-              initialData.downPaymentEnabled = true;
-              initialData.downPaymentValue = downPayment.amount.toFixed(2);
-              initialData.downPaymentWallet = downPayment.wallet || "";
-              initialData.downPaymentDueDate =
-                downPayment.dueDate?.split("T")[0] ||
-                downPayment.date.split("T")[0];
-            }
+
+            // Common Down Payment Data
+            const dpData = downPayment
+              ? {
+                  downPaymentEnabled: true,
+                  downPaymentValue: downPayment.amount.toFixed(2),
+                  downPaymentWallet: downPayment.wallet || "",
+                  downPaymentDueDate:
+                    downPayment.dueDate?.split("T")[0] ||
+                    downPayment.date.split("T")[0],
+                }
+              : {};
+
+            Object.assign(initialData, dpData);
 
             const firstInstallment = realInstallments.find(
               (t) => (t.installmentNumber || 0) > 0,
             );
 
-            if (firstInstallment) {
-              initialData.installmentValue = firstInstallment.amount.toFixed(2);
-              initialData.installmentsWallet = firstInstallment.wallet || "";
-              initialData.firstInstallmentDate =
-                firstInstallment.dueDate?.split("T")[0] || "";
+            // Mode Detection Logic (Conservative: Default to Total)
+            // User prefers Total. Only use InstallmentValue if explicitly needed?
+            // Actually, if we load data, we populate ONE buffer and generate the other or leave it empty?
+            // If the user saved it, we don't know which mode validly generated it (could be either).
+            // But we must populate the ACTIVE mode.
 
-              if (initialData.paymentMode === "total") {
-                initialData.wallet = firstInstallment.wallet || "";
-              }
-            }
+            // WE WILL DEFAULT TO TOTAL.
+            // AND POPULATE TOTAL DATA.
 
+            // Total Data Calculation
             if (!data.proposalGroupId) {
               const total = related.reduce((sum, t) => sum + t.amount, 0);
-              if (initialData.paymentMode === "total") {
-                initialData.amount = total.toFixed(2);
+
+              // Populate Total Logic
+              initialData.paymentMode = "total";
+              initialData.amount = total.toFixed(2);
+              if (firstInstallment) {
+                initialData.wallet =
+                  firstInstallment.wallet || initialData.wallet;
               }
+
+              // We ALSO populate the buffer for THIS mode
+              totalBuffer = {
+                ...initialData,
+                ...getTotalFields(initialData as any),
+              };
+
+              // Installment Buffer remains empty (as requested: "ir zerado")
+              // Or should we infer it? No, user wants it distinct.
+              // Creating a clean slate for the alternative mode is safer.
             }
           } else if (data.proposalGroupId) {
+            // Proposal Group Logic
             const all = await TransactionService.getTransactions(data.tenantId);
             const related = all
               .filter((t) => t.proposalGroupId === data.proposalGroupId)
@@ -174,9 +419,23 @@ export function useEditTransaction() {
                 return new Date(a.date).getTime() - new Date(b.date).getTime();
               });
             setRelatedInstallments(related);
+            const total = related.reduce((sum, t) => sum + t.amount, 0);
+
+            initialData.amount = total.toFixed(2);
+            initialData.paymentMode = "total";
+            totalBuffer = { ...initialData };
+          } else {
+            // Single Transaction
+            initialData.amount = data.amount.toFixed(2);
+            initialData.paymentMode = "total";
+            totalBuffer = { ...initialData };
           }
 
           setFormData(initialData);
+          setModeBuffers({
+            total: totalBuffer,
+            installmentValue: installmentBuffer,
+          });
         }
       } catch (error) {
         console.error("Error loading transaction:", error);
@@ -288,8 +547,8 @@ export function useEditTransaction() {
             installmentCount: effectiveTargetCount,
             date: newDate,
             dueDate: newDueDate,
-            amount: 0, // Placeholder, calculated below
-            wallet: "", // Placeholder
+            amount: 0,
+            wallet: "",
             status: "pending",
             notes: "",
             clientId: undefined,
@@ -311,23 +570,17 @@ export function useEditTransaction() {
     }
 
     // 3. RECACLULATE AMOUNTS with PRECISION LOGIC
-    // We must distribute the total correctly to avoid rounding errors
     const isTotalMode = formData.paymentMode === "total";
     const totalAmount = parseFloat(formData.amount || "0");
     const downPaymentVal = formData.downPaymentEnabled
       ? parseFloat(formData.downPaymentValue || "0")
       : 0;
 
-    // If in Installment Value mode, we trust the input value per installment
-    // BUT user complained about 55000.04 -> 55000.00.
-    // If they switch to "Total" mode, we must ensure the sum is exactly the total.
-
     const installmentsToUpdate = resultList.filter((t) => !t.isDownPayment);
     const count = installmentsToUpdate.length;
 
     // Apply Down Payment updates
     if (downPaymentItem) {
-      // Update Down Payment Item in the list
       const idx = resultList.indexOf(downPaymentItem);
       if (idx >= 0) {
         resultList[idx] = {
@@ -340,36 +593,28 @@ export function useEditTransaction() {
 
     if (isTotalMode && count > 0) {
       const remainingForInstallments = totalAmount - downPaymentVal;
-      // Precision Logic:
-      // e.g. 100 / 3 = 33.33, 33.33, 33.34
-
-      // Floor to 2 decimals
       const baseAmount =
         Math.floor((remainingForInstallments / count) * 100) / 100;
       const totalBase = baseAmount * count;
-      const remainder =
-        Math.round((remainingForInstallments - totalBase) * 100) / 100;
-      // Remainder is essentially number of cents to distribute. e.g. 0.01 or 0.02
-      const centsToDistribute = Math.round(remainder * 100); // 1 or 2 cents
+      const remainder = Math.round(
+        (remainingForInstallments - totalBase) * 100,
+      );
 
       installmentsToUpdate.forEach((inst, index) => {
-        // Distribute cents to the first N installments
-        const addCent = index < centsToDistribute;
+        const addCent = index < remainder;
         const finalAmount = baseAmount + (addCent ? 0.01 : 0);
 
-        // Find in resultList and update
         const mainIdx = resultList.indexOf(inst);
         if (mainIdx >= 0) {
           resultList[mainIdx] = {
             ...resultList[mainIdx],
-            amount: finalAmount, // JS float math is generally safe for addition of 0.01 to 2-decimal floats, but toFixed ensures
+            amount: finalAmount,
             wallet: formData.wallet,
           };
         }
       });
     } else if (!isTotalMode && count > 0) {
       // Installment Value Mode
-      // We just set everyone to the value
       const val = parseFloat(formData.installmentValue || "0");
       const wallet = formData.installmentsWallet || formData.wallet;
 
@@ -424,7 +669,6 @@ export function useEditTransaction() {
     try {
       const operations: Promise<unknown>[] = [];
 
-      // Identify Deleted IDs
       const previewRealIds = new Set(
         previewInstallments
           .filter((t) => !t.id.startsWith("temp-"))
@@ -446,7 +690,7 @@ export function useEditTransaction() {
           dueDate: inst.dueDate,
           installmentCount: inst.installmentCount,
           installmentNumber: inst.installmentNumber,
-          amount: parseFloat(inst.amount.toFixed(2)), // Ensure we send cleaned floats
+          amount: parseFloat(inst.amount.toFixed(2)),
           status: inst.status,
           wallet: inst.wallet,
           description: formData.description.trim(),
@@ -495,9 +739,10 @@ export function useEditTransaction() {
     handleChange,
     handleClientChange,
     handleSubmit,
+    switchPaymentMode, // New handler
     transaction,
     relatedInstallments,
-    previewInstallments,
+
     transactionId,
     isLoading: isLoading || permLoading,
     isSaving,

@@ -68,6 +68,31 @@ const initialFormData: TransactionFormData = {
   downPaymentDueDate: "",
 };
 
+// Helpers
+const getTotalFields = (data: TransactionFormData) => ({
+  amount: data.amount,
+  wallet: data.wallet,
+  dueDate: data.dueDate,
+  isInstallment: data.isInstallment,
+  installmentCount: data.installmentCount,
+  downPaymentEnabled: data.downPaymentEnabled,
+  downPaymentValue: data.downPaymentValue,
+  downPaymentWallet: data.downPaymentWallet,
+  downPaymentDueDate: data.downPaymentDueDate,
+});
+
+const getInstallmentFields = (data: TransactionFormData) => ({
+  installmentValue: data.installmentValue,
+  installmentsWallet: data.installmentsWallet,
+  firstInstallmentDate: data.firstInstallmentDate,
+  isInstallment: data.isInstallment,
+  installmentCount: data.installmentCount,
+  downPaymentEnabled: data.downPaymentEnabled,
+  downPaymentValue: data.downPaymentValue,
+  downPaymentWallet: data.downPaymentWallet,
+  downPaymentDueDate: data.downPaymentDueDate,
+});
+
 interface UseTransactionFormReturn {
   formData: TransactionFormData;
   setFormData: React.Dispatch<React.SetStateAction<TransactionFormData>>;
@@ -93,6 +118,7 @@ interface UseTransactionFormReturn {
   canCreate: boolean;
   isLoading: boolean;
   isTransactionLoading?: boolean;
+  switchPaymentMode: (mode: "total" | "installmentValue") => void;
 }
 
 export function useTransactionForm(): UseTransactionFormReturn {
@@ -118,6 +144,182 @@ export function useTransactionForm(): UseTransactionFormReturn {
   });
 
   const { wallets } = useWalletsData();
+
+  // Dual Buffer for creation too
+  const [modeBuffers, setModeBuffers] = React.useState<{
+    total: Partial<TransactionFormData>;
+    installmentValue: Partial<TransactionFormData>;
+  }>({
+    total: {},
+    installmentValue: {},
+  });
+
+  const switchPaymentMode = (newMode: "total" | "installmentValue") => {
+    if (newMode === formData.paymentMode) return;
+
+    const currentMode = formData.paymentMode;
+    const currentFields =
+      currentMode === "total"
+        ? getTotalFields(formData)
+        : getInstallmentFields(formData);
+
+    setModeBuffers((prev) => ({
+      ...prev,
+      [currentMode]: currentFields,
+    }));
+
+    // Hybrid Sync Logic:
+    // If target buffer is empty (never visited or cleared), calculate default values from current mode.
+    // If target buffer has data (user visited and edited), use it (persist).
+
+    const targetBuffer = modeBuffers[newMode];
+    const isTargetEmpty =
+      newMode === "total"
+        ? !targetBuffer.amount
+        : !targetBuffer.installmentValue;
+
+    let computedValues = {};
+
+    if (isTargetEmpty) {
+      if (newMode === "installmentValue") {
+        // Total -> Installment
+        // Default: Split remaining total (after down payment) by installment count
+        const total = parseFloat(formData.amount || "0");
+        const downPayment = formData.downPaymentEnabled
+          ? parseFloat(formData.downPaymentValue || "0")
+          : 0;
+        const count = formData.installmentCount || 1;
+        const remaining = Math.max(0, total - downPayment);
+        const installmentVal =
+          count > 0 ? (remaining / count).toFixed(2) : "0.00";
+
+        computedValues = {
+          installmentValue: installmentVal,
+          installmentsWallet: formData.wallet, // Propagate wallet
+          firstInstallmentDate: formData.date, // Default to transaction date
+          isInstallment: true,
+          installmentCount: count,
+          downPaymentEnabled: formData.downPaymentEnabled,
+          downPaymentValue: formData.downPaymentValue,
+          downPaymentWallet: formData.wallet, // Default to main wallet
+          downPaymentDueDate: formData.date,
+        };
+      } else {
+        // Installment -> Total
+        // Default: Sum installments + down payment
+        const instVal = parseFloat(formData.installmentValue || "0");
+        const count = formData.installmentCount || 1;
+        const downPayment = formData.downPaymentEnabled
+          ? parseFloat(formData.downPaymentValue || "0")
+          : 0;
+        const total = instVal * count + downPayment;
+
+        computedValues = {
+          amount: total.toFixed(2),
+          wallet: formData.installmentsWallet || formData.wallet, // Try to keep some wallet
+          dueDate: formData.firstInstallmentDate || formData.date,
+          // Keep installment settings in case we switch back
+          isInstallment: true,
+          installmentCount: count,
+          downPaymentEnabled: formData.downPaymentEnabled,
+          downPaymentValue: formData.downPaymentValue,
+          downPaymentWallet: formData.downPaymentWallet,
+          downPaymentDueDate: formData.downPaymentDueDate,
+        };
+      }
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      paymentMode: newMode,
+
+      ...(newMode === "total"
+        ? {
+            // Restore Total Mode Fields (or Computed)
+            amount: isTargetEmpty
+              ? (computedValues as any).amount
+              : targetBuffer.amount || "",
+            wallet: isTargetEmpty
+              ? (computedValues as any).wallet
+              : targetBuffer.wallet || "",
+            dueDate: isTargetEmpty
+              ? (computedValues as any).dueDate
+              : targetBuffer.dueDate || "",
+
+            isInstallment:
+              targetBuffer.isInstallment ??
+              (computedValues as any).isInstallment ??
+              false,
+            installmentCount:
+              targetBuffer.installmentCount ??
+              (computedValues as any).installmentCount ??
+              1,
+            downPaymentEnabled:
+              targetBuffer.downPaymentEnabled ??
+              (computedValues as any).downPaymentEnabled ??
+              false,
+            downPaymentValue:
+              targetBuffer.downPaymentValue ??
+              (computedValues as any).downPaymentValue ??
+              "",
+            downPaymentWallet:
+              targetBuffer.downPaymentWallet ??
+              (computedValues as any).downPaymentWallet ??
+              "",
+            downPaymentDueDate:
+              targetBuffer.downPaymentDueDate ??
+              (computedValues as any).downPaymentDueDate ??
+              "",
+
+            // Clear Installment Mode Fields
+            installmentValue: "",
+            installmentsWallet: "",
+            firstInstallmentDate: "",
+          }
+        : {
+            // Restore Installment Mode Fields (or Computed)
+            installmentValue: isTargetEmpty
+              ? (computedValues as any).installmentValue
+              : targetBuffer.installmentValue || "",
+            installmentsWallet: isTargetEmpty
+              ? (computedValues as any).installmentsWallet
+              : targetBuffer.installmentsWallet || "",
+            firstInstallmentDate: isTargetEmpty
+              ? (computedValues as any).firstInstallmentDate
+              : targetBuffer.firstInstallmentDate || "",
+
+            isInstallment:
+              targetBuffer.isInstallment ??
+              (computedValues as any).isInstallment ??
+              true,
+            installmentCount:
+              targetBuffer.installmentCount ??
+              (computedValues as any).installmentCount ??
+              1,
+            downPaymentEnabled:
+              targetBuffer.downPaymentEnabled ??
+              (computedValues as any).downPaymentEnabled ??
+              false,
+            downPaymentValue:
+              targetBuffer.downPaymentValue ??
+              (computedValues as any).downPaymentValue ??
+              "",
+            downPaymentWallet:
+              targetBuffer.downPaymentWallet ??
+              (computedValues as any).downPaymentWallet ??
+              "",
+            downPaymentDueDate:
+              targetBuffer.downPaymentDueDate ??
+              (computedValues as any).downPaymentDueDate ??
+              "",
+
+            // Clear Total Mode Fields
+            amount: "",
+            wallet: "",
+            dueDate: "",
+          }),
+    }));
+  };
 
   React.useEffect(() => {
     if (!permLoading && !canCreate) {
@@ -306,15 +508,13 @@ export function useTransactionForm(): UseTransactionFormReturn {
         updatedAt: now,
       });
 
-      // 3. POST-CREATION FIX: Distribute Penny Remainder
-      // Only needed for Total Mode with Installments to avoid drift
+      // 3. POST-CREATION FIX check
       if (
         formData.paymentMode === "total" &&
         formData.isInstallment &&
         formData.installmentCount > 1 &&
         installmentGroupId
       ) {
-        // Fetch the just-created group
         const all = await TransactionService.getTransactions(tenant.id);
         const group = all.filter(
           (t) =>
@@ -328,24 +528,17 @@ export function useTransactionForm(): UseTransactionFormReturn {
             : 0;
           const targetTotalForInstallments = totalAmount - downPayment;
 
-          // Calculate correct distribution
           const count = group.length;
           const baseAmount =
             Math.floor((targetTotalForInstallments / count) * 100) / 100;
           const totalBase = baseAmount * count;
           const remainder = Math.round(
             (targetTotalForInstallments - totalBase) * 100,
-          ); // Cents
+          );
 
-          // Update items that need adjustment
           const operations: Promise<unknown>[] = [];
 
           group.forEach((t, index) => {
-            // Sort order check? group from backend might not be sorted by installment number
-            // But usually we can just sort roughly or use index if we don't care WHICH month gets the penny
-            // Let's sort to be deterministic
-            // Actually we need to verify current amounts.
-
             const shouldBeAmount = baseAmount + (index < remainder ? 0.01 : 0);
             const currentAmount = t.amount;
 
@@ -386,5 +579,6 @@ export function useTransactionForm(): UseTransactionFormReturn {
     isSaving,
     canCreate,
     isLoading: permLoading,
+    switchPaymentMode,
   };
 }
