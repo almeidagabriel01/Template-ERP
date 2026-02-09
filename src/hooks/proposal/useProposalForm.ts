@@ -165,6 +165,15 @@ export function useProposalForm({
   const initialClientIdRef = React.useRef<string | undefined>(undefined);
   const initialIsNewClientRef = React.useRef<boolean>(true);
 
+  // Track if proposal has been fetched to prevent re-fetching on valid dependency changes (like products list)
+  const proposalFetchedRef = React.useRef(false);
+
+  // Reset fetch state when proposalId changes
+  React.useEffect(() => {
+    proposalFetchedRef.current = false;
+    setIsLoading(!!proposalId);
+  }, [proposalId]);
+
   // Flag to prevent auto-save when user explicitly discards changes
   const userDiscardedRef = React.useRef(false);
 
@@ -383,12 +392,18 @@ export function useProposalForm({
             // 1. Prepare payload (IDs are already real)
             // Calculate visibleProducts: filter out phantom products from removed systems
             const primarySistemaIds = new Set(
-              state.selectedSistemas.map((s) => s.sistemaId)
+              state.selectedSistemas.map((s) => s.sistemaId),
             );
-            const visibleProductsForSave = state.selectedProducts.filter((p) => {
-              const primaryAmbienteId = p.ambienteInstanceId?.split("-")[0] || p.systemInstanceId?.split("-")[0];
-              return primaryAmbienteId ? primarySistemaIds.has(primaryAmbienteId) : !p.ambienteInstanceId;
-            });
+            const visibleProductsForSave = state.selectedProducts.filter(
+              (p) => {
+                const primaryAmbienteId =
+                  p.ambienteInstanceId?.split("-")[0] ||
+                  p.systemInstanceId?.split("-")[0];
+                return primaryAmbienteId
+                  ? primarySistemaIds.has(primaryAmbienteId)
+                  : !p.ambienteInstanceId;
+              },
+            );
             // Use visibleProducts to exclude phantom products from removed systems
             const payload = prepareCreatePayload({
               formData: draftFormData,
@@ -528,8 +543,14 @@ export function useProposalForm({
   // Load existing proposal if editing
   React.useEffect(() => {
     const fetchProposal = async () => {
+      // Prevent re-fetching if already loaded (fixes issue where updating products triggers reload and data loss)
+      if (proposalFetchedRef.current) return;
+
       if (proposalId && products.length > 0) {
         try {
+          // Mark as fetched immediately to prevent race conditions
+          proposalFetchedRef.current = true;
+
           const proposal = await ProposalService.getProposalById(proposalId);
           if (proposal) {
             // Use proposal data as-is - do NOT sync with client
@@ -596,7 +617,10 @@ export function useProposalForm({
               discount: proposal.discount || 0,
               extraExpense: proposal.extraExpense || 0,
               products: syncedProducts,
-              status: (proposal.status === "draft" ? "in_progress" : proposal.status as ProposalStatus) || "in_progress",
+              status:
+                (proposal.status === "draft"
+                  ? "in_progress"
+                  : (proposal.status as ProposalStatus)) || "in_progress",
               // Payment options
               downPaymentEnabled: proposal.downPaymentEnabled || false,
               downPaymentValue: proposal.downPaymentValue || 0,
@@ -657,7 +681,8 @@ export function useProposalForm({
 
                 // Find the specific environment configuration in the system
                 const systemEnvConfig = masterSistema?.ambientes?.find(
-                  (a) => a.ambienteId === (masterAmbiente?.id || primaryAmbienteId)
+                  (a) =>
+                    a.ambienteId === (masterAmbiente?.id || primaryAmbienteId),
                 );
 
                 // Build products array from synced products
@@ -682,7 +707,11 @@ export function useProposalForm({
                       ambienteId: masterAmbiente?.id || primaryAmbienteId || "",
                       ambienteName:
                         masterAmbiente?.name || primaryAmbienteName || "",
-                      description: systemEnvConfig?.description || masterAmbiente?.description || s.ambientes?.[0]?.description || "", // Priority: Master Data (System Specific) -> Master Data (Global) -> Snapshot
+                      description:
+                        systemEnvConfig?.description ||
+                        masterAmbiente?.description ||
+                        s.ambientes?.[0]?.description ||
+                        "", // Priority: Master Data (System Specific) -> Master Data (Global) -> Snapshot
                       products: sistemaProducts,
                     },
                   ],
@@ -730,8 +759,7 @@ export function useProposalForm({
     getFormSnapshot,
     setLocalAmbientes,
     setLocalSistemas,
-  ],
-  );
+  ]);
 
   // Real-time Master Data Sync (Focus Refetch)
   // Automatically updates system/environment descriptions when user returns to the tab
@@ -825,10 +853,10 @@ export function useProposalForm({
     window.addEventListener("visibilitychange", onFocus);
 
     return () => {
-        window.removeEventListener("focus", onFocus);
-        window.removeEventListener("visibilitychange", onFocus);
-      };
-    }, [refreshMasterData]);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [refreshMasterData]);
 
   const selectedProducts = React.useMemo(
     () => formData.products || [],
