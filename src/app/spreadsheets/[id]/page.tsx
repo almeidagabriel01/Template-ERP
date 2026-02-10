@@ -66,60 +66,103 @@ export default function SpreadsheetEditorPage() {
     setSaving(true);
 
     try {
-      // Capture current selection to restore after reload
-      // @ts-expect-error - luckysheet is a global object from FortuneSheet
-      const currentSelection = window.luckysheet?.getRange?.()?.[0];
+      // Commit the active editing cell before saving.
+      // FortuneSheet keeps the editing text in a contenteditable DOM element
+      // (`luckysheet-rich-text-editor`) until the user presses Enter or moves
+      // to another cell. We read the editing value from the DOM, then patch
+      // it directly into the data returned by getAllSheets() — this avoids
+      // any async React state timing issues with the setCellValue API.
+      let editingRow: number | null = null;
+      let editingCol: number | null = null;
+      let editingValue: string | null = null;
 
-      // Force commit of active cell in FortuneSheet
-      const fortuneInput = document.querySelector(
-        'input[class*="luckysheet"], textarea[class*="luckysheet"], [contenteditable="true"]',
-      ) as HTMLElement;
-
-      if (fortuneInput) {
-        fortuneInput.dispatchEvent(new Event("input", { bubbles: true }));
-        fortuneInput.dispatchEvent(new Event("change", { bubbles: true }));
-        fortuneInput.dispatchEvent(
-          new KeyboardEvent("keydown", {
-            key: "Enter",
-            keyCode: 13,
-            bubbles: true,
-          }),
-        );
-        fortuneInput.blur();
+      const richTextEditor = document.getElementById(
+        "luckysheet-rich-text-editor",
+      );
+      if (richTextEditor && workbookRef.current) {
+        const text = richTextEditor.innerText;
+        const selection = workbookRef.current.getSelection();
+        if (selection && selection.length > 0 && text) {
+          editingRow = selection[0].row[0];
+          editingCol = selection[0].column[0];
+          editingValue = text;
+        }
       }
 
+      // Blur to exit edit mode visually
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
       }
 
-      // Wait for FortuneSheet to commit the active cell
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const currentData = workbookRef.current?.getAllSheets() || [];
+      // Deep clone because getAllSheets() returns immer-frozen (read-only) data
+      const currentData = structuredClone(
+        workbookRef.current?.getAllSheets() || [],
+      );
 
       if (!currentData || currentData.length === 0) {
         toast.error("Nenhum dado para salvar");
         return;
       }
 
+      // Patch the editing cell's value into the sheet data.
+      // getAllSheets() doesn't include uncommitted edits, so we write
+      // the value directly into the active sheet's 2D data array.
+      if (editingRow !== null && editingCol !== null && editingValue !== null) {
+        const activeSheet = currentData.find(
+          (s: { status?: number }) => s.status === 1,
+        );
+        if (activeSheet?.data) {
+          // Ensure the row array exists
+          if (!activeSheet.data[editingRow]) {
+            activeSheet.data[editingRow] = [];
+          }
+          // Ensure the cell object exists
+          const existingCell = activeSheet.data[editingRow][editingCol];
+          if (existingCell && typeof existingCell === "object") {
+            existingCell.v = editingValue;
+            existingCell.m = editingValue;
+          } else {
+            activeSheet.data[editingRow][editingCol] = {
+              v: editingValue,
+              m: editingValue,
+              ct: { fa: "General", t: "g" },
+            };
+          }
+        }
+      }
+
+      // Capture current selection to restore after reload
+      const currentSelection = workbookRef.current?.getSelection();
+
       await SpreadsheetService.updateSpreadsheet(id, {
         name,
         data: currentData,
       });
 
-      toast.success("Planilha salva com sucesso!");
-      await loadSpreadsheet();
+      // If the editing cell was patched, also commit it into FortuneSheet's
+      // internal state so the UI reflects the saved value without reloading.
+      if (
+        editingRow !== null &&
+        editingCol !== null &&
+        editingValue !== null &&
+        workbookRef.current
+      ) {
+        workbookRef.current.setCellValue(editingRow, editingCol, editingValue);
+      }
 
-      // Restore selection after reload
-      if (currentSelection) {
+      toast.success("Planilha salva com sucesso!");
+
+      // Restore selection (blur may have cleared it)
+      if (currentSelection && currentSelection.length > 0) {
         setTimeout(() => {
-          // @ts-expect-error - luckysheet is a global object from FortuneSheet
-          window.luckysheet?.setRangeShow?.(currentSelection);
-        }, 200);
+          workbookRef.current?.setSelection(currentSelection);
+        }, 50);
       }
     } catch (error) {
       console.error("Error saving spreadsheet:", error);
       toast.error("Erro ao salvar planilha");
+      // Reload from server to revert any uncommitted changes
+      await loadSpreadsheet();
     } finally {
       setSaving(false);
     }
