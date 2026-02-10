@@ -190,7 +190,7 @@ export default function ProposalsPage() {
     if (proposal.status === "draft") {
       return false;
     }
-    
+
     const hasValidTitle =
       proposal.title &&
       proposal.title.trim() !== "" &&
@@ -655,122 +655,156 @@ export default function ProposalsPage() {
                       {formatDate(proposal.validUntil)}
                     </div>
                     <div className="flex items-center justify-end gap-1">
-                      {/* Ver PDF */}
-                      {proposal.status !== "draft" ? (
-                        <Link href={`/proposals/${proposal.id}/view`}>
+                      {/* Individual action buttons — hidden on small screens (≤1700px) */}
+                      <div className="hidden min-[1701px]:flex items-center gap-1">
+                        {/* Ver PDF */}
+                        {proposal.status !== "draft" ? (
+                          <Link href={`/proposals/${proposal.id}/view`}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                              title="Ver PDF"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </Link>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground cursor-not-allowed opacity-50"
+                            title="Rascunhos não podem ser visualizados"
+                            disabled
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        )}
+
+                        {/* Baixar PDF */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={
+                            proposal.status === "draft"
+                              ? "Rascunhos não podem ser baixados"
+                              : canGeneratePdf(proposal)
+                                ? "Baixar PDF"
+                                : "Preencha título, cliente e produtos para baixar o PDF"
+                          }
+                          onClick={() => handleDownload(proposal)}
+                          disabled={
+                            downloadingId === proposal.id ||
+                            !canGeneratePdf(proposal)
+                          }
+                        >
+                          {downloadingId === proposal.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <FileDown className="w-4 h-4" />
+                          )}
+                        </Button>
+
+                        {/* Editar PDF */}
+                        {canEdit && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
+                            title={
+                              proposal.status === "draft"
+                                ? "Rascunhos não podem ter PDF editado"
+                                : canGeneratePdf(proposal)
+                                  ? "Editar PDF"
+                                  : "Preencha título, cliente e produtos para editar o PDF"
+                            }
+                            disabled={!canGeneratePdf(proposal)}
+                            onClick={() =>
+                              canGeneratePdf(proposal) &&
+                              router.push(`/proposals/${proposal.id}/edit-pdf`)
+                            }
+                          >
+                            <Palette className="w-4 h-4" />
+                          </Button>
+                        )}
+
+                        {/* Editar */}
+                        {canEdit && (
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                            title="Ver PDF"
+                            title="Editar"
+                            onClick={() => handleEdit(proposal.id)}
+                            disabled={editingId === proposal.id}
                           >
-                            <Eye className="w-4 h-4" />
+                            {editingId === proposal.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Pencil className="w-4 h-4" />
+                            )}
                           </Button>
-                        </Link>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground cursor-not-allowed opacity-50"
-                          title="Rascunhos não podem ser visualizados"
-                          disabled
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      )}
-
-                      {/* Baixar PDF */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={
-                          proposal.status === "draft"
-                            ? "Rascunhos não podem ser baixados"
-                            : canGeneratePdf(proposal)
-                            ? "Baixar PDF"
-                            : "Preencha título, cliente e produtos para baixar o PDF"
-                        }
-                        onClick={() => handleDownload(proposal)}
-                        disabled={
-                          downloadingId === proposal.id ||
-                          !canGeneratePdf(proposal)
-                        }
-                      >
-                        {downloadingId === proposal.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <FileDown className="w-4 h-4" />
                         )}
-                      </Button>
 
-                      {/* Editar PDF */}
-                      {canEdit && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
-                          title={
-                            proposal.status === "draft"
-                              ? "Rascunhos não podem ter PDF editado"
-                              : canGeneratePdf(proposal)
-                              ? "Editar PDF"
-                              : "Preencha título, cliente e produtos para editar o PDF"
+                        {/* Excluir */}
+                        {canDelete && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                            title="Excluir"
+                            onClick={() => setDeleteId(proposal.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+
+                        {/* Dropdown with extra actions (Compartilhar, Duplicar, Anexos) — large screens */}
+                        <ProposalActionsDropdown
+                          proposal={proposal}
+                          canEdit={canEdit}
+                          canCreate={canCreate}
+                          canGeneratePdf={canGeneratePdf(proposal)}
+                          isSharing={sharingId === proposal.id}
+                          isDuplicating={duplicatingId === proposal.id}
+                          onShare={() => handleShare(proposal.id)}
+                          onDuplicate={() => handleDuplicate(proposal.id)}
+                          onAttachments={() =>
+                            setAttachmentsProposalId(proposal.id)
                           }
-                          disabled={!canGeneratePdf(proposal)}
-                          onClick={() =>
-                            canGeneratePdf(proposal) &&
+                        />
+                      </div>
+
+                      {/* Compact dropdown with ALL actions — visible only on small screens (≤1700px) */}
+                      <div className="flex min-[1701px]:hidden">
+                        <ProposalActionsDropdown
+                          proposal={proposal}
+                          canEdit={canEdit}
+                          canCreate={canCreate}
+                          canDelete={canDelete}
+                          canGeneratePdf={canGeneratePdf(proposal)}
+                          isSharing={sharingId === proposal.id}
+                          isDuplicating={duplicatingId === proposal.id}
+                          isDownloading={downloadingId === proposal.id}
+                          isEditing={editingId === proposal.id}
+                          onShare={() => handleShare(proposal.id)}
+                          onDuplicate={() => handleDuplicate(proposal.id)}
+                          onAttachments={() =>
+                            setAttachmentsProposalId(proposal.id)
+                          }
+                          showAllActions
+                          onViewPdf={() =>
+                            router.push(`/proposals/${proposal.id}/view`)
+                          }
+                          onDownloadPdf={() => handleDownload(proposal)}
+                          onEditPdf={() =>
                             router.push(`/proposals/${proposal.id}/edit-pdf`)
                           }
-                        >
-                          <Palette className="w-4 h-4" />
-                        </Button>
-                      )}
-
-                      {/* Editar */}
-                      {canEdit && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          title="Editar"
-                          onClick={() => handleEdit(proposal.id)}
-                          disabled={editingId === proposal.id}
-                        >
-                          {editingId === proposal.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Pencil className="w-4 h-4" />
-                          )}
-                        </Button>
-                      )}
-
-                      {/* Excluir */}
-                      {canDelete && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
-                          title="Excluir"
-                          onClick={() => setDeleteId(proposal.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-
-                      <ProposalActionsDropdown
-                        proposal={proposal}
-                        canEdit={canEdit}
-                        canCreate={canCreate}
-                        canGeneratePdf={canGeneratePdf(proposal)}
-                        isSharing={sharingId === proposal.id}
-                        isDuplicating={duplicatingId === proposal.id}
-                        onShare={() => handleShare(proposal.id)}
-                        onDuplicate={() => handleDuplicate(proposal.id)}
-                        onAttachments={() =>
-                          setAttachmentsProposalId(proposal.id)
-                        }
-                      />
+                          onEdit={() => handleEdit(proposal.id)}
+                          onDelete={() => setDeleteId(proposal.id)}
+                        />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
