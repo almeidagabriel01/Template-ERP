@@ -12,12 +12,12 @@ const DropdownMenuContext = React.createContext<{
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
   triggerRef: React.RefObject<HTMLDivElement | null>;
-  contentRef: React.RefObject<HTMLDivElement | null>;
+  contentRef: (node: HTMLDivElement | null) => void;
 }>({
   open: false,
   setOpen: () => {},
   triggerRef: { current: null },
-  contentRef: { current: null },
+  contentRef: () => {},
 });
 
 export function useDropdownMenuContext() {
@@ -28,6 +28,9 @@ export function DropdownMenu({ children }: DropdownMenuProps) {
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const portalContentRef = React.useRef<HTMLDivElement>(null);
+  const handleContentRef = React.useCallback((node: HTMLDivElement | null) => {
+    portalContentRef.current = node;
+  }, []);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -52,7 +55,7 @@ export function DropdownMenu({ children }: DropdownMenuProps) {
         open,
         setOpen,
         triggerRef: containerRef,
-        contentRef: portalContentRef,
+        contentRef: handleContentRef,
       }}
     >
       <div className="relative inline-block text-left" ref={containerRef}>
@@ -157,8 +160,7 @@ export function DropdownMenuContent({
       ref={(el) => {
         (localRef as React.MutableRefObject<HTMLDivElement | null>).current =
           el;
-        (contentRef as React.MutableRefObject<HTMLDivElement | null>).current =
-          el;
+        contentRef(el);
       }}
       style={{
         position: "fixed",
