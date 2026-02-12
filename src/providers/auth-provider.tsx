@@ -27,8 +27,8 @@ const AuthContext = React.createContext<AuthContextType>({
   user: null,
   isLoading: true,
   login: async () => false,
-  logout: async () => { },
-  refreshUser: async () => { },
+  logout: async () => {},
+  refreshUser: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   const fetchUserData = async (
-    firebaseUser: FirebaseUser
+    firebaseUser: FirebaseUser,
   ): Promise<User | null> => {
     try {
       const userDocRef = doc(db, "users", firebaseUser.uid);
@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               db,
               "users",
               firebaseUser.uid,
-              "permissions"
+              "permissions",
             );
             const permsSnap = await getDocs(permsRef);
 
@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } catch (err) {
             console.error(
               "Error fetching member permissions in auth-provider:",
-              err
+              err,
             );
           }
         }
@@ -119,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } as User;
       } else {
         console.warn(
-          "User document not found in Firestore, treating as free user."
+          "User document not found in Firestore, treating as free user.",
         );
         return {
           id: firebaseUser.uid,
@@ -188,7 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await signOut(auth);
       setUser(null);
 
-      localStorage.removeItem("viewingAsTenant");
+      sessionStorage.removeItem("viewingAsTenant");
 
       document.documentElement.style.removeProperty("--primary");
       const styleTag = document.getElementById("tenant-styles");
