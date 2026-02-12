@@ -28,10 +28,6 @@ export function AddSectionButtons({ onAddSection }: AddSectionButtonsProps) {
                 <div className="w-4 h-0.5 bg-current" />
                 Divisor
             </Button>
-            <Button variant="outline" size="sm" onClick={() => onAddSection('product-table')} className="gap-2">
-                <List className="w-4 h-4" />
-                Lista de Produtos
-            </Button>
         </div>
     )
 }
