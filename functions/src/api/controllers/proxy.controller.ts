@@ -34,7 +34,19 @@ export const proxyImage = async (
   res: Response
 ): Promise<Response> => {
   try {
+    const origin = req.get("origin");
     const imageUrl = req.query.url as string;
+    const isCaptureMode = req.query.capture === "1";
+    const disableCache = req.query.noStore === "1";
+    const isNoStore = isCaptureMode || disableCache;
+    const cacheControl = isNoStore ? "no-store, max-age=0" : "public, max-age=3600";
+
+    res.set("Access-Control-Allow-Origin", isCaptureMode ? "*" : origin || "*");
+    res.set("Vary", "Origin");
+    if (isNoStore) {
+      res.set("Pragma", "no-cache");
+      res.set("Expires", "0");
+    }
 
     if (!imageUrl) {
       return res.status(400).send("URL parameter is required.");
@@ -64,7 +76,7 @@ export const proxyImage = async (
           const [buffer] = await file.download();
 
           res.set("Content-Type", contentType);
-          res.set("Cache-Control", "public, max-age=3600"); // Cache for 1 hour
+          res.set("Cache-Control", cacheControl);
           return res.send(buffer);
         } catch (storageError) {
           console.error(
@@ -85,10 +97,10 @@ export const proxyImage = async (
       },
     });
 
-    const contentType = response.headers["content-type"];
+    const contentType = response.headers["content-type"] || "application/octet-stream";
 
     res.set("Content-Type", contentType);
-    res.set("Cache-Control", "public, max-age=3600"); // Cache for 1 hour
+    res.set("Cache-Control", cacheControl);
     return res.send(response.data);
   } catch (error: unknown) {
     const message =
