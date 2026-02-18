@@ -898,18 +898,15 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
       <div
         ref={measureRef}
         style={{
-          position: "absolute",
+          position: "fixed",
           top: 0,
           left: 0,
           width: "210mm", // Must match page width
           padding: "48px", // Match page padding
           fontFamily, // Match font
-          opacity: 0,
+          transform: "translate(-2400px, -2400px)",
           zIndex: -1000,
           pointerEvents: "none",
-          visibility: "hidden",
-          height: 0, // Prevent adding scroll height
-          overflow: "hidden", // Clip content so it doesn't expand scroll
         }}
         aria-hidden="true"
       >
