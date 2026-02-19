@@ -70,14 +70,16 @@ export function PdfAmbienteTag({
 }) {
   const text = ambienteName.toUpperCase();
   const height = Math.round(20 * scale);
-  const paddingX = Math.round(10 * scale);
-  const gap = Math.round(4 * scale);
+  const paddingX = Math.round(12 * scale);
+  const gap = Math.round(2 * scale);
   const fontSize = Math.round(10 * scale);
   const iconSize = Math.round(10 * scale);
   const radius = Math.round(height / 2);
-  const rightSafetyGap = Math.max(6, Math.round(4 * scale));
-  const textWidth = Math.max(fontSize, Math.ceil(text.length * fontSize * 0.72));
-  const width = paddingX * 2 + iconSize + gap + textWidth + rightSafetyGap;
+  const textWidth = Math.max(
+    fontSize,
+    Math.ceil(text.length * fontSize * 0.68),
+  );
+  const width = paddingX * 2 + iconSize + gap + textWidth;
   const iconX = paddingX;
   const iconY = Number(((height - iconSize) / 2).toFixed(2));
   const textX = iconX + iconSize + gap;
