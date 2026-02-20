@@ -15,6 +15,7 @@ export interface PdfProduct {
   isExtra?: boolean;
   systemInstanceId?: string;
   _isInactive?: boolean;
+  _isGhost?: boolean;
 }
 
 export interface PdfAmbiente {

@@ -313,6 +313,7 @@ export default function SharedProposalPage() {
               proposal={proposal}
               tenant={tenant}
               template={template}
+              skipCatalogEnrichment
               customSettings={
                 (proposal.pdfSettings as Parameters<
                   typeof ProposalPdfViewer

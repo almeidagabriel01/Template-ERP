@@ -27,25 +27,64 @@ interface UpdateProposalPayload {
 
 // Sanitize products for API
 export function sanitizeProducts(products: ProposalProduct[]) {
-  return products.map((p) => ({
-    productId: p.productId,
-    productName: p.productName,
-    quantity:
-      typeof p.quantity === "number" && !isNaN(p.quantity)
-        ? Math.max(0, p.quantity)
-        : 0,
-    unitPrice:
-      typeof p.unitPrice === "number" && !isNaN(p.unitPrice) ? p.unitPrice : 0,
-    markup: typeof p.markup === "number" && !isNaN(p.markup) ? p.markup : 0,
-    total: typeof p.total === "number" && !isNaN(p.total) ? p.total : 0,
-    manufacturer: p.manufacturer,
-    category: p.category,
-    // Support both new and legacy format
-    ambienteInstanceId: p.ambienteInstanceId || p.systemInstanceId,
-    systemInstanceId: p.systemInstanceId || p.ambienteInstanceId,
-    isExtra: p.isExtra,
-    status: p.status,
-  }));
+  const normalizeImages = (value: unknown): string[] => {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map((item) => {
+        if (typeof item === "string") return item.trim();
+        if (
+          item &&
+          typeof item === "object" &&
+          "url" in (item as Record<string, unknown>) &&
+          typeof (item as Record<string, unknown>).url === "string"
+        ) {
+          return String((item as Record<string, unknown>).url).trim();
+        }
+        return "";
+      })
+      .filter(Boolean);
+  };
+
+  return products.map((p) => {
+    const normalizedProductImages = normalizeImages(p.productImages);
+    const normalizedProductImage =
+      (typeof p.productImage === "string" ? p.productImage.trim() : "") ||
+      normalizedProductImages[0] ||
+      "";
+
+    return {
+      productId: p.productId,
+      productName: p.productName,
+      quantity:
+        typeof p.quantity === "number" && !isNaN(p.quantity)
+          ? Math.max(0, p.quantity)
+          : 0,
+      unitPrice:
+        typeof p.unitPrice === "number" && !isNaN(p.unitPrice)
+          ? p.unitPrice
+          : 0,
+      markup: typeof p.markup === "number" && !isNaN(p.markup) ? p.markup : 0,
+      total: typeof p.total === "number" && !isNaN(p.total) ? p.total : 0,
+      productImage: normalizedProductImage,
+      productImages:
+        normalizedProductImages.length > 0
+          ? normalizedProductImages
+          : normalizedProductImage
+            ? [normalizedProductImage]
+            : [],
+      productDescription:
+        typeof p.productDescription === "string"
+          ? p.productDescription
+          : undefined,
+      manufacturer: p.manufacturer,
+      category: p.category,
+      // Support both new and legacy format
+      ambienteInstanceId: p.ambienteInstanceId || p.systemInstanceId,
+      systemInstanceId: p.systemInstanceId || p.ambienteInstanceId,
+      isExtra: p.isExtra,
+      status: p.status,
+    };
+  });
 }
 
 // Transform sistemas for API - outputs new format with ambientes array
