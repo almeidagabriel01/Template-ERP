@@ -32,7 +32,8 @@ export function PdfExtraProductsBlock({
   pdfDisplaySettings,
 }: PdfExtraProductsBlockProps) {
   const settings = { ...defaultPdfDisplaySettings, ...pdfDisplaySettings };
-  const extraSubtotal = products.reduce(
+  const visibleProducts = products.filter((product) => Number(product.quantity || 0) > 0);
+  const extraSubtotal = visibleProducts.reduce(
     (sum: number, p: PdfProduct) => sum + p.total,
     0,
   );
@@ -121,7 +122,7 @@ export function PdfExtraProductsBlock({
 
         {/* Products */}
         <div className="p-4 space-y-3 bg-white">
-          {products.map((product: PdfProduct, idx: number) => (
+          {visibleProducts.map((product: PdfProduct, idx: number) => (
             <div
               key={product.productId}
               className="flex items-center gap-4 p-4 rounded-lg border"

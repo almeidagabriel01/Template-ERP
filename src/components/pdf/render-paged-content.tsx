@@ -171,7 +171,9 @@ export const RenderPagedContent: React.FC<RenderPagedContentProps> = ({
         return (
           <div key="totals" style={{ width: "100%" }}>
             <PdfTotals
-              products={products.filter((p) => !p._isGhost)}
+              products={products.filter(
+                (p) => Number(p.quantity || 0) > 0 && !p._isGhost,
+              )}
               discount={proposal.discount || 0}
               extraExpense={proposal.extraExpense || 0}
               contentStyles={

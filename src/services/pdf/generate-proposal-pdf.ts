@@ -62,7 +62,10 @@ export async function generateProposalPdf({
 
   let resolvedProposal = proposal;
   const shouldFetchCanonical =
-    canonicalSource && sourceLabel !== "edit-preview" && Boolean(proposal.id);
+    canonicalSource &&
+    sourceLabel !== "edit-preview" &&
+    sourceLabel !== "shared" &&
+    Boolean(proposal.id);
   if (shouldFetchCanonical && proposal.id) {
     const latest = await ProposalService.getProposalById(proposal.id);
     if (latest) {

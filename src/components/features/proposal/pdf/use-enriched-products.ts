@@ -14,13 +14,40 @@ export function useEnrichedProducts(
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const normalizeProposalProduct = (
+      proposalProduct: ProposalProduct,
+    ): ProposalProduct => {
+      const normalizedQuantity = Number(proposalProduct.quantity || 0);
+      const normalizedImages = Array.isArray(proposalProduct.productImages)
+        ? proposalProduct.productImages.filter((img) => typeof img === "string" && img)
+        : [];
+      const fallbackImage = proposalProduct.productImage || normalizedImages[0] || "";
+      const isGhost = normalizedQuantity <= 0;
+
+      return {
+        ...proposalProduct,
+        quantity: normalizedQuantity,
+        productImage: fallbackImage,
+        productImages:
+          normalizedImages.length > 0
+            ? normalizedImages
+            : fallbackImage
+              ? [fallbackImage]
+              : [],
+        _isGhost: isGhost,
+        _shouldHide: Boolean(proposalProduct._shouldHide || isGhost),
+      };
+    };
+
     const loadProductImages = async () => {
       if (
         options?.skipCatalogEnrichment ||
         !tenantId ||
         !proposal?.products?.length
       ) {
-        setEnrichedProducts(proposal?.products || []);
+        setEnrichedProducts(
+          (proposal?.products || []).map((p) => normalizeProposalProduct(p)),
+        );
         setIsLoading(false);
         return;
       }
@@ -34,18 +61,19 @@ export function useEnrichedProducts(
 
         // Enrich proposal products with images from catalog
         const enriched = (proposal?.products || []).map((proposalProduct) => {
+          const baseProduct = normalizeProposalProduct(proposalProduct);
           const catalogProduct = productMap.get(proposalProduct.productId);
           
           if (catalogProduct) {
             const baseEnriched = {
-              ...proposalProduct,
+              ...baseProduct,
               productImage:
-                catalogProduct.images?.[0] || catalogProduct.image || "",
+                catalogProduct.images?.[0] || catalogProduct.image || baseProduct.productImage || "",
               productImages: catalogProduct.images?.length
                 ? catalogProduct.images
                 : catalogProduct.image
                   ? [catalogProduct.image]
-                  : [],
+                  : baseProduct.productImages || [],
               productDescription:
                 catalogProduct.description ||
                 proposalProduct.productDescription ||
@@ -54,7 +82,7 @@ export function useEnrichedProducts(
 
             // Metadata flags
             const isInactiveStatus = options?.filterInactive && (catalogProduct.status === 'inactive' || proposalProduct.status === 'inactive');
-            const isGhost = (proposalProduct.quantity || 0) === 0;
+            const isGhost = (baseProduct.quantity || 0) <= 0;
 
             if (isInactiveStatus || isGhost) {
               return {
@@ -67,13 +95,27 @@ export function useEnrichedProducts(
 
             return baseEnriched;
           }
-          return proposalProduct;
+          const isInactiveStatus =
+            options?.filterInactive && proposalProduct.status === "inactive";
+
+          if (isInactiveStatus || baseProduct._isGhost) {
+            return {
+              ...baseProduct,
+              _isInactive: Boolean(isInactiveStatus),
+              _isGhost: Boolean(baseProduct._isGhost),
+              _shouldHide: true,
+            };
+          }
+
+          return baseProduct;
         }); // Keep all products, including inactive ones
 
         setEnrichedProducts(enriched);
       } catch (error) {
         console.error("Error loading product images:", error);
-        setEnrichedProducts(proposal?.products || []);
+        setEnrichedProducts(
+          (proposal?.products || []).map((p) => normalizeProposalProduct(p)),
+        );
       } finally {
         setIsLoading(false);
       }

@@ -25,7 +25,10 @@ export function PdfTotals({
   pdfDisplaySettings,
 }: PdfTotalsProps) {
   const settings = { ...defaultPdfDisplaySettings, ...pdfDisplaySettings };
-  const subtotal = products.reduce((sum, p) => sum + p.total, 0);
+  const subtotal = products.reduce(
+    (sum, p) => (Number(p.quantity || 0) > 0 ? sum + p.total : sum),
+    0,
+  );
   const discountAmt = (subtotal * (discount || 0)) / 100;
   const total = subtotal - discountAmt + (extraExpense || 0);
   const totalBorderColor =

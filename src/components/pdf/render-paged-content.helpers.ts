@@ -116,6 +116,8 @@ export function buildContentItems(
 
   const hasSistemas = proposal.sistemas && proposal.sistemas.length > 0;
   let hasAddedPaymentTerms = false;
+  const hasVisibleQuantity = (p: Product): boolean =>
+    Number(p.quantity || 0) > 0 && !p._isGhost;
 
   // Check if proposal has dynamic payment options configured
   const hasDynamicPaymentOptions = !!(
@@ -181,7 +183,7 @@ export function buildContentItems(
       productsForSistema = products.filter(
         (p) =>
           p.systemInstanceId?.startsWith(`${sistema.sistemaId}-`) &&
-          !p._isGhost, // Removed !p._shouldHide to include inactive products in subtotal
+          hasVisibleQuantity(p), // Removed !p._shouldHide to include inactive products in subtotal
       );
 
       // Fallback for legacy (no instanceId)
@@ -194,7 +196,7 @@ export function buildContentItems(
         ];
 
         productsForSistema = products.filter(
-          (p) => allIds.includes(p.productId) && !p._isGhost,
+          (p) => allIds.includes(p.productId) && hasVisibleQuantity(p),
         );
       }
 
@@ -217,7 +219,7 @@ export function buildContentItems(
         !p.systemInstanceId &&
         !sistemaProductIds.has(p.productId) &&
         !p._shouldHide &&
-        !p._isGhost,
+        hasVisibleQuantity(p),
     );
 
     if (extraProducts.length > 0) {
@@ -289,7 +291,7 @@ export function buildContentItems(
 
         // Filter out hidden products for height calculation and rendering
         const visibleSortedProducts = sortedProducts.filter(
-          (p) => !p._shouldHide,
+          (p) => !p._shouldHide && hasVisibleQuantity(p),
         );
 
         // Calculate height for this environment
@@ -344,7 +346,7 @@ export function buildContentItems(
 
         // Add products (filter out hidden products)
         const visibleProducts = group.products.filter(
-          (p: Product) => !p._shouldHide && !p._isGhost,
+          (p: Product) => !p._shouldHide && hasVisibleQuantity(p),
         );
         visibleProducts.forEach((product, idx) => {
           const productHeight = calculateProductHeight(product, 80, settings);
@@ -365,7 +367,8 @@ export function buildContentItems(
 
       // Add sistema footer
       const sistemaSubtotal = productsForSistema.reduce(
-        (sum: number, p: Product) => sum + p.total,
+        (sum: number, p: Product) =>
+          hasVisibleQuantity(p) ? sum + p.total : sum,
         0,
       );
       items.push({
@@ -390,13 +393,14 @@ export function buildContentItems(
   };
 
   const addRegularProducts = (productsToAdd: Product[]) => {
-    if (productsToAdd.length > 0) {
+    const visibleProducts = productsToAdd.filter((p) => hasVisibleQuantity(p));
+    if (visibleProducts.length > 0) {
       items.push({
         type: "product-header",
         id: generateId("product-header"),
         height: ESTIMATED_HEIGHTS.PRODUCT_HEADER,
       });
-      productsToAdd.forEach((product, i) => {
+      visibleProducts.forEach((product, i) => {
         const h = calculateProductHeight(product, 80, settings);
         items.push({
           type: "product-row",

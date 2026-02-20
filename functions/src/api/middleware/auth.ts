@@ -31,8 +31,12 @@ export const validateFirebaseIdToken = async (
     return next();
   }
 
-  // Permitir acesso público às rotas de compartilhamento
-  if (req.path.startsWith("/v1/share/") || req.path.startsWith("/share/")) {
+  // Permitir acesso público às rotas de compartilhamento e proxy de imagem
+  if (
+    req.path.startsWith("/v1/share/") ||
+    req.path.startsWith("/share/") ||
+    req.path.startsWith("/v1/aux/proxy-image")
+  ) {
     return next();
   }
 
