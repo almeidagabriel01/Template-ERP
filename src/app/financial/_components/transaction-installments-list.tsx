@@ -470,11 +470,16 @@ export function TransactionInstallmentsList({
                           toggleGroup(group.main.installmentNumber || 0)
                         }
                         className={cn(
-                          "group/row flex items-center justify-between py-2 px-3 rounded-lg border transition-all bg-muted/50",
+                          "group/row flex items-center justify-between py-2 px-3 rounded-lg border transition-all",
+                          group.main.status === "paid"
+                            ? "bg-emerald-500/10 border-emerald-500/20"
+                            : group.main.status === "overdue"
+                              ? "bg-red-500/10 border-red-500/20"
+                              : "bg-muted/50",
                           selectedIds?.has(group.main.id)
                             ? "ring-2 ring-primary"
                             : "",
-                          hasSubs && "cursor-pointer hover:bg-muted/70",
+                          hasSubs && "cursor-pointer hover:opacity-80",
                         )}
                       >
                         <div className="flex items-center gap-3">
@@ -606,7 +611,14 @@ export function TransactionInstallmentsList({
                             return (
                               <div
                                 key={subItem.id}
-                                className="relative flex items-center justify-between py-2 px-3 rounded-lg border bg-muted/30 ml-2"
+                                className={cn(
+                                  "relative flex items-center justify-between py-2 px-3 rounded-lg border ml-2",
+                                  subItem.status === "paid"
+                                    ? "bg-emerald-500/10 border-emerald-500/20"
+                                    : subItem.status === "overdue"
+                                      ? "bg-red-500/10 border-red-500/20"
+                                      : "bg-muted/30",
+                                )}
                               >
                                 {/* Horizontal connection line */}
                                 <div className="absolute -left-3 top-1/2 w-3 h-px bg-border border-t border-dashed" />
