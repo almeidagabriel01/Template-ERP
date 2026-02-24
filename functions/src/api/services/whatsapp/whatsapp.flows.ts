@@ -7,7 +7,10 @@ import {
   getWalletSummary,
 } from "./whatsapp.db";
 import { logAction, updateSession } from "./whatsapp.session";
-import { sendWhatsAppMessage } from "./whatsapp.api";
+import {
+  sendWhatsAppMessage,
+  sendWhatsAppInteractiveMessage,
+} from "./whatsapp.api";
 import { SharedProposalService } from "../shared-proposal.service";
 
 export async function handleListProposals(
@@ -26,27 +29,47 @@ export async function handleListProposals(
       return;
     }
 
-    let msg = "📄 *Propostas recentes:*\n\n";
-    const proposalsShown: { id: string; index: number }[] = [];
-
-    proposals.forEach((p, index) => {
+    const rows = proposals.map((p) => {
       const value = p.totalValue ? formatCurrency(p.totalValue) : "R$ 0,00";
-      const displayIndex = index + 1;
-      const title = String(p.title || "Proposta");
-      const client = String(p.clientName || "Sem cliente");
+      const titleStr = String(p.title || "Proposta").substring(0, 24);
+      const descStr =
+        `${String(p.clientName || "Sem cliente")} – ${value}`.substring(0, 72);
 
-      proposalsShown.push({ id: p.id, index: displayIndex });
-      msg += `${displayIndex}. ${title} – ${client} – ${value}\n`;
+      return {
+        id: `proposal_pdf_${p.id}`,
+        title: titleStr,
+        description: descStr,
+      };
     });
 
-    msg +=
-      "\nDigite o número da proposta para receber o PDF.\nOu digite *0* para voltar ao menu inicial.";
+    const interactivePayload = {
+      type: "list",
+      header: {
+        type: "text",
+        text: "📄 Suas Propostas",
+      },
+      body: {
+        text: "Toque no botão abaixo para ver as propostas recentes que separamos para você.",
+      },
+      footer: {
+        text: "Selecione para receber o PDF",
+      },
+      action: {
+        button: "Escolher proposta",
+        sections: [
+          {
+            title: "Propostas Recentes",
+            rows: rows,
+          },
+        ],
+      },
+    };
 
-    await sendWhatsAppMessage(to, msg);
+    await sendWhatsAppInteractiveMessage(to, interactivePayload);
 
     await updateSession(to, {
-      lastAction: "awaiting_proposal_selection",
-      proposalsShown,
+      lastAction: "idle",
+      proposalsShown: [],
     });
   } catch (error) {
     console.error("[WhatsApp] Error in handleListProposals:", error);

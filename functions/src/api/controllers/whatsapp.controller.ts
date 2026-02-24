@@ -14,7 +14,10 @@ import {
   checkUsage,
   incrementUsage,
 } from "../services/whatsapp/whatsapp.session";
-import { sendWhatsAppMessage } from "../services/whatsapp/whatsapp.api";
+import {
+  sendWhatsAppMessage,
+  sendWhatsAppInteractiveMessage,
+} from "../services/whatsapp/whatsapp.api";
 import {
   handleListProposals,
   handleSendPdf,
@@ -131,14 +134,18 @@ export const handleWebhook = async (req: Request, res: Response) => {
         }
 
         const user = { id: userDoc.id, ...userDoc.data() } as any;
-        let effectiveRole = String(user.role || "").toLowerCase().trim();
+        let effectiveRole = String(user.role || "")
+          .toLowerCase()
+          .trim();
 
         try {
           const userRecord = await auth.getUser(user.id);
           const claimRole = String(userRecord.customClaims?.role || "")
             .toLowerCase()
             .trim();
-          const claimTenantId = String(userRecord.customClaims?.tenantId || "").trim();
+          const claimTenantId = String(
+            userRecord.customClaims?.tenantId || "",
+          ).trim();
 
           if (claimRole) {
             effectiveRole = claimRole;
@@ -216,7 +223,51 @@ export const handleWebhook = async (req: Request, res: Response) => {
 
         let actionProcessed = false;
 
-        if (normalizedText.startsWith("#")) {
+        const interactiveId =
+          message.interactive?.button_reply?.id ||
+          message.interactive?.list_reply?.id ||
+          "";
+
+        if (interactiveId) {
+          if (interactiveId === "menu_proposals") {
+            await handleListProposals(from, tenantId, user.id);
+            actionProcessed = true;
+          } else if (interactiveId === "menu_financial") {
+            if (
+              !["admin", "master", "wk", "superadmin"].includes(effectiveRole)
+            ) {
+              await sendWhatsAppMessage(
+                from,
+                "Você não tem permissão para acessar informações financeiras pelo WhatsApp.",
+              );
+              await logAction(from, user.id, "unauthorized_access_attempt", {
+                target: "financial_summary",
+              });
+            } else {
+              await handleFinancialDaySummary(from, tenantId, user.id);
+            }
+            actionProcessed = true;
+          } else if (interactiveId === "menu_balance") {
+            if (
+              !["admin", "master", "wk", "superadmin"].includes(effectiveRole)
+            ) {
+              await sendWhatsAppMessage(
+                from,
+                "Você não tem permissão para acessar o saldo pelo WhatsApp.",
+              );
+              await logAction(from, user.id, "unauthorized_access_attempt", {
+                target: "balance",
+              });
+            } else {
+              await handleCurrentBalance(from, tenantId, user.id);
+            }
+            actionProcessed = true;
+          } else if (interactiveId.startsWith("proposal_pdf_")) {
+            const proposalId = interactiveId.replace("proposal_pdf_", "");
+            await handleSendPdf(from, tenantId, proposalId, user.id);
+            actionProcessed = true;
+          }
+        } else if (normalizedText.startsWith("#")) {
           const inputId = text.trim().substring(1).trim();
           if (inputId) {
             await handleSendPdf(from, tenantId, inputId, user.id);
@@ -268,7 +319,9 @@ export const handleWebhook = async (req: Request, res: Response) => {
             (t) => normalizedText.includes(t),
           )
         ) {
-          if (!["admin", "master", "wk", "superadmin"].includes(effectiveRole)) {
+          if (
+            !["admin", "master", "wk", "superadmin"].includes(effectiveRole)
+          ) {
             await sendWhatsAppMessage(
               from,
               "Você não tem permissão para acessar informações financeiras pelo WhatsApp.",
@@ -286,7 +339,9 @@ export const handleWebhook = async (req: Request, res: Response) => {
             normalizedText.includes(t),
           )
         ) {
-          if (!["admin", "master", "wk", "superadmin"].includes(effectiveRole)) {
+          if (
+            !["admin", "master", "wk", "superadmin"].includes(effectiveRole)
+          ) {
             await sendWhatsAppMessage(
               from,
               "Você não tem permissão para acessar o saldo pelo WhatsApp.",
@@ -309,10 +364,38 @@ export const handleWebhook = async (req: Request, res: Response) => {
           );
           actionProcessed = true;
         } else {
-          await sendWhatsAppMessage(
-            from,
-            "Olá! Sou seu assistente ERP. Posso ajudar com:\n\n1. 'Ver propostas'\n2. 'Financeiro de hoje'\n3. 'Saldo atual'\n\nOu digite o número da proposta (#ID) para PDF.",
-          );
+          const buttons = [
+            {
+              type: "reply",
+              reply: { id: "menu_proposals", title: "📄 Ver propostas" },
+            },
+          ];
+
+          if (["admin", "master", "wk", "superadmin"].includes(effectiveRole)) {
+            buttons.push(
+              {
+                type: "reply",
+                reply: { id: "menu_financial", title: "📊 Resumo hoje" },
+              },
+              {
+                type: "reply",
+                reply: { id: "menu_balance", title: "💰 Saldo atual" },
+              },
+            );
+          }
+
+          const interactivePayload = {
+            type: "button",
+            body: {
+              text: "Olá! Sou seu assistente ERP. Posso ajudar com as opções abaixo:\n\nOu digite o número da proposta (#ID) para baixar o PDF.",
+            },
+            action: {
+              buttons: buttons,
+            },
+          };
+
+          await sendWhatsAppInteractiveMessage(from, interactivePayload);
+
           await updateSession(from, {
             lastAction: "idle",
             proposalsShown: [],
