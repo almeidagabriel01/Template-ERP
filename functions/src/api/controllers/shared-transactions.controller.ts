@@ -117,7 +117,13 @@ export const getSharedTransaction = async (req: Request, res: Response) => {
       userAgent: req.headers["user-agent"],
     };
 
-    await SharedTransactionService.recordView(sharedTransaction.id, viewerData);
+    await SharedTransactionService.recordView(
+      sharedTransaction.id,
+      sharedTransaction.tenantId,
+      sharedTransaction.transactionId,
+      viewerData,
+      (transactionData as Record<string, unknown>)?.description as string | undefined,
+    );
 
     return res.status(200).json({
       success: true,
