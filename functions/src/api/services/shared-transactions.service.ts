@@ -1,6 +1,7 @@
 import { db } from "../../init";
 import { FieldValue } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
+import { NotificationService } from "./notification.service";
 
 const SHARED_TRANSACTIONS_COLLECTION = "shared_transactions";
 const SHARED_LINK_EXPIRATION_DAYS = 30;
@@ -145,10 +146,13 @@ export class SharedTransactionService {
 
   static async recordView(
     sharedTransactionId: string,
+    tenantId: string,
+    transactionId: string,
     viewerData: {
       ip?: string;
       userAgent?: string;
     },
+    transactionDescription?: string,
   ): Promise<void> {
     try {
       const viewerInfo: ViewerInfo = {
@@ -159,10 +163,21 @@ export class SharedTransactionService {
 
       const docRef = db.collection(SHARED_TRANSACTIONS_COLLECTION).doc(sharedTransactionId);
 
-      await docRef.update({
-        viewedAt: new Date().toISOString(),
-        viewerInfo: FieldValue.arrayUnion(viewerInfo),
-      });
+      const description = transactionDescription || "Lançamento";
+
+      await Promise.all([
+        docRef.update({
+          viewedAt: new Date().toISOString(),
+          viewerInfo: FieldValue.arrayUnion(viewerInfo),
+        }),
+        NotificationService.createNotification({
+          tenantId,
+          type: "transaction_viewed",
+          title: "Lançamento Visualizado",
+          message: `O lançamento "${description}" foi visualizado.`,
+          transactionId,
+        }),
+      ]);
     } catch (error) {
       console.error("Error recording view:", error);
     }
