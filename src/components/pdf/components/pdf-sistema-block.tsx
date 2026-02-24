@@ -158,13 +158,10 @@ export function PdfSistemaBlock({
 }: PdfSistemaBlockProps) {
   const settings = resolvePdfDisplaySettings(pdfDisplaySettings);
   const ambientes = resolveSistemaAmbientes(sistema);
-  const visibleProducts = products.filter(
-    (product) =>
-      Number(product.quantity || 0) > 0 &&
-      !product._isGhost &&
-      !product._isInactive,
+  const nonGhostProducts = products.filter(
+    (product) => Number(product.quantity || 0) > 0 && !product._isGhost,
   );
-  const sistemaSubtotal = visibleProducts.reduce((sum, p) => sum + p.total, 0);
+  const sistemaSubtotal = nonGhostProducts.reduce((sum, p) => sum + p.total, 0);
 
   return (
     <div className="mt-16 mb-6 break-inside-avoid">
@@ -292,6 +289,29 @@ export function PdfSistemaBlock({
                     )}
                   </tbody>
                 </table>
+
+                {settings.showEnvironmentSubtotals && ambientes.length > 1 && (
+                  <div
+                    className="flex justify-between items-center px-4 pb-2 pt-1.5"
+                    style={{ borderTop: `1px dashed ${primaryColor}30` }}
+                  >
+                    <span className="text-xs font-medium text-gray-500">
+                      Subtotal ({amb.ambienteName}):
+                    </span>
+                    <span
+                      className="text-sm font-semibold"
+                      style={{ color: primaryColor }}
+                    >
+                      {formatCurrency(
+                        scopeProducts
+                          .filter(
+                            (p) => Number(p.quantity || 0) > 0 && !p._isGhost,
+                          )
+                          .reduce((sum, p) => sum + p.total, 0),
+                      )}
+                    </span>
+                  </div>
+                )}
               </div>
             );
           })}
