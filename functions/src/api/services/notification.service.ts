@@ -8,7 +8,8 @@ export type NotificationType =
   | "proposal_approved"
   | "transaction_due_reminder"
   | "proposal_expiring"
-  | "system";
+  | "system"
+  | "transaction_viewed";
 
 export type DueToastType = "transaction_due_reminder" | "proposal_expiring";
 

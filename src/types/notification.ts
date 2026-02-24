@@ -4,6 +4,7 @@ export enum NotificationType {
   TRANSACTION_DUE_REMINDER = "transaction_due_reminder",
   PROPOSAL_EXPIRING = "proposal_expiring",
   SYSTEM = "system",
+  TRANSACTION_VIEWED = "transaction_viewed",
 }
 
 export interface Notification {

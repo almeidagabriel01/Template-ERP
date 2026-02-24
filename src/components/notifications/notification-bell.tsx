@@ -33,6 +33,7 @@ function getNotificationIcon(type: NotificationType) {
 function getNotificationLink(notification: Notification): string | undefined {
   switch (notification.type) {
     case NotificationType.TRANSACTION_DUE_REMINDER:
+    case NotificationType.TRANSACTION_VIEWED:
       return "/financial";
     case NotificationType.PROPOSAL_EXPIRING:
       return notification.proposalId
