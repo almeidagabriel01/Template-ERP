@@ -159,6 +159,7 @@ export function SimpleProposalForm({
     toggleProduct,
     updateProductQuantity,
     updateProductMarkup,
+    updateProductPrice,
     removeProduct,
     handleToggleProductStatus,
     calculateSubtotal,
@@ -655,8 +656,11 @@ export function SimpleProposalForm({
               unitPrice: price,
               markup: markup,
               total: sp.quantity * price * (1 + markup / 100),
-              manufacturer: productDef?.manufacturer,
-              category: productDef?.category,
+              manufacturer: (productDef as Record<string, unknown>)
+                ?.manufacturer as string | undefined,
+              category: (productDef as Record<string, unknown>)?.category as
+                | string
+                | undefined,
               systemInstanceId: newInstanceId,
               isExtra: false,
               // Link to the environment for grouping
@@ -746,8 +750,11 @@ export function SimpleProposalForm({
           quantity: sp.quantity,
           unitPrice: price,
           total: price * sp.quantity,
-          manufacturer: existingProduct?.manufacturer,
-          category: existingProduct?.category,
+          manufacturer: (existingProduct as Record<string, unknown>)
+            ?.manufacturer as string | undefined,
+          category: (existingProduct as Record<string, unknown>)?.category as
+            | string
+            | undefined,
           ambienteInstanceId: newInstanceId,
           systemInstanceId: newInstanceId, // Legacy field
           isExtra: false,
@@ -950,6 +957,7 @@ export function SimpleProposalForm({
                   onRemoveSystem={removeSistema}
                   onUpdateProductQuantity={updateProductQuantity}
                   onUpdateProductMarkup={updateProductMarkup}
+                  onUpdateProductPrice={updateProductPrice}
                   onAddExtraProductToSystem={addProductToSystem}
                   onAddNewSystem={handleAddNewSystem}
                   onUpdateSystem={handleUpdateSystem}

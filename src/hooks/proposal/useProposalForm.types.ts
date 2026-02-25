@@ -94,6 +94,12 @@ export interface UseProposalFormReturn {
     systemInstanceId?: string,
     itemType?: "product" | "service",
   ) => void;
+  updateProductPrice: (
+    productId: string,
+    newPrice: number,
+    systemInstanceId?: string,
+    itemType?: "product" | "service",
+  ) => void;
   removeAmbienteFromSistema: (sistemaIndex: number, ambienteId: string) => void;
   resetToInitial: () => void;
   markAsDiscarded: () => void;

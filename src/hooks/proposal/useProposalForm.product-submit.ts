@@ -1,5 +1,9 @@
 import * as React from "react";
-import { Proposal, ProposalProduct, ProposalService } from "@/services/proposal-service";
+import {
+  Proposal,
+  ProposalProduct,
+  ProposalService,
+} from "@/services/proposal-service";
 import { Product } from "@/services/product-service";
 import { Service } from "@/services/service-service";
 import { ClientType } from "@/services/client-service";
@@ -9,7 +13,7 @@ import { CreateClientData } from "@/hooks/useClientActions";
 import { getPrimaryAmbiente } from "@/lib/sistema-migration-utils";
 import { getExtraProducts } from "./product-handlers";
 import { prepareCreatePayload } from "./submit-helpers";
-import { toast } from '@/lib/toast';
+import { toast } from "@/lib/toast";
 
 interface UseProposalFormProductSubmitContext {
   formData: Partial<Proposal>;
@@ -88,20 +92,26 @@ export function useProposalFormProductSubmit(
   const toggleProduct = (product: Product | Service) => {
     const itemType = product.itemType || "product";
     const existing = selectedProducts.find(
-      (p) => p.productId === product.id && (p.itemType || "product") === itemType,
+      (p) =>
+        p.productId === product.id && (p.itemType || "product") === itemType,
     );
     if (existing) {
       setFormData((prev) => ({
         ...prev,
         products: selectedProducts.filter(
-          (p) => !(p.productId === product.id && (p.itemType || "product") === itemType),
+          (p) =>
+            !(
+              p.productId === product.id &&
+              (p.itemType || "product") === itemType
+            ),
         ),
       }));
       return;
     }
 
     const price = parseFloat(product.price) || 0;
-  const markup = itemType === "service" ? 0 : parseFloat(product.markup || "0");
+    const markup =
+      itemType === "service" ? 0 : parseFloat(product.markup || "0");
     const newProduct: ProposalProduct = {
       productId: product.id,
       itemType,
@@ -117,8 +127,8 @@ export function useProposalFormProductSubmit(
       unitPrice: price,
       markup,
       total: price * (1 + markup / 100),
-      manufacturer: product.manufacturer,
-      category: product.category,
+      manufacturer: (product as Product).manufacturer,
+      category: (product as Product).category,
     };
 
     setFormData((prev) => ({
@@ -147,7 +157,7 @@ export function useProposalFormProductSubmit(
         if (!matchesTarget) return p;
         const newQty = Math.max(0, p.quantity + delta);
         const effectiveMarkup =
-          (p.itemType || "product") === "service" ? 0 : (p.markup || 0);
+          (p.itemType || "product") === "service" ? 0 : p.markup || 0;
         const sellingPrice = p.unitPrice * (1 + effectiveMarkup / 100);
         return { ...p, quantity: newQty, total: newQty * sellingPrice };
       }),
@@ -235,7 +245,8 @@ export function useProposalFormProductSubmit(
   );
 
   const calculateTotal = React.useCallback(
-    () => calculateSubtotal() - calculateDiscount() + (formData.extraExpense || 0),
+    () =>
+      calculateSubtotal() - calculateDiscount() + (formData.extraExpense || 0),
     [calculateSubtotal, calculateDiscount, formData.extraExpense],
   );
 
@@ -257,7 +268,10 @@ export function useProposalFormProductSubmit(
     if (formData.downPaymentType !== "percentage") return;
     const computedDownPayment = calculateDownPaymentValue();
     if (computedDownPayment !== (formData.downPaymentValue || 0)) {
-      setFormData((prev) => ({ ...prev, downPaymentValue: computedDownPayment }));
+      setFormData((prev) => ({
+        ...prev,
+        downPaymentValue: computedDownPayment,
+      }));
     }
   }, [
     formData.downPaymentType,
@@ -280,7 +294,10 @@ export function useProposalFormProductSubmit(
     if (!formData.installmentsEnabled) return;
     const newInstallmentValue = calculateInstallmentValue();
     if (newInstallmentValue !== formData.installmentValue) {
-      setFormData((prev) => ({ ...prev, installmentValue: newInstallmentValue }));
+      setFormData((prev) => ({
+        ...prev,
+        installmentValue: newInstallmentValue,
+      }));
     }
   }, [
     formData.installmentsEnabled,
@@ -308,10 +325,18 @@ export function useProposalFormProductSubmit(
       return;
     }
 
-    const numericFields = ["discount", "extraExpense", "downPaymentValue", "installmentsCount"];
+    const numericFields = [
+      "discount",
+      "extraExpense",
+      "downPaymentValue",
+      "installmentsCount",
+    ];
     setFormData((prev) => ({
       ...prev,
-      [name]: numericFields.includes(name) || type === "number" ? Number(value) : value,
+      [name]:
+        numericFields.includes(name) || type === "number"
+          ? Number(value)
+          : value,
     }));
   };
 
@@ -383,8 +408,12 @@ export function useProposalFormProductSubmit(
         }
       }
 
-      const hasValidTitle = !!(formData.title && formData.title.trim().length > 0);
-      const hasValidClient = !!(formData.clientName && formData.clientName.trim().length > 0);
+      const hasValidTitle = !!(
+        formData.title && formData.title.trim().length > 0
+      );
+      const hasValidClient = !!(
+        formData.clientName && formData.clientName.trim().length > 0
+      );
       const hasProducts = (formData.products?.length || 0) > 0;
       const isComplete = hasValidTitle && hasValidClient && hasProducts;
 
@@ -426,7 +455,8 @@ export function useProposalFormProductSubmit(
         } catch (clientUpdateError) {
           console.error("Failed to update client:", clientUpdateError);
           const clientErrorMessage =
-            clientUpdateError instanceof Error && clientUpdateError.message.trim()
+            clientUpdateError instanceof Error &&
+            clientUpdateError.message.trim()
               ? clientUpdateError.message.trim()
               : "Falha ao atualizar os dados do cliente.";
           toast.error(
@@ -447,7 +477,11 @@ export function useProposalFormProductSubmit(
         toast.success(`Proposta ${proposalLabel} foi criada com sucesso.`, {
           title: "Sucesso ao criar",
         });
-        router.push(isComplete ? `/proposals/${createdProposal.id}/edit-pdf` : "/proposals");
+        router.push(
+          isComplete
+            ? `/proposals/${createdProposal.id}/edit-pdf`
+            : "/proposals",
+        );
       }
       return true;
     } catch (error) {
@@ -481,5 +515,42 @@ export function useProposalFormProductSubmit(
     calculateTotal,
     handleChange,
     handleSubmit,
+    updateProductPrice: (
+      productId: string,
+      newPrice: number,
+      systemInstanceId?: string,
+      itemType?: "product" | "service",
+    ) => {
+      setFormData((prev) => ({
+        ...prev,
+        products: (prev.products || []).map((p) => {
+          const isTarget = systemInstanceId
+            ? p.systemInstanceId === systemInstanceId &&
+              p.productId === productId &&
+              (!itemType || (p.itemType || "product") === itemType)
+            : !p.systemInstanceId &&
+              p.productId === productId &&
+              (!itemType || (p.itemType || "product") === itemType);
+
+          if (!isTarget) return p;
+
+          // For services, we update the unitPrice directly.
+          // Markup is ignored (or treated as 0) for services usually, but we keep the logic consistent.
+          const effectiveMarkup =
+            (p.itemType || "product") === "service" ? 0 : p.markup || 0;
+
+          // If it's a service, we assume markup is irrelevant for now as per requirement "alterar o valor do serviço".
+          // So we just set unitPrice = newPrice.
+          // If logic requires maintaining markup for products, we might need adjustments,
+          // but specifically for services:
+
+          return {
+            ...p,
+            unitPrice: newPrice,
+            total: newPrice * p.quantity * (1 + effectiveMarkup / 100),
+          };
+        }),
+      }));
+    },
   };
 }

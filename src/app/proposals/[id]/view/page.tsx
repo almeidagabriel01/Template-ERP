@@ -122,10 +122,14 @@ export default function ViewProposalPage() {
                     (prod) => prod.id === pp.productId,
                   );
                   if (freshProduct) {
+                    const isService = sourceType === "service";
                     const price =
-                      parseFloat(freshProduct.price) || pp.unitPrice;
-                    const markup =
-                      pp.markup !== undefined
+                      pp.unitPrice !== undefined
+                        ? pp.unitPrice
+                        : parseFloat(freshProduct.price) || 0;
+                    const markup = isService
+                      ? 0
+                      : pp.markup !== undefined
                         ? pp.markup
                         : parseFloat(freshProduct.markup || "0");
                     const sellingPrice = price * (1 + markup / 100);
@@ -146,7 +150,7 @@ export default function ViewProposalPage() {
                       markup: markup,
                       total: pp.quantity * sellingPrice,
                       manufacturer:
-                        freshProduct.manufacturer || pp.manufacturer,
+                        (freshProduct as any).manufacturer || pp.manufacturer,
                       category: freshProduct.category || pp.category,
                     };
                   }
