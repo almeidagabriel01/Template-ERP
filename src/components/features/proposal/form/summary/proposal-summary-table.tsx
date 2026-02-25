@@ -53,7 +53,7 @@ export function ProposalSummaryTable({
       <table className="w-full text-sm">
         <thead className="bg-muted">
           <tr>
-            <th className="text-left p-3">Produto</th>
+            <th className="text-left p-3">Item</th>
             <th className="text-center p-3 w-16">Qtd</th>
             <th className="text-right p-3 w-36">Unit.</th>
             <th className="text-right p-3 w-36">Total</th>
