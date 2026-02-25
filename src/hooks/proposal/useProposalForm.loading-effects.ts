@@ -359,10 +359,7 @@ export function useProposalFormLoadingEffects(
           discount: proposal.discount || 0,
           extraExpense: proposal.extraExpense || 0,
           products: syncedProducts,
-          status:
-            (proposal.status === "draft"
-              ? "in_progress"
-              : (proposal.status as ProposalStatus)) || "in_progress",
+          status: (proposal.status as ProposalStatus) || "in_progress",
           downPaymentEnabled: proposal.downPaymentEnabled || false,
           downPaymentType: proposal.downPaymentType || "value",
           downPaymentPercentage: proposal.downPaymentPercentage,
