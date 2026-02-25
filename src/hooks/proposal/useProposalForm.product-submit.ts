@@ -340,8 +340,12 @@ export function useProposalFormProductSubmit(
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent): Promise<boolean> => {
+  const handleSubmit = async (
+    e: React.FormEvent,
+    options?: { finalize?: boolean },
+  ): Promise<boolean> => {
     e.preventDefault();
+    const isFinalizingAction = options?.finalize ?? true;
 
     if (formData.downPaymentEnabled) {
       if (formData.downPaymentType === "percentage") {
@@ -417,11 +421,17 @@ export function useProposalFormProductSubmit(
       const hasProducts = (formData.products?.length || 0) > 0;
       const isComplete = hasValidTitle && hasValidClient && hasProducts;
 
-      const finalStatus: ProposalStatus = isComplete
-        ? formData.status && formData.status !== "draft"
-          ? formData.status
-          : "in_progress"
-        : "draft";
+      const currentStatus = (formData.status as ProposalStatus) || "in_progress";
+      const shouldKeepDraftWhileSaving =
+        proposalId && !isFinalizingAction && currentStatus === "draft";
+
+      const finalStatus: ProposalStatus = shouldKeepDraftWhileSaving
+        ? "draft"
+        : isComplete
+          ? currentStatus !== "draft"
+            ? currentStatus
+            : "in_progress"
+          : "draft";
 
       const draftFormData = {
         ...formData,

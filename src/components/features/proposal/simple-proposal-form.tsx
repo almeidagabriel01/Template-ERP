@@ -776,13 +776,15 @@ export function SimpleProposalForm({
     updateSistema(index, sistema);
   };
 
-  const handleFormSubmit = async (): Promise<boolean> => {
+  const handleFormSubmit = async (
+    options?: { finalize?: boolean },
+  ): Promise<boolean> => {
     if (!validateStep3()) {
       return false;
     }
 
     const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-    return await handleSubmit(fakeEvent);
+    return await handleSubmit(fakeEvent, options);
   };
 
   // Handle back navigation - show modal if editing existing proposal with unsaved changes
@@ -796,7 +798,7 @@ export function SimpleProposalForm({
 
   // Handle save from modal then navigate
   const handleSaveAndBack = async () => {
-    const success = await handleFormSubmit();
+    const success = await handleFormSubmit({ finalize: false });
     if (success) {
       router.push("/proposals");
     } else {
@@ -1090,7 +1092,7 @@ export function SimpleProposalForm({
           </div>
 
           <StepNavigation
-            onSubmit={handleFormSubmit}
+            onSubmit={() => handleFormSubmit({ finalize: true })}
             isSubmitting={isSaving}
             submitDisabled={!!proposalId && !isDirty}
             submitLabel={proposalId ? "Salvar Proposta" : "Criar Proposta"}
