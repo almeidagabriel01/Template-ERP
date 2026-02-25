@@ -55,6 +55,12 @@ interface ProposalSystemsSectionProps {
     systemInstanceId: string,
     itemType?: "product" | "service",
   ) => void;
+  onUpdateProductPrice: (
+    productId: string,
+    newPrice: number,
+    systemInstanceId: string,
+    itemType?: "product" | "service",
+  ) => void;
   onAddExtraProductToSystem: (
     product: Product | Service,
     sistemaIndex: number,
@@ -92,6 +98,7 @@ export function ProposalSystemsSection({
   onRemoveSystem,
   onUpdateProductQuantity,
   onUpdateProductMarkup,
+  onUpdateProductPrice,
   onAddExtraProductToSystem,
   onAddNewSystem,
   onUpdateSystem,
@@ -264,10 +271,10 @@ export function ProposalSystemsSection({
                 instanceIds.includes(p.systemInstanceId || ""),
               );
 
-              const sistemaTotal = sistemaProducts.reduce(
-                (sum, p) => sum + p.unitPrice * p.quantity,
-                0,
-              );
+              const sistemaTotal = sistemaProducts.reduce((sum, p) => {
+                if ((p.itemType || "product") === "service") return sum;
+                return sum + p.unitPrice * p.quantity;
+              }, 0);
 
               const sistemaTotalWithMarkup = sistemaProducts.reduce(
                 (sum, p) => sum + p.total,
@@ -297,6 +304,13 @@ export function ProposalSystemsSection({
                     onUpdateProductMarkup(
                       productId,
                       markup,
+                      instanceId || systemInstanceId,
+                    )
+                  }
+                  onUpdateProductPrice={(productId, newPrice, instanceId) =>
+                    onUpdateProductPrice(
+                      productId,
+                      newPrice,
                       instanceId || systemInstanceId,
                     )
                   }
@@ -390,6 +404,12 @@ interface SystemCardProps {
     instanceId?: string,
     itemType?: "product" | "service",
   ) => void;
+  onUpdateProductPrice: (
+    productId: string,
+    newPrice: number,
+    instanceId?: string,
+    itemType?: "product" | "service",
+  ) => void;
   onAddExtraProduct: (product: Product | Service, instanceId?: string) => void;
   onToggleStatus?: (
     productId: string,
@@ -410,6 +430,7 @@ function SystemCard({
   onRemove,
   onUpdateQuantity,
   onUpdateMarkup,
+  onUpdateProductPrice,
   onRemoveProduct,
   onAddExtraProduct,
   onToggleStatus,
@@ -641,6 +662,7 @@ function SystemCard({
                               product.itemType || "product",
                             )
                           }
+                          onUpdateProductPrice={onUpdateProductPrice}
                           onRemoveProduct={(pid) =>
                             onRemoveProduct(
                               pid,
@@ -690,6 +712,12 @@ interface ProductRowProps {
     instanceId?: string,
     itemType?: "product" | "service",
   ) => void;
+  onUpdateProductPrice: (
+    productId: string,
+    newPrice: number,
+    instanceId?: string,
+    itemType?: "product" | "service",
+  ) => void;
   onRemoveProduct: (
     productId: string,
     instanceId?: string,
@@ -708,6 +736,7 @@ function ProductRow({
   isActive,
   onUpdateQuantity,
   onUpdateMarkup,
+  onUpdateProductPrice,
   onRemoveProduct,
   onToggleStatus,
 }: ProductRowProps) {
@@ -717,9 +746,42 @@ function ProductRow({
   const [markup, setMarkup] = React.useState(product.markup || 0);
   const [isEditingMarkup, setIsEditingMarkup] = React.useState(false);
 
+  const [priceInput, setPriceInput] = React.useState(
+    (product.unitPrice || 0).toString(),
+  );
+  const [isEditingPrice, setIsEditingPrice] = React.useState(false);
+
   React.useEffect(() => {
     setMarkup(product.markup || 0);
   }, [product.markup]);
+
+  React.useEffect(() => {
+    if (!isEditingPrice) {
+      setPriceInput((product.unitPrice || 0).toString());
+    }
+  }, [product.unitPrice, isEditingPrice]);
+
+  const handlePriceBlur = () => {
+    setIsEditingPrice(false);
+    const val = priceInput.replace(/[^0-9.,]/g, "").replace(",", ".");
+    const numVal = parseFloat(val);
+    if (!isNaN(numVal) && numVal !== product.unitPrice) {
+      onUpdateProductPrice(
+        product.productId,
+        numVal,
+        product.systemInstanceId || "",
+        product.itemType || "product",
+      );
+    } else {
+      setPriceInput((product.unitPrice || 0).toString());
+    }
+  };
+
+  const handlePriceKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.currentTarget.blur();
+    }
+  };
 
   const handleStatusToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -924,17 +986,42 @@ function ProductRow({
 
       {/* Price */}
       <div className="flex flex-col items-end min-w-[80px]">
-        <span
-          className={`font-semibold text-sm shrink-0 tabular-nums ${!isActive ? "text-muted-foreground" : ""}`}
-        >
-          R$ {(product.total || 0).toFixed(2)}
-        </span>
-        {isActive && (
+        {/* If it is a service, allow editing price even if inactive */}
+        {isService ? (
+          <div className="relative flex items-center group">
+            <span className="absolute left-2 text-xs text-muted-foreground">
+              R$
+            </span>
+            <input
+              type="text"
+              value={
+                isEditingPrice
+                  ? priceInput
+                  : product.unitPrice?.toFixed(2) || "0.00"
+              }
+              onFocus={() => {
+                setIsEditingPrice(true);
+                setPriceInput((product.unitPrice || 0).toString());
+              }}
+              onChange={(e) => setPriceInput(e.target.value)}
+              onBlur={handlePriceBlur}
+              onKeyDown={handlePriceKeyDown}
+              className="w-20 h-7 text-sm text-right border rounded-md pl-6 pr-1 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-background hover:border-gray-400"
+            />
+          </div>
+        ) : (
+          <span
+            className={`font-semibold text-sm shrink-0 tabular-nums ${!isActive ? "text-muted-foreground" : ""}`}
+          >
+            R$ {(product.total || 0).toFixed(2)}
+          </span>
+        )}
+
+        {isActive && !isService && (
           <span className="text-[10px] text-muted-foreground">
             (R${" "}
-            {(isService
-              ? product.unitPrice || 0
-              : (product.unitPrice || 0) * (1 + (product.markup || 0) / 100)
+            {(
+              product.unitPrice || 0 * (1 + (product.markup || 0) / 100)
             ).toFixed(2)}{" "}
             un)
           </span>

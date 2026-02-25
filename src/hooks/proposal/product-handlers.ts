@@ -17,13 +17,18 @@ export function createToggleProduct({
   return (product: Product | Service) => {
     const itemType = product.itemType || "product";
     const existing = selectedProducts.find(
-      (p) => p.productId === product.id && (p.itemType || "product") === itemType,
+      (p) =>
+        p.productId === product.id && (p.itemType || "product") === itemType,
     );
     if (existing) {
       setFormData((prev) => ({
         ...prev,
         products: selectedProducts.filter(
-          (p) => !(p.productId === product.id && (p.itemType || "product") === itemType),
+          (p) =>
+            !(
+              p.productId === product.id &&
+              (p.itemType || "product") === itemType
+            ),
         ),
       }));
     } else {
@@ -44,7 +49,7 @@ export function createToggleProduct({
         unitPrice: price,
         markup: markup,
         total: price * (1 + markup / 100),
-        manufacturer: product.manufacturer,
+        manufacturer: (product as any).manufacturer,
         category: product.category,
       };
       setFormData((prev) => ({
@@ -109,12 +114,15 @@ export function getExtraProducts(
     selectedSistemas.flatMap((s) => {
       // Handle both new and legacy formats
       if (s.ambientes && s.ambientes.length > 0) {
-        return s.ambientes.flatMap(a => a.products.map(p => p.productId));
+        return s.ambientes.flatMap((a) => a.products.map((p) => p.productId));
       }
       return (s.products || []).map((p) => p.productId);
     }),
   );
   return selectedProducts.filter(
-    (p) => !p.systemInstanceId && !p.ambienteInstanceId && !sistemaProductIds.has(p.productId),
+    (p) =>
+      !p.systemInstanceId &&
+      !p.ambienteInstanceId &&
+      !sistemaProductIds.has(p.productId),
   );
 }
