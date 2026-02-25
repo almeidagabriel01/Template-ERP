@@ -111,7 +111,7 @@ export function ProductFormNew({
       setFieldError("category", "Categoria é obrigatória");
       isValid = false;
     }
-    if (!formData.manufacturer.trim()) {
+    if (entityType === "product" && !formData.manufacturer?.trim()) {
       setFieldError("manufacturer", "Fabricante é obrigatório");
       isValid = false;
     }
@@ -140,7 +140,12 @@ export function ProductFormNew({
           <FormStatic label="Descrição" value={formData.description} />
           <FormGroup>
             <FormStatic label="Categoria" value={formData.category} />
-            <FormStatic label="Fabricante" value={formData.manufacturer} />
+            {entityType === "product" && (
+              <FormStatic
+                label="Fabricante"
+                value={formData.manufacturer || "-"}
+              />
+            )}
           </FormGroup>
         </FormSection>
         <FormSection title="Preço" icon={DollarSign}>
@@ -205,28 +210,87 @@ export function ProductFormNew({
               </div>
             </div>
 
-            <FormItem
-              label={`Nome do ${entityLabel}`}
-              htmlFor="name"
-              required
-              error={errors.name}
-            >
-              <Input
-                id="name"
-                name="name"
-                placeholder={
-                  entityType === "service"
-                    ? "Ex: Instalação e Configuração"
-                    : "Ex: Câmera de Segurança HD Pro"
-                }
-                value={formData.name}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                icon={<Tag className="w-4 h-4" />}
-                className={errors.name ? "border-destructive" : ""}
-                required
-              />
-            </FormItem>
+            {entityType === "service" ? (
+              <FormGroup cols={2}>
+                <FormItem
+                  label={`Nome do ${entityLabel}`}
+                  htmlFor="name"
+                  required
+                  error={errors.name}
+                >
+                  <Input
+                    id="name"
+                    name="name"
+                    placeholder="Ex: Instalação e Configuração"
+                    value={formData.name}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    icon={<Tag className="w-4 h-4" />}
+                    className={errors.name ? "border-destructive" : ""}
+                    required
+                  />
+                </FormItem>
+
+                <DynamicSelect
+                  storageKey="product_categories"
+                  label="Categoria"
+                  id="category"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  required
+                  error={errors.category}
+                  className="flex flex-col gap-4 space-y-0 [&>div:first-child]:h-5 [&_label]:leading-5"
+                />
+              </FormGroup>
+            ) : (
+              <>
+                <FormItem
+                  label={`Nome do ${entityLabel}`}
+                  htmlFor="name"
+                  required
+                  error={errors.name}
+                >
+                  <Input
+                    id="name"
+                    name="name"
+                    placeholder="Ex: Câmera de Segurança HD Pro"
+                    value={formData.name}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    icon={<Tag className="w-4 h-4" />}
+                    className={errors.name ? "border-destructive" : ""}
+                    required
+                  />
+                </FormItem>
+
+                <FormGroup cols={2}>
+                  <DynamicSelect
+                    storageKey="product_categories"
+                    label="Categoria"
+                    id="category"
+                    name="category"
+                    value={formData.category}
+                    onChange={handleChange}
+                    required
+                    error={errors.category}
+                    className="flex flex-col gap-4 space-y-0 [&>div:first-child]:h-5 [&_label]:leading-5"
+                  />
+
+                  <DynamicSelect
+                    storageKey="product_manufacturers"
+                    label="Fabricante"
+                    id="manufacturer"
+                    name="manufacturer"
+                    value={formData.manufacturer || ""}
+                    onChange={handleChange}
+                    required
+                    error={errors.manufacturer}
+                    className="flex flex-col gap-4 space-y-0 [&>div:first-child]:h-5 [&_label]:leading-5"
+                  />
+                </FormGroup>
+              </>
+            )}
 
             <FormItem label="Descrição" htmlFor="description">
               <Textarea
@@ -238,29 +302,6 @@ export function ProductFormNew({
                 className="min-h-[140px]"
               />
             </FormItem>
-
-            <FormGroup>
-              <DynamicSelect
-                storageKey="product_categories"
-                label="Categoria"
-                id="category"
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                required
-                error={errors.category}
-              />
-              <DynamicSelect
-                storageKey="product_manufacturers"
-                label="Fabricante"
-                id="manufacturer"
-                name="manufacturer"
-                value={formData.manufacturer}
-                onChange={handleChange}
-                required
-                error={errors.manufacturer}
-              />
-            </FormGroup>
           </div>
 
           <StepNavigation onBeforeNext={validateStep1} />

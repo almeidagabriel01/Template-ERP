@@ -22,7 +22,7 @@ export type Service = {
   description: string;
   price: string;
   markup?: string;
-  manufacturer: string;
+
   category: string;
   sku: string;
   stock: number;

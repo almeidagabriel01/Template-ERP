@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { toast } from '@/lib/toast';
+import { toast } from "@/lib/toast";
 import { ProductService, Product } from "@/services/product-service";
 import { ServiceService, Service } from "@/services/service-service";
 import { useTenant } from "@/providers/tenant-provider";
@@ -16,7 +16,7 @@ import {
   ALLOWED_TYPES,
 } from "@/services/storage-service";
 import { useFormValidation, FormErrors } from "@/hooks/useFormValidation";
-import { productSchema } from "@/lib/validations";
+import { productSchema, serviceSchema } from "@/lib/validations";
 
 // Maximum file size: 5MB per image
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -26,7 +26,7 @@ export interface ProductFormData {
   description: string;
   price: string;
   markup: string;
-  manufacturer: string;
+  manufacturer?: string;
   category: string;
   sku: string;
   stock: string;
@@ -113,7 +113,7 @@ export function useProductForm(
     validateField,
     setFieldError,
   } = useFormValidation({
-    schema: productSchema,
+    schema: entityType === "service" ? serviceSchema : productSchema,
   });
 
   const [formData, setFormData] = React.useState<ProductFormData>({
@@ -121,13 +121,14 @@ export function useProductForm(
     description: initialData?.description || "",
     price: initialData?.price || "",
     markup: initialData?.markup || "30",
-    manufacturer: initialData?.manufacturer || "",
+    manufacturer:
+      "manufacturer" in (initialData || {})
+        ? (initialData as Product).manufacturer
+        : "",
     category: initialData?.category || "",
     sku: initialData?.sku || "",
     stock:
-      typeof initialData?.stock === "number"
-        ? String(initialData.stock)
-        : "",
+      typeof initialData?.stock === "number" ? String(initialData.stock) : "",
     status: initialData?.status || "active",
     image: null,
     images: [],
@@ -158,7 +159,10 @@ export function useProductForm(
           description: initialData?.description || "",
           price: initialData?.price || "",
           markup: initialData?.markup || "30",
-          manufacturer: initialData?.manufacturer || "",
+          manufacturer:
+            "manufacturer" in (initialData || {})
+              ? (initialData as Product).manufacturer
+              : "",
           category: initialData?.category || "",
           sku: initialData?.sku || "",
           stock:
@@ -183,7 +187,10 @@ export function useProductForm(
         description: initialData.description || "",
         price: initialData.price || "",
         markup: initialData.markup || "",
-        manufacturer: initialData.manufacturer || "",
+        manufacturer:
+          "manufacturer" in initialData
+            ? (initialData as Product).manufacturer
+            : "",
         category: initialData.category || "",
         sku: initialData.sku || "",
         stock:
@@ -397,7 +404,10 @@ export function useProductForm(
         description: formData.description,
         price: formData.price,
         markup: formData.markup,
-        manufacturer: formData.manufacturer,
+        // Only include manufacturer if it's a product
+        ...(entityType === "product" && {
+          manufacturer: formData.manufacturer,
+        }),
         category: formData.category,
         sku: formData.sku,
         stock: normalizedStock,
@@ -406,7 +416,8 @@ export function useProductForm(
       };
 
       const entityLabel = entityType === "service" ? "serviço" : "produto";
-      const entityPluralPath = entityType === "service" ? "/services" : "/products";
+      const entityPluralPath =
+        entityType === "service" ? "/services" : "/products";
 
       if (productId) {
         if (entityType === "service") {
@@ -414,9 +425,12 @@ export function useProductForm(
         } else {
           await ProductService.updateProduct(productId, dataToSave);
         }
-        toast.success(`${entityLabel.charAt(0).toUpperCase() + entityLabel.slice(1)} ${productLabel} foi atualizado com sucesso.`, {
-          title: "Sucesso ao editar",
-        });
+        toast.success(
+          `${entityLabel.charAt(0).toUpperCase() + entityLabel.slice(1)} ${productLabel} foi atualizado com sucesso.`,
+          {
+            title: "Sucesso ao editar",
+          },
+        );
         router.push(entityPluralPath);
         router.refresh();
       } else {
@@ -426,7 +440,9 @@ export function useProductForm(
           description: formData.description,
           price: formData.price,
           markup: formData.markup,
-          manufacturer: formData.manufacturer,
+          ...(entityType === "product" && {
+            manufacturer: formData.manufacturer,
+          }),
           category: formData.category,
           sku: formData.sku,
           stock: normalizedStock,
