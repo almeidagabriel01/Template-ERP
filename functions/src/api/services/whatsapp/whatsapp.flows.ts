@@ -5,6 +5,8 @@ import {
   getProposalByIdForTenant,
   getTodaysTransactions,
   getWalletSummary,
+  getRecentTransactions,
+  getWeeklyPendingTransactions,
 } from "./whatsapp.db";
 import { logAction, updateSession } from "./whatsapp.session";
 import {
@@ -12,6 +14,7 @@ import {
   sendWhatsAppInteractiveMessage,
 } from "./whatsapp.api";
 import { SharedProposalService } from "../shared-proposal.service";
+import { SharedTransactionService } from "../shared-transactions.service";
 
 export async function handleListProposals(
   to: string,
@@ -186,5 +189,147 @@ export async function handleCurrentBalance(
   } catch (error) {
     console.error("[WhatsApp] Error in handleCurrentBalance:", error);
     await sendWhatsAppMessage(to, "Saldo indisponível no momento.");
+  }
+}
+
+export async function handleWeeklySummary(
+  to: string,
+  tenantId: string,
+  userId: string,
+) {
+  await logAction(to, userId, "view_weekly_summary");
+
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const dayOfWeek = today.getDay();
+    const diffToMonday =
+      today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    const weekStart = new Date(today.setDate(diffToMonday));
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    const pending = await getWeeklyPendingTransactions(
+      tenantId,
+      weekStart,
+      weekEnd,
+    );
+
+    if (pending.length === 0) {
+      await sendWhatsAppMessage(to, "Nenhuma conta pendente para esta semana.");
+      return;
+    }
+
+    let toPay = 0;
+    let toReceive = 0;
+
+    pending.forEach((t) => {
+      if (t.type === "income") toReceive += t.amount;
+      if (t.type === "expense") toPay += t.amount;
+    });
+
+    const msg = `📅 *Resumo da Semana*\n\n📈 A Receber: ${formatCurrency(toReceive)}\n📉 A Pagar: ${formatCurrency(toPay)}`;
+
+    await sendWhatsAppMessage(to, msg);
+  } catch (error) {
+    console.error("[WhatsApp] Error in handleWeeklySummary:", error);
+    await sendWhatsAppMessage(to, "Erro ao buscar resumo semanal.");
+  }
+}
+
+export async function handleListRecentTransactions(
+  to: string,
+  tenantId: string,
+  userId: string,
+) {
+  await logAction(to, userId, "list_recent_transactions");
+
+  try {
+    const transactions = await getRecentTransactions(tenantId, 10);
+
+    if (transactions.length === 0) {
+      await sendWhatsAppMessage(
+        to,
+        "Nenhum lançamento encontrado recentemente.",
+      );
+      return;
+    }
+
+    const rows = transactions.map((t) => {
+      const value = formatCurrency(t.amount);
+      const titleStr = t.description.substring(0, 24);
+      const descStr =
+        `${t.date.toLocaleDateString("pt-BR")} – ${value}`.substring(0, 72);
+
+      return {
+        id: `transaction_link_${t.id}`,
+        title: titleStr,
+        description: descStr,
+      };
+    });
+
+    const interactivePayload = {
+      type: "list",
+      header: {
+        type: "text",
+        text: "🧾 Últimos Lançamentos",
+      },
+      body: {
+        text: "Escolha um lançamento abaixo para visualizar os detalhes completos.",
+      },
+      footer: {
+        text: "Selecione um lançamento",
+      },
+      action: {
+        button: "Ver Lançamentos",
+        sections: [
+          {
+            title: "Recentes",
+            rows: rows,
+          },
+        ],
+      },
+    };
+
+    await sendWhatsAppInteractiveMessage(to, interactivePayload);
+  } catch (error) {
+    console.error("[WhatsApp] Error in handleListRecentTransactions:", error);
+    await sendWhatsAppMessage(to, "Nenhum lançamento encontrado.");
+  }
+}
+
+export async function handleSendTransactionLink(
+  to: string,
+  tenantId: string,
+  transactionId: string,
+  userId: string,
+) {
+  await logAction(to, userId, "send_transaction_link_attempt", {
+    transactionId,
+  });
+
+  try {
+    const result = await SharedTransactionService.createShareLink(
+      transactionId,
+      tenantId,
+      userId,
+    );
+
+    const message = `🧾 *Seu lançamento está pronto!*\n\nAcesse o link abaixo para visualizar os detalhes completos do lançamento.\n\n🔗 ${result.shareUrl}`;
+
+    await sendWhatsAppMessage(to, message);
+
+    await logAction(to, userId, "send_transaction_link_success", {
+      transactionId,
+      shareUrl: result.shareUrl,
+    });
+  } catch (error) {
+    console.error("[WhatsApp] Error in handleSendTransactionLink:", error);
+    await sendWhatsAppMessage(
+      to,
+      "Ocorreu um erro ao gerar o link do lançamento.",
+    );
   }
 }

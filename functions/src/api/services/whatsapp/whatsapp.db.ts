@@ -248,3 +248,130 @@ export async function getWalletSummary(
     return { totalBalance: 0 };
   }
 }
+
+export async function getRecentTransactions(
+  tenantId: string,
+  limitN = 10,
+): Promise<{ id: string; description: string; amount: number; date: Date }[]> {
+  try {
+    const snapshot = await db
+      .collection("transactions")
+      .where("tenantId", "==", tenantId)
+      .orderBy("createdAt", "desc")
+      .limit(limitN * 10)
+      .get();
+
+    const uniqueTransactions: {
+      id: string;
+      description: string;
+      amount: number;
+      date: Date;
+    }[] = [];
+    const seenGroups = new Set<string>();
+
+    for (const doc of snapshot.docs) {
+      if (uniqueTransactions.length >= limitN) break;
+
+      const data = doc.data() as any;
+      const groupId = data.installmentGroupId || doc.id;
+
+      if (seenGroups.has(groupId)) continue;
+      seenGroups.add(groupId);
+
+      const rawAmount = toNumber(data.amount ?? data.value);
+      uniqueTransactions.push({
+        id: doc.id,
+        description: String(data.description || "Lançamento"),
+        amount: Math.abs(rawAmount),
+        date: toDate(data.date ?? data.createdAt) || new Date(),
+      });
+    }
+
+    return uniqueTransactions;
+  } catch (error) {
+    console.warn("[WhatsApp] Failed getRecentTransactions query", error);
+    try {
+      const fallbackSnap = await db
+        .collection("transactions")
+        .where("tenantId", "==", tenantId)
+        .limit(limitN * 10)
+        .get();
+
+      const sortedDocs = fallbackSnap.docs
+        .map((doc) => ({ doc, data: doc.data() as any }))
+        .sort((a, b) => {
+          const aTime = toDate(a.data.createdAt ?? a.data.date)?.getTime() || 0;
+          const bTime = toDate(b.data.createdAt ?? b.data.date)?.getTime() || 0;
+          return bTime - aTime;
+        });
+
+      const uniqueTransactions: {
+        id: string;
+        description: string;
+        amount: number;
+        date: Date;
+      }[] = [];
+      const seenGroups = new Set<string>();
+
+      for (const item of sortedDocs) {
+        if (uniqueTransactions.length >= limitN) break;
+
+        const groupId = item.data.installmentGroupId || item.doc.id;
+
+        if (seenGroups.has(groupId)) continue;
+        seenGroups.add(groupId);
+
+        const rawAmount = toNumber(item.data.amount ?? item.data.value);
+        uniqueTransactions.push({
+          id: item.doc.id,
+          description: String(item.data.description || "Lançamento"),
+          amount: Math.abs(rawAmount),
+          date: toDate(item.data.createdAt ?? item.data.date) || new Date(),
+        });
+      }
+
+      return uniqueTransactions;
+    } catch (fallbackError) {
+      console.error(
+        "[WhatsApp] Failed getRecentTransactions fallback",
+        fallbackError,
+      );
+      return [];
+    }
+  }
+}
+
+export async function getWeeklyPendingTransactions(
+  tenantId: string,
+  weekStart: Date,
+  weekEnd: Date,
+): Promise<{ type: "income" | "expense"; amount: number }[]> {
+  try {
+    const snapshot = await db
+      .collection("transactions")
+      .where("tenantId", "==", tenantId)
+      .where("status", "in", ["pending", "overdue"])
+      .get();
+
+    return snapshot.docs
+      .filter((doc) => {
+        const data = doc.data() as any;
+        const dueDate = toDate(data.dueDate);
+        return dueDate && dueDate >= weekStart && dueDate <= weekEnd;
+      })
+      .map((doc) => {
+        const data = doc.data() as any;
+        const rawAmount = toNumber(data.amount ?? data.value);
+        return {
+          type: normalizeTransactionType(data.type, rawAmount),
+          amount: Math.abs(rawAmount),
+        };
+      });
+  } catch (error) {
+    console.error(
+      "[WhatsApp] Failed getWeeklyPendingTransactions query",
+      error,
+    );
+    return [];
+  }
+}
