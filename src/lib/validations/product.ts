@@ -41,7 +41,12 @@ export const productSchema = z.object({
   status: z.enum(["active", "inactive"]).default("active"),
 });
 
+export const serviceSchema = productSchema.omit({
+  manufacturer: true,
+});
+
 export type ProductFormData = z.infer<typeof productSchema>;
+export type ServiceFormData = z.infer<typeof serviceSchema>;
 
 // Partial schema for real-time field validation
 export const productFieldSchemas = {
