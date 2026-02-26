@@ -14,16 +14,11 @@ export async function downloadProposalPdf(req: Request, res: Response) {
     }
 
     const authTenantId = String(req.user?.tenantId || "").trim();
-    const authUserId = String(req.user?.uid || "").trim();
-    if (!authTenantId || !authUserId) {
+    if (!authTenantId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const pdfBuffer = await getOrGenerateProposalPdfBuffer(
-      authTenantId,
-      proposalId,
-      authUserId,
-    );
+    const pdfBuffer = await getOrGenerateProposalPdfBuffer(authTenantId, proposalId);
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(

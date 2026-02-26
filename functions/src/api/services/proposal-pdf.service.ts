@@ -1,19 +1,37 @@
 import { createHash } from "node:crypto";
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { FieldPath, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { chromium } from "playwright-core";
 import chromiumPackage from "@sparticuz/chromium";
 import { db } from "../../init";
-import { SharedProposalService } from "./shared-proposal.service";
+import {
+  renderProposalPdfHtml,
+  type ProposalPdfTemplatePayload,
+} from "../../shared/pdf/ProposalPdfTemplate";
 
-const PDF_TEMPLATE_VERSION = "proposal-pdf-v1";
+const PDF_TEMPLATE_VERSION = "proposal-pdf-v2-server-html";
 const PDF_VIEWPORT_WIDTH = 1280;
 const PDF_VIEWPORT_HEIGHT = 1700;
 const PDF_PAGE_READY_TIMEOUT_MS = 45_000;
+const PDF_RENDER_ASSET_TIMEOUT_MS = 20_000;
 
 type ProposalPdfMetadata = {
   storagePath?: string;
   versionHash?: string;
+};
+
+type ProductLike = {
+  productId?: unknown;
+  itemType?: unknown;
+  productImage?: unknown;
+  productImages?: unknown;
+  productDescription?: unknown;
+  quantity?: unknown;
+  status?: unknown;
+  _isGhost?: unknown;
+  _shouldHide?: unknown;
+  _isInactive?: unknown;
+  [key: string]: unknown;
 };
 
 type ProposalDocData = {
@@ -21,6 +39,7 @@ type ProposalDocData = {
   pdf?: ProposalPdfMetadata;
   createdAt?: unknown;
   updatedAt?: unknown;
+  products?: ProductLike[];
   [key: string]: unknown;
 };
 
@@ -30,17 +49,6 @@ type TenantDocData = {
   logoUrl?: unknown;
   proposalDefaults?: unknown;
   [key: string]: unknown;
-};
-
-type SharedProposalPayload = {
-  success: true;
-  proposal: Record<string, unknown>;
-  tenant: {
-    id: string;
-    name: string;
-    logoUrl: string;
-    primaryColor: string;
-  } | null;
 };
 
 function getProposalPdfStoragePath(tenantId: string, proposalId: string): string {
@@ -113,79 +121,163 @@ function buildVersionHash(
   });
 }
 
-function getAppBaseUrl(): string {
-  const normalizeCandidate = (value: string): string => {
-    const raw = String(value || "").trim();
-    if (!raw) return "";
-    if (/^https?:\/\//i.test(raw)) return raw;
-    return `https://${raw}`;
-  };
-
-  const isSsoPreviewUrl = (value: string): boolean => {
-    try {
-      const hostname = new URL(value).hostname.toLowerCase();
-      return hostname.endsWith(".vercel.app") && hostname.includes("-git-");
-    } catch {
-      return false;
-    }
-  };
-
-  const allowPreview = String(process.env.PDF_ALLOW_PREVIEW_URL || "")
-    .trim()
-    .toLowerCase() === "true";
-
-  const candidates = [
-    process.env.PDF_APP_URL,
-    process.env.PUBLIC_APP_URL,
-    process.env.VERCEL_PROJECT_PRODUCTION_URL,
-    process.env.NEXT_PUBLIC_APP_URL,
-    process.env.APP_URL,
-  ]
-    .map((value) => normalizeCandidate(String(value || "")))
-    .filter(Boolean);
-
-  for (const candidate of candidates) {
-    if (!allowPreview && isSsoPreviewUrl(candidate)) {
-      continue;
-    }
-
-    return candidate.endsWith("/") ? candidate : `${candidate}/`;
-  }
-
-  if (process.env.FUNCTIONS_EMULATOR === "true") {
-    return "http://localhost:3000/";
-  }
-
-  return "https://proops.com.br/";
+function toStringValue(value: unknown): string {
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return "";
 }
 
-function buildSharedProposalPayload(
-  proposalId: string,
-  proposalData: ProposalDocData,
-  tenantId: string,
-  tenantData: TenantDocData,
-): SharedProposalPayload {
-  const serializedProposal = {
-    id: proposalId,
-    ...(toSerializable(proposalData) as Record<string, unknown>),
-  };
+function toNumberValue(value: unknown): number {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  return numeric;
+}
+
+function extractImageUrls(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (typeof item === "string") return item.trim();
+      if (
+        item &&
+        typeof item === "object" &&
+        "url" in (item as Record<string, unknown>) &&
+        typeof (item as Record<string, unknown>).url === "string"
+      ) {
+        return String((item as Record<string, unknown>).url).trim();
+      }
+      return "";
+    })
+    .filter(Boolean);
+}
+
+function chunkArray<T>(values: T[], chunkSize: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < values.length; i += chunkSize) {
+    chunks.push(values.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+function normalizeProposalProduct(product: ProductLike): ProductLike {
+  const quantity = Math.max(0, toNumberValue(product.quantity));
+  const normalizedImages = extractImageUrls(product.productImages);
+  const fallbackImage = toStringValue(product.productImage) || normalizedImages[0] || "";
+  const isGhost = quantity <= 0;
 
   return {
-    success: true,
-    proposal: serializedProposal,
-    tenant: {
-      id: tenantId,
-      name: String(tenantData.name || ""),
-      logoUrl: String(tenantData.logoUrl || ""),
-      primaryColor: String(tenantData.primaryColor || ""),
-    },
+    ...product,
+    quantity,
+    productImage: fallbackImage,
+    productImages:
+      normalizedImages.length > 0
+        ? normalizedImages
+        : fallbackImage
+          ? [fallbackImage]
+          : [],
+    _isGhost: isGhost,
+    _shouldHide: Boolean(product._shouldHide || isGhost),
   };
 }
 
-async function generatePdfFromSharedPage(
-  shareUrl: string,
-  sharedProposalPayload: SharedProposalPayload,
-): Promise<Buffer> {
+async function enrichProposalProducts(
+  proposalData: ProposalDocData,
+  tenantId: string,
+): Promise<ProposalDocData> {
+  const sourceProducts = Array.isArray(proposalData.products)
+    ? proposalData.products
+    : [];
+
+  const normalizedProducts = sourceProducts.map((product) =>
+    normalizeProposalProduct(product),
+  );
+
+  const visibleProducts = normalizedProducts.filter(
+    (product) => toNumberValue(product.quantity) > 0,
+  );
+
+  const productIds = Array.from(
+    new Set(
+      visibleProducts
+        .map((product) => toStringValue(product.productId))
+        .filter(Boolean),
+    ),
+  );
+
+  if (!tenantId || productIds.length === 0) {
+    return {
+      ...proposalData,
+      products: visibleProducts,
+    };
+  }
+
+  const productCatalogMap = new Map<string, Record<string, unknown>>();
+  const chunks = chunkArray(productIds, 10);
+
+  await Promise.all(
+    chunks.map(async (idsChunk) => {
+      const catalogSnap = await db
+        .collection("products")
+        .where("tenantId", "==", tenantId)
+        .where(FieldPath.documentId(), "in", idsChunk)
+        .get();
+
+      catalogSnap.docs.forEach((docSnap) => {
+        productCatalogMap.set(
+          docSnap.id,
+          docSnap.data() as Record<string, unknown>,
+        );
+      });
+    }),
+  );
+
+  const enrichedProducts = visibleProducts.map((product) => {
+    const productId = toStringValue(product.productId);
+    const catalogProduct = productId ? productCatalogMap.get(productId) : undefined;
+
+    if (!catalogProduct) {
+      const isInactive = toStringValue(product.status) === "inactive";
+      return {
+        ...product,
+        _isInactive: isInactive,
+        _shouldHide: Boolean(product._shouldHide || product._isGhost || isInactive),
+      };
+    }
+
+    const catalogImages = extractImageUrls(catalogProduct.images);
+    const catalogImage =
+      typeof catalogProduct.image === "string" ? catalogProduct.image : "";
+
+    const mergedImages =
+      catalogImages.length > 0
+        ? catalogImages
+        : catalogImage
+          ? [catalogImage]
+          : extractImageUrls(product.productImages);
+    const mergedImage = mergedImages[0] || toStringValue(product.productImage);
+
+    const status = toStringValue(catalogProduct.status) || toStringValue(product.status);
+    const isInactive = status === "inactive";
+
+    return {
+      ...product,
+      productImage: mergedImage,
+      productImages: mergedImages,
+      productDescription:
+        toStringValue(catalogProduct.description) ||
+        toStringValue(product.productDescription),
+      _isInactive: isInactive,
+      _shouldHide: Boolean(product._shouldHide || product._isGhost || isInactive),
+    };
+  });
+
+  return {
+    ...proposalData,
+    products: enrichedProducts,
+  };
+}
+
+async function generatePdfFromHtml(html: string): Promise<Buffer> {
   chromiumPackage.setGraphicsMode = false;
   const executablePath = await chromiumPackage.executablePath();
   const pageErrors: string[] = [];
@@ -199,7 +291,6 @@ async function generatePdfFromSharedPage(
   try {
     const page = await browser.newPage({
       viewport: { width: PDF_VIEWPORT_WIDTH, height: PDF_VIEWPORT_HEIGHT },
-      deviceScaleFactor: 2,
     });
 
     page.on("pageerror", (error) => {
@@ -211,77 +302,27 @@ async function generatePdfFromSharedPage(
       pageErrors.push(`${request.method()} ${request.url()} :: ${failureText}`);
     });
 
-    await page.route("**/v1/share/**", async (route, request) => {
-      if (request.method() !== "GET") {
-        await route.continue();
-        return;
+    await page.route("**/*", async (route, request) => {
+      try {
+        const hostname = new URL(request.url()).hostname.toLowerCase();
+        if (
+          hostname === "vercel.com" ||
+          hostname.endsWith(".vercel.com") ||
+          hostname.endsWith(".vercel.app")
+        ) {
+          await route.abort("blockedbyclient");
+          return;
+        }
+      } catch {
+        // Ignore URL parse failures and continue request.
       }
 
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json; charset=utf-8",
-        body: JSON.stringify(sharedProposalPayload),
-      });
+      await route.continue();
     });
 
-    await page.goto(shareUrl, {
-      waitUntil: "domcontentloaded",
+    await page.setContent(html, {
+      waitUntil: "load",
       timeout: PDF_PAGE_READY_TIMEOUT_MS,
-    });
-
-    await page.waitForSelector("#shared-proposal-preview-content", {
-      timeout: PDF_PAGE_READY_TIMEOUT_MS,
-    });
-
-    await page.waitForSelector('[data-pdf-products-ready="1"]', {
-      timeout: PDF_PAGE_READY_TIMEOUT_MS,
-      state: "attached",
-    });
-
-    await page.waitForSelector("#shared-proposal-preview-content [data-page-index]", {
-      timeout: PDF_PAGE_READY_TIMEOUT_MS,
-    });
-
-    await page.evaluate(() => {
-      const previewNode = document.getElementById("shared-proposal-preview-content");
-      if (!previewNode) {
-        throw new Error("PDF_PREVIEW_NOT_FOUND");
-      }
-
-      const clonedNode = previewNode.cloneNode(true) as HTMLElement;
-      clonedNode.id = "pdf-root-export";
-      clonedNode.style.transform = "none";
-      clonedNode.style.margin = "0";
-      clonedNode.style.boxShadow = "none";
-      clonedNode.style.border = "none";
-      clonedNode.style.width = "794px";
-      clonedNode.style.minHeight = "1123px";
-      clonedNode.style.background = "#ffffff";
-
-      document.body.innerHTML = "";
-      document.body.style.margin = "0";
-      document.body.style.padding = "0";
-      document.body.style.background = "#ffffff";
-      document.body.style.width = "794px";
-      document.body.style.maxWidth = "794px";
-      document.body.appendChild(clonedNode);
-
-      const style = document.createElement("style");
-      style.innerHTML = `
-        @page { size: A4; margin: 0; }
-        html, body { margin: 0; padding: 0; background: #ffffff; }
-        .pdf-page-container {
-          margin: 0 !important;
-          box-shadow: none !important;
-          break-after: page;
-          page-break-after: always;
-        }
-        .pdf-page-container:last-of-type {
-          break-after: auto;
-          page-break-after: auto;
-        }
-      `;
-      document.head.appendChild(style);
     });
 
     await page.waitForFunction(
@@ -289,7 +330,7 @@ async function generatePdfFromSharedPage(
         try {
           await document.fonts.ready;
         } catch {
-          // Ignore font readiness errors.
+          // Ignore fonts readiness failures.
         }
 
         const imageWaiters = Array.from(document.images).map(
@@ -307,15 +348,14 @@ async function generatePdfFromSharedPage(
         await Promise.all(imageWaiters);
         return true;
       },
-      { timeout: 20_000 },
+      { timeout: PDF_RENDER_ASSET_TIMEOUT_MS },
     );
 
-    await page.emulateMedia({ media: "screen" });
-    await page.waitForTimeout(180);
+    await page.emulateMedia({ media: "print" });
 
     const pdf = await page.pdf({
-      printBackground: true,
       format: "A4",
+      printBackground: true,
       preferCSSPageSize: true,
       margin: {
         top: "0mm",
@@ -328,36 +368,8 @@ async function generatePdfFromSharedPage(
     return Buffer.from(pdf);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    let diagnostics = "UNAVAILABLE";
-
-    try {
-      const page = browser.contexts()[0]?.pages()[0];
-      if (!page) {
-        throw new Error("NO_PAGE_CONTEXT");
-      }
-      diagnostics = await page.evaluate(() => {
-        const bodyText = (document.body?.innerText || "").slice(0, 1200);
-        const hasPreviewRoot = Boolean(
-          document.querySelector("#shared-proposal-preview-content"),
-        );
-        const pagesCount = document.querySelectorAll("[data-page-index]").length;
-        const isProductsReady =
-          document.querySelector('[data-pdf-products-ready="1"]') !== null;
-
-        return JSON.stringify({
-          location: window.location.href,
-          title: document.title,
-          hasPreviewRoot,
-          pagesCount,
-          isProductsReady,
-          bodyText,
-        });
-      });
-    } catch {
-      // Ignore diagnostics collection failures.
-    }
-
-    throw new Error(`PDF_RENDER_FAILED: ${message} | diagnostics=${diagnostics} | pageErrors=${pageErrors.slice(0, 5).join(" || ")}`);
+    const diagnostics = pageErrors.slice(0, 8).join(" || ") || "UNAVAILABLE";
+    throw new Error(`PDF_RENDER_FAILED: ${message} | pageErrors=${diagnostics}`);
   } finally {
     await browser.close();
   }
@@ -366,7 +378,6 @@ async function generatePdfFromSharedPage(
 export async function getOrGenerateProposalPdfBuffer(
   tenantId: string,
   proposalId: string,
-  userId: string,
 ): Promise<Buffer> {
   const proposalRef = db.collection("proposals").doc(proposalId);
   const proposalSnap = await proposalRef.get();
@@ -375,7 +386,7 @@ export async function getOrGenerateProposalPdfBuffer(
   }
 
   const proposalData = (proposalSnap.data() || {}) as ProposalDocData;
-  const proposalTenantId = String(proposalData.tenantId || "").trim();
+  const proposalTenantId = toStringValue(proposalData.tenantId);
   if (!proposalTenantId || proposalTenantId !== tenantId) {
     throw new Error("FORBIDDEN_TENANT_MISMATCH");
   }
@@ -404,22 +415,25 @@ export async function getOrGenerateProposalPdfBuffer(
     }
   }
 
-  const shareLink = await SharedProposalService.createShareLink(
+  const enrichedProposalData = await enrichProposalProducts(proposalData, tenantId);
+
+  const templatePayload: ProposalPdfTemplatePayload = {
     proposalId,
-    tenantId,
-    userId,
-  );
-  const shareUrl = new URL(`/share/${shareLink.token}`, getAppBaseUrl()).toString();
-  const sharedProposalPayload = buildSharedProposalPayload(
-    proposalId,
-    proposalData,
-    tenantId,
-    tenantData,
-  );
-  const generatedBuffer = await generatePdfFromSharedPage(
-    shareUrl,
-    sharedProposalPayload,
-  );
+    proposal: toSerializable({
+      id: proposalId,
+      ...enrichedProposalData,
+    }) as ProposalPdfTemplatePayload["proposal"],
+    tenant: {
+      id: tenantId,
+      name: toStringValue(tenantData.name),
+      logoUrl: toStringValue(tenantData.logoUrl),
+      primaryColor: toStringValue(tenantData.primaryColor),
+      proposalDefaults: toSerializable(tenantData.proposalDefaults),
+    },
+  };
+
+  const html = renderProposalPdfHtml(templatePayload);
+  const generatedBuffer = await generatePdfFromHtml(html);
 
   await storageFile.save(generatedBuffer, {
     contentType: "application/pdf",
