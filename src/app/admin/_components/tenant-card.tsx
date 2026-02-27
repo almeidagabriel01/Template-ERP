@@ -20,7 +20,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tenant } from "@/types";
 import { TenantBillingInfo } from "@/services/admin-service";
-import { LogIn, Trash2, Pencil, Calendar, CheckCircle2, Loader2 } from "lucide-react";
+import {
+  LogIn,
+  Trash2,
+  Pencil,
+  Calendar,
+  CheckCircle2,
+  Loader2,
+} from "lucide-react";
 import { calculateNextBillingDate } from "../_utils/billing-date";
 
 interface TenantCardProps {
@@ -37,9 +44,16 @@ export function TenantCard({
   onLoginAs,
 }: TenantCardProps) {
   const { tenant, planName, subscriptionStatus, billingInterval, admin } = item;
-  const nextBillingDate = admin.currentPeriodEnd
-    ? new Date(admin.currentPeriodEnd)
-    : calculateNextBillingDate(tenant.createdAt, billingInterval);
+  let formattedBillingDate = "";
+  if (admin.currentPeriodEnd) {
+    const [yyyy, mm, dd] = admin.currentPeriodEnd.split("T")[0].split("-");
+    formattedBillingDate = `${dd}/${mm}/${yyyy}`;
+  } else {
+    formattedBillingDate = calculateNextBillingDate(
+      tenant.createdAt,
+      billingInterval,
+    ).toLocaleDateString("pt-BR");
+  }
   const isPastDue = subscriptionStatus === "past_due";
 
   // Controlled dialog state
@@ -159,7 +173,7 @@ export function TenantCard({
             <span
               className={`font-medium ${isPastDue ? "text-red-600" : "text-foreground"}`}
             >
-              {nextBillingDate.toLocaleDateString("pt-BR")}
+              {formattedBillingDate}
             </span>
             {isPastDue && (
               <Badge variant="destructive" className="h-4 px-1 text-[9px]">
@@ -189,18 +203,23 @@ export function TenantCard({
       </CardFooter>
 
       {/* Delete Confirmation Dialog - Controlled */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remover Empresa</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja remover <strong>{tenant.name}</strong>?
-              Esta ação irá excluir permanentemente a empresa e todos os seus dados
-              (usuários, produtos, propostas, etc).
+              Esta ação irá excluir permanentemente a empresa e todos os seus
+              dados (usuários, produtos, propostas, etc).
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>
+              Cancelar
+            </AlertDialogCancel>
             <Button
               onClick={handleDelete}
               disabled={isDeleting}
