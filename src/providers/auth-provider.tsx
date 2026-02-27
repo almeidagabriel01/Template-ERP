@@ -183,19 +183,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const userData = await fetchUserData(firebaseUser);
-        setUser(userData);
-        try {
-          await createServerSession(firebaseUser);
-        } catch (error) {
-          console.error("Unable to sync server session:", error);
+      try {
+        if (firebaseUser) {
+          const userData = await fetchUserData(firebaseUser);
+          setUser(userData);
+          try {
+            await createServerSession(firebaseUser);
+          } catch (error) {
+            console.error("Unable to sync server session:", error);
+          }
+        } else {
+          setUser(null);
+          try {
+            await clearServerSession();
+          } catch (error) {
+            // Falha ao limpar sessão do servidor (ex.: sem rede) — ignorar para não
+            // bloquear o estado de loading indefinidamente.
+            console.error("Unable to clear server session:", error);
+          }
         }
-      } else {
-        setUser(null);
-        await clearServerSession();
+      } catch (error) {
+        // Garante que qualquer erro inesperado no callback não trave o isLoading.
+        console.error("Unexpected error in onAuthStateChanged handler:", error);
+      } finally {
+        // SEMPRE libera o loading, independente de erros de rede ou sessão.
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
 
     return () => unsubscribe();

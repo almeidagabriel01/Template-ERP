@@ -81,6 +81,10 @@ export function useWalletsData(): UseWalletsDataReturn {
       hasLoadedRef.current = true;
     } catch (error) {
       console.error("Failed to fetch wallets", error);
+      toast.error(
+        "Não foi possível carregar as carteiras. Verifique sua conexão e tente novamente.",
+        { title: "Erro ao carregar" },
+      );
     } finally {
       setIsLoading(false);
     }

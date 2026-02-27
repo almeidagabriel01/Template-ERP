@@ -246,6 +246,12 @@ export function useFinancialData(): UseFinancialDataReturn {
         setWallets(walletsData);
       } catch (error) {
         console.error("Failed to fetch transactions", error);
+        if (!background) {
+          toast.error(
+            "Não foi possível carregar os dados financeiros. Verifique sua conexão e tente novamente.",
+            { title: "Erro ao carregar" },
+          );
+        }
       } finally {
         if (!background) setIsLoading(false);
       }

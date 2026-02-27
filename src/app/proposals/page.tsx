@@ -264,7 +264,11 @@ export default function ProposalsPage() {
         return;
       }
       try {
-        await ProposalService.waitForSave();
+        // Timeout de segurança: máx 10s esperando o save pendente
+        await Promise.race([
+          ProposalService.waitForSave(),
+          new Promise<void>((resolve) => setTimeout(resolve, 10000)),
+        ]);
         if (cancelled) return;
         const result = await ProposalService.getProposalsPaginated(
           tenant.id,
@@ -294,7 +298,11 @@ export default function ProposalsPage() {
       }
       setIsAwaitingPendingSave(true);
       try {
-        await ProposalService.waitForSave();
+        // Timeout de segurança: se waitForSave travar por algum motivo, libera em 10s
+        await Promise.race([
+          ProposalService.waitForSave(),
+          new Promise<void>((resolve) => setTimeout(resolve, 10000)),
+        ]);
       } finally {
         if (!cancelled) {
           setIsAwaitingPendingSave(false);
@@ -335,9 +343,13 @@ export default function ProposalsPage() {
 
   const fetchProposals = React.useCallback(async () => {
     if (tenant) {
+      setIsLoading(true);
       try {
-        await ProposalService.waitForSave(); // Wait for any pending auto-saves
-        setIsLoading(true);
+        // Aguarda salvar pendente com timeout de segurança (5s) para nunca travar
+        await Promise.race([
+          ProposalService.waitForSave(),
+          new Promise<void>((resolve) => setTimeout(resolve, 5000)),
+        ]);
         const data = await ProposalService.getProposals(tenant.id);
 
         // Sync client names from clients collection
@@ -377,9 +389,15 @@ export default function ProposalsPage() {
         setProposals(data);
       } catch (error) {
         console.error("Failed to fetch proposals", error);
+        toast.error("Erro ao carregar propostas. Verifique sua conexão e tente novamente.", {
+          title: "Erro ao carregar",
+        });
+      } finally {
+        setIsLoading(false);
       }
+    } else {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, [tenant]);
 
   // Initial fetch — only when searching/filtering
@@ -395,7 +413,6 @@ export default function ProposalsPage() {
       console.log("Received proposal update notification, refreshing list...");
       resetRef.current?.();
       if (isFiltering) {
-        setIsLoading(true);
         fetchProposals();
       }
     });
