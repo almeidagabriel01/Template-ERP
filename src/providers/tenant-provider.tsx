@@ -41,6 +41,26 @@ function resolveSafeTenantColor(input: unknown): string {
   return "#3b82f6";
 }
 
+function normalizePlanId(input?: string): string | undefined {
+  if (!input) return undefined;
+  const normalized = input.trim().toLowerCase();
+
+  if (["free", "gratuito", "grátis", "gratis"].includes(normalized)) {
+    return "free";
+  }
+  if (["starter", "inicial", "start"].includes(normalized)) {
+    return "starter";
+  }
+  if (["pro", "professional", "profissional"].includes(normalized)) {
+    return "pro";
+  }
+  if (["enterprise", "empresarial"].includes(normalized)) {
+    return "enterprise";
+  }
+
+  return normalized;
+}
+
 const VIEWING_AS_TENANT_KEY = "viewingAsTenant";
 const VIEWING_AS_TENANT_DATA_KEY = "viewingAsTenantData";
 
@@ -180,6 +200,16 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
                     email: targetTenant.admin.email,
                     role: "admin",
                     tenantId: fetchedTenant.id,
+                    planId:
+                      normalizePlanId(
+                        (targetTenant as { planId?: string }).planId,
+                      ) ||
+                      normalizePlanId(targetTenant.planName) ||
+                      "free",
+                    billingInterval:
+                      targetTenant.billingInterval === "yearly"
+                        ? "yearly"
+                        : "monthly",
                   } as User);
                 } else {
                   setTenantOwner(null);

@@ -79,7 +79,7 @@ export function Header({}: HeaderProps) {
     isLoading: isTenantLoading,
   } = useTenant();
   const router = useRouter();
-  const [isViewingAsTenant, setIsViewingAsTenant] = React.useState(false);
+  const isViewingAsTenant = user?.role === "superadmin" && !!tenant;
   const [userPlanName, setUserPlanName] = React.useState<string | null>(null);
 
   /* 
@@ -101,8 +101,13 @@ export function Header({}: HeaderProps) {
       // Determine which user's plan to fetch
       const targetUser = isViewingAsTenant && tenant?.id ? tenantOwner : user;
 
-      // If we are loading or strictly don't have a user yet, do nothing (or remain null)
-      if (!targetUser) return;
+      // Wait tenant owner when impersonating. If still missing after loading, fallback safely.
+      if (!targetUser) {
+        if (isViewingAsTenant && !isTenantLoading) {
+          setUserPlanName("Sem Plano");
+        }
+        return;
+      }
 
       if (!targetUser?.planId) {
         if (targetUser?.role === "superadmin") {
@@ -144,9 +149,12 @@ export function Header({}: HeaderProps) {
         };
         if (PLAN_NAMES[targetUser.planId]) {
           setUserPlanName(PLAN_NAMES[targetUser.planId]);
+        } else {
+          setUserPlanName("Sem Plano");
         }
       } catch (error) {
         console.error("Error fetching plan:", error);
+        setUserPlanName("Sem Plano");
       }
     };
     fetchPlanName();
@@ -158,16 +166,8 @@ export function Header({}: HeaderProps) {
     tenantOwner,
     tenantOwner?.planId,
     tenant?.id,
+    isTenantLoading,
   ]);
-
-  React.useEffect(() => {
-    // Check localStorage directly
-    const viewingAsId =
-      typeof window !== "undefined"
-        ? sessionStorage.getItem("viewingAsTenant")
-        : null;
-    setIsViewingAsTenant(!!viewingAsId);
-  }, [tenant]);
 
   const handleBackToAdmin = () => {
     clearViewingTenant();
