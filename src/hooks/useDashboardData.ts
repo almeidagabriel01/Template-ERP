@@ -11,6 +11,7 @@ import { WalletService } from "@/services/wallet-service"; // Import WalletServi
 import { Wallet } from "@/types"; // Import Wallet type
 import { useTenant } from "@/providers/tenant-provider";
 import type { BarChartDataItem } from "@/components/charts/simple-bar-chart";
+import { toast } from "@/lib/toast";
 
 interface FinancialSummary {
   totalIncome: number;
@@ -138,6 +139,12 @@ export function useDashboardData(): DashboardData {
         }
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
+        if (!cancelled) {
+          toast.error(
+            "Não foi possível carregar os dados do painel. Verifique sua conexão.",
+            { title: "Erro ao carregar" },
+          );
+        }
       } finally {
         if (!cancelled) {
           setIsDataLoading(false);

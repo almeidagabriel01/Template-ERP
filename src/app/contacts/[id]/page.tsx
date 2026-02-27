@@ -151,6 +151,9 @@ export default function EditCustomerPage() {
         }
       } catch (error) {
         console.error("Error fetching client:", error);
+        toast.error("Não foi possível carregar os dados do cliente. Verifique sua conexão.", {
+          title: "Erro ao carregar",
+        });
       } finally {
         setIsLoading(false);
       }

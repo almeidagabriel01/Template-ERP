@@ -61,6 +61,11 @@ export function useContactsCtrl() {
         if (!cancelled) setAllClients(data);
       } catch (error) {
         console.error("Failed to fetch clients for filtering", error);
+        if (!cancelled)
+          toast.error(
+            "Não foi possível realizar a pesquisa. Verifique sua conexão.",
+            { title: "Erro na pesquisa" },
+          );
       } finally {
         if (!cancelled) setIsLoadingAll(false);
       }
