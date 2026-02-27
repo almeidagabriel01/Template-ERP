@@ -5,7 +5,7 @@ import { normalize } from "@/utils/text";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Search, Edit, Trash2, FileSpreadsheet } from "lucide-react";
-import { toast } from '@/lib/toast';
+import { toast } from "@/lib/toast";
 import { useTenant } from "@/providers/tenant-provider";
 import { useAuth } from "@/providers/auth-provider";
 import {
@@ -30,6 +30,7 @@ import { DataTable, DataTableColumn } from "@/components/ui/data-table";
 import { useSort } from "@/hooks/use-sort";
 import { QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
 import { SpreadsheetsSkeleton } from "./_components/spreadsheets-skeleton";
+import { SpreadsheetsTableSkeleton } from "./_components/spreadsheets-table-skeleton";
 import { SelectTenantState } from "@/components/shared/select-tenant-state";
 
 export default function SpreadsheetsPage() {
@@ -45,6 +46,7 @@ export default function SpreadsheetsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isTableLoading, setIsTableLoading] = useState(true);
   const resetRef = useRef<(() => void) | null>(null);
 
   const isFiltering = searchTerm.trim() !== "";
@@ -54,8 +56,6 @@ export default function SpreadsheetsPage() {
     requestSort,
     sortConfig,
   } = useSort(allSpreadsheets ?? []);
-
-  const isPageLoading = tenantLoading;
 
   // Check if we have any spreadsheets (for empty state)
   useEffect(() => {
@@ -233,9 +233,8 @@ export default function SpreadsheetsPage() {
     },
   ];
 
-  if (isPageLoading) {
-    return <SpreadsheetsSkeleton />;
-  }
+  const showSkeleton =
+    tenantLoading || (hasAnySheets !== false && isTableLoading && !isFiltering);
 
   if (!tenant && user?.role === "superadmin") {
     return <SelectTenantState />;
@@ -243,7 +242,11 @@ export default function SpreadsheetsPage() {
 
   return (
     <>
-      <div className="space-y-6 flex flex-col min-h-[calc(100vh_-_180px)]">
+      {showSkeleton && <SpreadsheetsSkeleton />}
+      <div
+        className="space-y-6 flex-col min-h-[calc(100vh-180px)]"
+        style={{ display: showSkeleton ? "none" : "flex" }}
+      >
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Planilhas</h1>
@@ -346,6 +349,8 @@ export default function SpreadsheetsPage() {
             minWidth="600px"
             onSort={requestSort}
             sortConfig={sortConfig}
+            loadingSkeleton={<SpreadsheetsTableSkeleton />}
+            onInitialLoadComplete={() => setIsTableLoading(false)}
           />
         )}
       </div>

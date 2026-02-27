@@ -13,9 +13,16 @@ export function ContactsSkeleton() {
         <Skeleton className="h-10 w-36" />
       </div>
 
-      {/* Search Bar */}
-      <div className="relative max-w-md">
-        <Skeleton className="h-10 w-full" />
+      {/* Search Bar & Filters */}
+      <div className="flex flex-col sm:flex-row gap-4 items-center">
+        <div className="relative max-w-md w-full">
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Skeleton className="h-9 w-[68px]" />
+          <Skeleton className="h-9 w-[95px]" />
+          <Skeleton className="h-9 w-[124px]" />
+        </div>
       </div>
 
       {/* Grid Table */}
