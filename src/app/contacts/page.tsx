@@ -48,18 +48,23 @@ export default function CustomersPage() {
     [canEdit, canDelete, actions.setClientToDelete],
   );
 
-  // Initial loading state
-  if (state.tenantLoading) {
-    return <ContactsSkeleton />;
-  }
+  const [isTableLoading, setIsTableLoading] = React.useState(true);
 
   if (!tenant && user?.role === "superadmin") {
     return <SelectTenantState />;
   }
 
+  const showSkeleton =
+    state.tenantLoading ||
+    (state.hasAnyClients !== false && isTableLoading && !state.isFiltering);
+
   return (
     <>
-      <div className="space-y-6 flex flex-col min-h-[calc(100vh_-_180px)]">
+      {showSkeleton && <ContactsSkeleton />}
+      <div
+        className="space-y-6 flex-col min-h-[calc(100vh-180px)]"
+        style={{ display: showSkeleton ? "none" : "flex" }}
+      >
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
@@ -118,6 +123,8 @@ export default function CustomersPage() {
             minWidth="900px"
             onSort={actions.requestSort}
             sortConfig={sortConfig}
+            loadingSkeleton={<ContactsTableSkeleton />}
+            onInitialLoadComplete={() => setIsTableLoading(false)}
           />
         )}
       </div>
