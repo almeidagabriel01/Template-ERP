@@ -19,7 +19,7 @@ import { ProposalPdfViewer } from "@/components/pdf/proposal-pdf-viewer";
 import Image from "next/image";
 
 import { ProposalDefaults } from "@/lib/proposal-defaults";
-import { usePdfGenerator } from "@/components/features/proposal/pdf/use-pdf-generator";
+import { savePdfBlob } from "@/services/pdf/render-to-pdf";
 
 export default function SharedProposalPage() {
   const params = useParams();
@@ -35,19 +35,57 @@ export default function SharedProposalPage() {
   const [previewZoom, setPreviewZoom] = React.useState(1);
   const contentRef = React.useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = React.useState(0);
+  const [isGenerating, setIsGenerating] = React.useState(false);
 
-  const { isGenerating, handleGenerate } = usePdfGenerator({
-    proposal: proposal || {},
-    template,
-    tenant,
-    customSettings:
-      (proposal?.pdfSettings as Parameters<
-        typeof ProposalPdfViewer
-      >[0]["customSettings"]) ?? undefined,
-    showCover: true,
-    canonicalSource: false,
-    setIsOpen: () => undefined,
-  });
+  const handleDownloadPdf = React.useCallback(async () => {
+    if (!token) return;
+    setIsGenerating(true);
+    try {
+      const apiBaseUrl = String(process.env.NEXT_PUBLIC_API_URL || "")
+        .trim()
+        .replace(/\/+$/, "");
+      if (!apiBaseUrl) {
+        throw new Error("NEXT_PUBLIC_API_URL is not configured.");
+      }
+
+      const endpoint = `${apiBaseUrl}/v1/share/${encodeURIComponent(token)}/pdf`;
+      const response = await fetch(endpoint, {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "");
+        throw new Error(errorText || "Falha ao baixar PDF.");
+      }
+
+      const blob = await response.blob();
+      const contentDisposition = response.headers.get("content-disposition");
+      let filename = "Proposta.pdf";
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="([^"]+)"/i);
+        if (match?.[1]) {
+          filename = match[1];
+        }
+      }
+
+      if (filename === "Proposta.pdf" || filename === "proposta.pdf") {
+        const clean = (proposal?.title || "")
+          .replace(/[<>:"/\\|?*]/g, "")
+          .trim();
+        if (clean) {
+          filename = `Proposta - ${clean}.pdf`;
+        }
+      }
+
+      savePdfBlob(blob, filename);
+    } catch (err) {
+      console.error("Error downloading shared PDF:", err);
+      alert("Erro ao baixar PDF. Tente novamente.");
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [token, proposal?.title]);
 
   React.useEffect(() => {
     // Auto-fit PDF on mobile screens initially and on resize
@@ -256,7 +294,7 @@ export default function SharedProposalPage() {
                       color: "hsl(var(--primary-foreground))",
                     }
               }
-              onClick={() => handleGenerate(undefined, "shared")}
+              onClick={handleDownloadPdf}
               disabled={isGenerating}
             >
               {isGenerating ? (
@@ -292,7 +330,7 @@ export default function SharedProposalPage() {
                     color: "hsl(var(--primary-foreground))",
                   }
             }
-            onClick={() => handleGenerate(undefined, "shared")}
+            onClick={handleDownloadPdf}
             disabled={isGenerating}
           >
             {isGenerating ? (

@@ -1,5 +1,4 @@
 import { getStorage } from "firebase-admin/storage";
-import { jsPDF } from "jspdf";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../../../init";
 import {
@@ -8,83 +7,11 @@ import {
   isUrlAccessible,
   downloadPdfFromSafeUrl,
   toDate,
-  toNumber,
-  formatCurrency,
 } from "./whatsapp.utils";
 import { getProposalByIdForTenant } from "./whatsapp.db";
+import { getOrGenerateProposalPdfBuffer } from "../proposal-pdf.service";
 
 const PDF_GENERATION_LOCK_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes
-
-export async function generateSimpleProposalPdfBuffer(proposal: {
-  id: string;
-  [key: string]: unknown;
-}): Promise<Buffer> {
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const marginX = 48;
-  let y = 64;
-
-  const proposalTitle = String(proposal.title || `Proposta ${proposal.id}`);
-  const clientName = String(proposal.clientName || "Cliente nao informado");
-  const proposalCode = String(proposal.code || proposal.id);
-  const status = String(proposal.status || "N/A");
-  const totalValue = toNumber(
-    proposal.totalValue ?? proposal.total ?? proposal.value,
-  );
-  const validUntil = toDate(proposal.validUntil);
-  const notes = String(proposal.customNotes || "").trim();
-
-  doc.setFontSize(20);
-  doc.text("Proposta Comercial", marginX, y);
-  y += 34;
-
-  doc.setFontSize(12);
-  doc.text(`Titulo: ${proposalTitle}`, marginX, y);
-  y += 22;
-  doc.text(`Cliente: ${clientName}`, marginX, y);
-  y += 22;
-  doc.text(`Codigo: ${proposalCode}`, marginX, y);
-  y += 22;
-  doc.text(`Status: ${status}`, marginX, y);
-  y += 22;
-  doc.text(`Valor total: ${formatCurrency(totalValue)}`, marginX, y);
-  y += 22;
-  doc.text(
-    `Validade: ${validUntil ? validUntil.toLocaleDateString("pt-BR") : "Nao informado"}`,
-    marginX,
-    y,
-  );
-  y += 30;
-  doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, marginX, y);
-  y += 30;
-
-  if (notes) {
-    doc.setFontSize(11);
-    doc.text("Observacoes:", marginX, y);
-    y += 18;
-    const wrappedNotes = doc.splitTextToSize(notes, 500);
-    doc.text(wrappedNotes, marginX, y);
-  }
-
-  const arrayBuffer = doc.output("arraybuffer");
-  return Buffer.from(arrayBuffer);
-}
-
-export async function generateProposalPdfBuffer(proposal: {
-  id: string;
-  [key: string]: unknown;
-}): Promise<Buffer> {
-  const configuredRenderer = String(process.env.PDF_RENDERER || "jspdf")
-    .trim()
-    .toLowerCase();
-
-  if (configuredRenderer === "puppeteer") {
-    console.warn(
-      "[WhatsApp] PDF_RENDERER=puppeteer is not implemented yet. Falling back to jspdf.",
-    );
-  }
-
-  return generateSimpleProposalPdfBuffer(proposal);
-}
 
 export async function getOrGenerateProposalPdf(
   tenantId: string,
@@ -146,7 +73,8 @@ export async function getOrGenerateProposalPdf(
         const [buffer] = await file.download();
         return { pdfBuffer: buffer, pdfPath: resolvedPath };
       } else {
-        const remotePdfBuffer = await downloadPdfFromSafeUrl(preferredExistingUrl);
+        const remotePdfBuffer =
+          await downloadPdfFromSafeUrl(preferredExistingUrl);
         if (remotePdfBuffer) {
           return { pdfBuffer: remotePdfBuffer, pdfPath: resolvedPath };
         }
@@ -253,7 +181,10 @@ export async function getOrGenerateProposalPdf(
   const file = bucket.file(pdfPath);
 
   try {
-    const generatedPdfBuffer = await generateProposalPdfBuffer(proposal);
+    const generatedPdfBuffer = await getOrGenerateProposalPdfBuffer(
+      tenantId,
+      proposalId,
+    );
 
     await file.save(generatedPdfBuffer, {
       contentType: "application/pdf",

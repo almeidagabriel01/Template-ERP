@@ -24,29 +24,42 @@ async function getAuthenticatedUser(): Promise<FirebaseUser | null> {
   });
 }
 
-function getFilenameFromContentDisposition(headerValue: string | null, fallbackProposalId: string): string {
-  if (!headerValue) {
-    return `proposta-${fallbackProposalId}.pdf`;
-  }
+function sanitizeFilename(value: string): string {
+  return value.replace(/[<>:"/\\|?*]/g, "").trim();
+}
 
-  const utf8Match = headerValue.match(/filename\*=UTF-8''([^;]+)/i);
-  if (utf8Match?.[1]) {
-    try {
-      return decodeURIComponent(utf8Match[1]);
-    } catch {
-      // Ignore invalid encoding and continue fallback parsing.
+function buildFilenameFromTitle(title?: string): string {
+  const clean = sanitizeFilename(title || "");
+  return clean ? `Proposta - ${clean}.pdf` : "Proposta.pdf";
+}
+
+function getFilenameFromContentDisposition(
+  headerValue: string | null,
+  fallbackTitle?: string,
+): string {
+  if (headerValue) {
+    const utf8Match = headerValue.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match?.[1]) {
+      try {
+        return decodeURIComponent(utf8Match[1]);
+      } catch {
+        // Ignore invalid encoding and continue fallback parsing.
+      }
+    }
+
+    const simpleMatch = headerValue.match(/filename="([^"]+)"/i);
+    if (simpleMatch?.[1]) {
+      return simpleMatch[1];
     }
   }
 
-  const simpleMatch = headerValue.match(/filename="([^"]+)"/i);
-  if (simpleMatch?.[1]) {
-    return simpleMatch[1];
-  }
-
-  return `proposta-${fallbackProposalId}.pdf`;
+  return buildFilenameFromTitle(fallbackTitle);
 }
 
-export async function downloadProposalPdfFromBackend(proposalId: string): Promise<void> {
+export async function downloadProposalPdfFromBackend(
+  proposalId: string,
+  proposalTitle?: string,
+): Promise<void> {
   const apiBaseUrl = String(process.env.NEXT_PUBLIC_API_URL || "")
     .trim()
     .replace(/\/+$/, "");
@@ -77,7 +90,7 @@ export async function downloadProposalPdfFromBackend(proposalId: string): Promis
   const blob = await response.blob();
   const filename = getFilenameFromContentDisposition(
     response.headers.get("content-disposition"),
-    proposalId,
+    proposalTitle,
   );
 
   savePdfBlob(blob, filename);
