@@ -1,9 +1,14 @@
 import { Request, Response } from "express";
 import { getOrGenerateProposalPdfBuffer } from "../services/proposal-pdf.service";
+import { db } from "../../init";
 
-function buildFilename(proposalId: string): string {
-  const normalized = proposalId.replace(/[^a-zA-Z0-9_-]/g, "");
-  return `proposta-${normalized || "documento"}.pdf`;
+function sanitizeFilename(value: string): string {
+  return value.replace(/[<>:"/\\|?*]/g, "").trim();
+}
+
+function buildFilename(title?: string): string {
+  const clean = sanitizeFilename(title || "");
+  return clean ? `Proposta - ${clean}.pdf` : "Proposta.pdf";
 }
 
 export async function downloadProposalPdf(req: Request, res: Response) {
@@ -18,13 +23,20 @@ export async function downloadProposalPdf(req: Request, res: Response) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const pdfBuffer = await getOrGenerateProposalPdfBuffer(authTenantId, proposalId);
+    // Fetch proposal title for filename
+    const proposalSnap = await db.collection("proposals").doc(proposalId).get();
+    const proposalTitle = proposalSnap.exists
+      ? String((proposalSnap.data() as Record<string, unknown>)?.title || "")
+      : "";
+
+    const pdfBuffer = await getOrGenerateProposalPdfBuffer(
+      authTenantId,
+      proposalId,
+    );
+    const filename = buildFilename(proposalTitle);
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${buildFilename(proposalId)}"`,
-    );
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.setHeader("Cache-Control", "private, no-store");
     return res.status(200).send(pdfBuffer);
   } catch (error) {

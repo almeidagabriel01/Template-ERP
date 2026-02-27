@@ -6,7 +6,7 @@ import chromiumPackage from "@sparticuz/chromium";
 import { db } from "../../init";
 import { SharedProposalService } from "./shared-proposal.service";
 
-const PDF_TEMPLATE_VERSION = "proposal-pdf-v3-frontend-puppeteer";
+const PDF_TEMPLATE_VERSION = "proposal-pdf-v4-playwright";
 const PDF_VIEWPORT_WIDTH = 1280;
 const PDF_VIEWPORT_HEIGHT = 1700;
 const PDF_PAGE_READY_TIMEOUT_MS = 45_000;
@@ -34,7 +34,10 @@ type TenantDocData = {
   [key: string]: unknown;
 };
 
-function getProposalPdfStoragePath(tenantId: string, proposalId: string): string {
+function getProposalPdfStoragePath(
+  tenantId: string,
+  proposalId: string,
+): string {
   return `tenants/${tenantId}/proposals/${proposalId}/pdf/proposal.pdf`;
 }
 
@@ -55,14 +58,16 @@ function toSerializable(value: unknown): unknown {
       typeof (value as { toDate?: unknown }).toDate === "function"
     ) {
       try {
-        return ((value as { toDate: () => Date }).toDate()).toISOString();
+        return (value as { toDate: () => Date }).toDate().toISOString();
       } catch {
         return null;
       }
     }
 
     const sortedEntries = Object.entries(value as Record<string, unknown>)
-      .filter(([, raw]) => typeof raw !== "undefined" && typeof raw !== "function")
+      .filter(
+        ([, raw]) => typeof raw !== "undefined" && typeof raw !== "function",
+      )
       .sort(([a], [b]) => a.localeCompare(b));
 
     const normalized: Record<string, unknown> = {};
@@ -109,8 +114,6 @@ function toStringValue(value: unknown): string {
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return "";
 }
-
-
 
 async function generatePdfFromUrl(url: string): Promise<Buffer> {
   chromiumPackage.setGraphicsMode = false;
@@ -159,9 +162,11 @@ async function generatePdfFromUrl(url: string): Promise<Buffer> {
           // Ignore fonts readiness failures.
         }
 
-        const pdfReadyMarker = document.querySelector('[data-pdf-products-ready="1"]');
+        const pdfReadyMarker = document.querySelector(
+          '[data-pdf-products-ready="1"]',
+        );
         if (!pdfReadyMarker) {
-           return false;
+          return false;
         }
 
         const imageWaiters = Array.from(document.images).map(
@@ -202,7 +207,9 @@ async function generatePdfFromUrl(url: string): Promise<Buffer> {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const diagnostics = pageErrors.slice(0, 8).join(" || ") || "UNAVAILABLE";
-    throw new Error(`PDF_RENDER_FAILED: ${message} | pageErrors=${diagnostics}`);
+    throw new Error(
+      `PDF_RENDER_FAILED: ${message} | pageErrors=${diagnostics}`,
+    );
   } finally {
     await browser.close();
   }
