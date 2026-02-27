@@ -44,6 +44,14 @@ function resolveSafeTenantColor(input: unknown): string {
 const VIEWING_AS_TENANT_KEY = "viewingAsTenant";
 const VIEWING_AS_TENANT_DATA_KEY = "viewingAsTenantData";
 
+function readViewingTenantId(): string | null {
+  if (typeof window === "undefined") return null;
+  const fromSession = sessionStorage.getItem(VIEWING_AS_TENANT_KEY);
+  if (fromSession) return fromSession;
+  const fromLocal = localStorage.getItem(VIEWING_AS_TENANT_KEY);
+  return fromLocal || null;
+}
+
 export function TenantProvider({ children }: { children: React.ReactNode }) {
   const [tenant, setTenant] = React.useState<Tenant | null>(null);
   const [tenantOwner, setTenantOwner] = React.useState<User | null>(null);
@@ -58,10 +66,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
 
   const loadTenant = React.useCallback(async () => {
     // Check for "Viewing As" override (Super Admin feature)
-    const viewingAsId =
-      typeof window !== "undefined"
-        ? sessionStorage.getItem(VIEWING_AS_TENANT_KEY)
-        : null;
+    const viewingAsId = readViewingTenantId();
 
     let tenantIdToLoad = viewingAsId;
 
@@ -160,7 +165,33 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
               } else {
                 setTenantOwner(null);
               }
-            } else if (isSuperAdmin || !user?.masterId) {
+            } else if (isSuperAdmin) {
+              try {
+                const { AdminService } = await import("@/services/admin-service");
+                const allTenants = await AdminService.getAllTenantsBilling();
+                const targetTenant = allTenants.find(
+                  (item) => item.tenant.id === fetchedTenant.id,
+                );
+
+                if (targetTenant?.admin?.id) {
+                  setTenantOwner({
+                    id: targetTenant.admin.id,
+                    name: targetTenant.admin.name || fetchedTenant.name,
+                    email: targetTenant.admin.email,
+                    role: "admin",
+                    tenantId: fetchedTenant.id,
+                  } as User);
+                } else {
+                  setTenantOwner(null);
+                }
+              } catch (superAdminOwnerError) {
+                console.warn(
+                  "Error resolving tenant owner for superadmin via API",
+                  superAdminOwnerError,
+                );
+                setTenantOwner(null);
+              }
+            } else if (!user?.masterId) {
               // Admin/Master/SuperAdmin: query users in tenant to find owner
               const q = query(
                 collection(db, "users"),
@@ -225,6 +256,20 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     loadTenant();
   }, [loadTenant]);
 
+  React.useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (
+        event.key === VIEWING_AS_TENANT_KEY ||
+        event.key === VIEWING_AS_TENANT_DATA_KEY
+      ) {
+        setRefreshTrigger((prev) => prev + 1);
+      }
+    };
+
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
   // Apply tenant theme synchronously to avoid flash
   React.useLayoutEffect(() => {
     if (tenant) {
@@ -268,12 +313,16 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const clearViewingTenant = () => {
     sessionStorage.removeItem(VIEWING_AS_TENANT_KEY);
     sessionStorage.removeItem(VIEWING_AS_TENANT_DATA_KEY);
+    localStorage.removeItem(VIEWING_AS_TENANT_KEY);
+    localStorage.removeItem(VIEWING_AS_TENANT_DATA_KEY);
     setRefreshTrigger((prev) => prev + 1);
   };
 
   const setViewingTenant = (newTenant: Tenant) => {
     sessionStorage.setItem(VIEWING_AS_TENANT_KEY, newTenant.id);
     sessionStorage.setItem(VIEWING_AS_TENANT_DATA_KEY, JSON.stringify(newTenant));
+    localStorage.setItem(VIEWING_AS_TENANT_KEY, newTenant.id);
+    localStorage.setItem(VIEWING_AS_TENANT_DATA_KEY, JSON.stringify(newTenant));
     setTenant(newTenant); // Immediate update
     // We don't trigger refresh here because we just manually set the state
     // ideally we should also fetch owner here or trigger refresh

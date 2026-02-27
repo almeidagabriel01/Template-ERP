@@ -9,6 +9,8 @@ import { ProductsSkeleton } from "@/app/products/_components/products-skeleton";
 import { ProductsTableSkeleton } from "@/app/products/_components/products-table-skeleton";
 import { normalize } from "@/utils/text";
 import { useTenant } from "@/providers/tenant-provider";
+import { useAuth } from "@/providers/auth-provider";
+import { SelectTenantState } from "@/components/shared/select-tenant-state";
 import { Service, ServiceService } from "@/services/service-service";
 import { useServiceActions } from "@/hooks/useServiceActions";
 import { StockEditableCell } from "@/app/products/_components/stock-editable-cell";
@@ -34,6 +36,7 @@ import { QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
 
 export default function ServicesPage() {
   const { tenant, isLoading: tenantLoading } = useTenant();
+  const { user } = useAuth();
   const { canCreate, canDelete, canEdit } = usePagePermission("services");
   const [allServices, setAllServices] = useState<Service[] | null>(null);
   const [isLoadingAll, setIsLoadingAll] = useState(false);
@@ -348,6 +351,10 @@ export default function ServicesPage() {
 
   return (
     <>
+      {!tenantLoading && !tenant && user?.role === "superadmin" ? (
+        <SelectTenantState />
+      ) : (
+        <>
       <div className="space-y-6 flex flex-col min-h-[calc(100vh_-_180px)]">
         <div className="flex items-center justify-between">
           <div>
@@ -437,6 +444,8 @@ export default function ServicesPage() {
         )}
       </div>
       {renderDialogs()}
+      </>
+      )}
     </>
   );
 }

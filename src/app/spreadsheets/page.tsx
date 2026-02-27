@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Search, Edit, Trash2, FileSpreadsheet } from "lucide-react";
 import { toast } from '@/lib/toast';
 import { useTenant } from "@/providers/tenant-provider";
+import { useAuth } from "@/providers/auth-provider";
 import {
   Spreadsheet,
   SpreadsheetService,
@@ -29,9 +30,11 @@ import { DataTable, DataTableColumn } from "@/components/ui/data-table";
 import { useSort } from "@/hooks/use-sort";
 import { QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
 import { SpreadsheetsSkeleton } from "./_components/spreadsheets-skeleton";
+import { SelectTenantState } from "@/components/shared/select-tenant-state";
 
 export default function SpreadsheetsPage() {
   const { tenant, isLoading: tenantLoading } = useTenant();
+  const { user } = useAuth();
   const router = useRouter();
   const [allSpreadsheets, setAllSpreadsheets] = useState<Spreadsheet[] | null>(
     null,
@@ -232,6 +235,10 @@ export default function SpreadsheetsPage() {
 
   if (isPageLoading) {
     return <SpreadsheetsSkeleton />;
+  }
+
+  if (!tenant && user?.role === "superadmin") {
+    return <SelectTenantState />;
   }
 
   return (

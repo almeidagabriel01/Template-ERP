@@ -228,6 +228,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
 
       sessionStorage.removeItem("viewingAsTenant");
+      sessionStorage.removeItem("viewingAsTenantData");
+      localStorage.removeItem("viewingAsTenant");
+      localStorage.removeItem("viewingAsTenantData");
 
       document.documentElement.style.removeProperty("--primary");
       const styleTag = document.getElementById("tenant-styles");

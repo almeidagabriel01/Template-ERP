@@ -13,6 +13,7 @@ import { formatCurrency } from "@/utils/format";
 import { useFinancialData } from "./_hooks/useFinancialData";
 import { FinancialSkeleton } from "./_components/financial-skeleton";
 import { useTenant } from "@/providers/tenant-provider";
+import { useAuth } from "@/providers/auth-provider";
 import {
   FinancialSummaryCards,
   TransactionCard,
@@ -24,6 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSort } from "@/hooks/use-sort";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { Loader2 } from "lucide-react";
+import { SelectTenantState } from "@/components/shared/select-tenant-state";
 
 const isDownPaymentLike = (t: Transaction): boolean =>
   !!t.isDownPayment || (t.installmentNumber || 0) === 0;
@@ -203,7 +205,8 @@ function TransactionListInfinite({
 }
 
 export default function FinancialPage() {
-  const { isLoading: tenantLoading } = useTenant();
+  const { tenant, isLoading: tenantLoading } = useTenant();
+  const { user } = useAuth();
   const { canCreate, canEdit, canDelete } = usePagePermission("financial");
   const {
     summary,
@@ -462,6 +465,10 @@ export default function FinancialPage() {
   // Show loading first - before checking plan access to avoid flash
   if (tenantLoading || isPlanLoading) {
     return <FinancialSkeleton />;
+  }
+
+  if (!tenant && user?.role === "superadmin") {
+    return <SelectTenantState />;
   }
 
   // Check plan access after loading is complete
