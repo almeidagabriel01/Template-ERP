@@ -10,6 +10,8 @@ import { DataTable } from "@/components/ui/data-table";
 
 import { usePagePermission } from "@/hooks/usePagePermission";
 import { useContactsCtrl } from "./_hooks/use-contacts-ctrl";
+import { useAuth } from "@/providers/auth-provider";
+import { SelectTenantState } from "@/components/shared/select-tenant-state";
 import { ContactsToolbar } from "./_components/contacts-toolbar";
 import {
   ContactsEmptyState,
@@ -20,6 +22,7 @@ import { DeleteClientDialog } from "./_components/delete-client-dialog";
 
 export default function CustomersPage() {
   const { canCreate, canDelete, canEdit } = usePagePermission("clients");
+  const { user } = useAuth();
   const { state, actions } = useContactsCtrl();
 
   const {
@@ -46,8 +49,12 @@ export default function CustomersPage() {
   );
 
   // Initial loading state
-  if (!tenant) {
+  if (state.tenantLoading) {
     return <ContactsSkeleton />;
+  }
+
+  if (!tenant && user?.role === "superadmin") {
+    return <SelectTenantState />;
   }
 
   return (

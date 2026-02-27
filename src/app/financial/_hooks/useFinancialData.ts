@@ -218,7 +218,17 @@ export function useFinancialData(): UseFinancialDataReturn {
 
   const fetchData = React.useCallback(
     async (background = false) => {
-      if (!tenant || (!hasFinancial && !isPlanLoading)) return;
+      if (!tenant) {
+        setTransactions([]);
+        setWallets([]);
+        if (!background) setIsLoading(false);
+        return;
+      }
+
+      if (!hasFinancial && !isPlanLoading) {
+        if (!background) setIsLoading(false);
+        return;
+      }
 
       if (!background) setIsLoading(true);
       try {

@@ -11,6 +11,7 @@ import { Proposal, ProposalStatus, ProposalAttachment } from "@/types/proposal";
 import { ProposalActionsDropdown } from "@/components/features/proposal/proposal-actions-dropdown";
 import { ProposalAttachmentsDialog } from "@/components/features/proposal/proposal-attachments-dialog";
 import { useTenant } from "@/providers/tenant-provider";
+import { useAuth } from "@/providers/auth-provider";
 import {
   Plus,
   FileText,
@@ -79,6 +80,7 @@ const statusOptions: {
 ];
 
 import { ProposalService } from "@/services/proposal-service";
+import { SelectTenantState } from "@/components/shared/select-tenant-state";
 import { usePagePermission } from "@/hooks/usePagePermission";
 import { usePdfGenerator } from "@/components/features/proposal/pdf/use-pdf-generator";
 import { Tenant } from "@/types";
@@ -126,6 +128,7 @@ function PdfDownloader({
 export default function ProposalsPage() {
   const router = useRouter();
   const { tenant } = useTenant();
+  const { user } = useAuth();
   const { canCreate, canEdit, canDelete } = usePagePermission("proposals");
   const [proposals, setProposals] = React.useState<Proposal[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -256,7 +259,10 @@ export default function ProposalsPage() {
   React.useEffect(() => {
     let cancelled = false;
     const check = async () => {
-      if (!tenant) return;
+      if (!tenant) {
+        setHasAnyProposals(false);
+        return;
+      }
       try {
         await ProposalService.waitForSave();
         if (cancelled) return;
@@ -282,7 +288,10 @@ export default function ProposalsPage() {
   React.useEffect(() => {
     let cancelled = false;
     const waitPendingSave = async () => {
-      if (!tenant) return;
+      if (!tenant) {
+        setIsAwaitingPendingSave(false);
+        return;
+      }
       setIsAwaitingPendingSave(true);
       try {
         await ProposalService.waitForSave();
@@ -926,6 +935,10 @@ export default function ProposalsPage() {
 
   return (
     <>
+      {!tenant && user?.role === "superadmin" ? (
+        <SelectTenantState />
+      ) : (
+        <>
       {showFullPageSkeleton && <ProposalsSkeleton />}
       <div
         className={cn(
@@ -1034,6 +1047,8 @@ export default function ProposalsPage() {
         )}
       </div>
       {renderDialogs()}
+      </>
+      )}
 
       <PdfDownloader
         proposal={proposals.find((p) => p.id === downloadingId) || null}

@@ -26,10 +26,11 @@ import {
 import { DashboardSkeleton } from "./_components/dashboard-skeleton";
 
 import { useTenant } from "@/providers/tenant-provider";
+import { SelectTenantState } from "@/components/shared/select-tenant-state";
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { tenantOwner } = useTenant();
+  const { tenantOwner, tenant } = useTenant();
   const {
     financialSummary,
     clients,
@@ -48,6 +49,10 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return <DashboardSkeleton />;
+  }
+
+  if (!tenant && user?.role === "superadmin") {
+    return <SelectTenantState />;
   }
 
   return (

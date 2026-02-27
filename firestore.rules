@@ -46,6 +46,18 @@ service cloud.firestore {
     }
 
     /**
+     * Firestore role fallback for superadmin checks.
+     * This avoids hard failures when production tokens are temporarily stale
+     * while still requiring an authenticated, server-controlled user document.
+     */
+    function hasSuperAdminRoleInUserDoc() {
+      return isAuthenticated()
+             && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+             && get(/databases/$(database)/documents/users/$(request.auth.uid))
+                  .data.get('role', '') in ['superadmin', 'SUPERADMIN'];
+    }
+
+    /**
      * Claims-based master source (trusted token claim)
      */
     function getAuthMasterId() {
@@ -111,7 +123,9 @@ service cloud.firestore {
      * Super admins have full read access to all tenant data for administration.
      */
     function isSuperAdmin() {
-      return isAuthenticated() && getAuthRole() in ['superadmin', 'SUPERADMIN'];
+      return isAuthenticated()
+             && (getAuthRole() in ['superadmin', 'SUPERADMIN']
+                 || hasSuperAdminRoleInUserDoc());
     }
 
     /**
