@@ -7,11 +7,28 @@ import { User } from "@/types";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
+import { callPublicApi } from "@/lib/api-client";
 import { ALLOWED_TYPES } from "@/services/storage-service";
 import { TenantNiche } from "@/types";
 
 type AuthMode = "login" | "register" | "forgot";
 const AUTH_MODES: AuthMode[] = ["login", "register", "forgot"];
+
+interface ContactValidationResponse {
+  success: boolean;
+  email?: {
+    valid: boolean;
+    exists: boolean;
+    normalized?: string;
+    reason?: string;
+  };
+  phoneNumber?: {
+    valid: boolean;
+    exists: boolean;
+    normalized?: string;
+    reason?: string;
+  };
+}
 
 interface UseLoginFormReturn {
   // Login fields
@@ -311,6 +328,7 @@ export function useLoginForm(): UseLoginFormReturn {
   const handleRegister = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setError("");
+    setErrors({});
 
     if (password.length < 6) {
       setError("A senha deve ter pelo menos 6 caracteres.");
@@ -327,6 +345,48 @@ export function useLoginForm(): UseLoginFormReturn {
         ...prev,
         companyName: "Nome da empresa é obrigatório",
       }));
+      return;
+    }
+
+    try {
+      const contactValidation = await callPublicApi<ContactValidationResponse>(
+        "v1/validation/contact",
+        "POST",
+        {
+          email,
+          phoneNumber: phoneNumber || undefined,
+        },
+      );
+
+      const newErrors: Record<string, string> = {};
+
+      if (contactValidation.email && !contactValidation.email.valid) {
+        newErrors.email =
+          contactValidation.email.reason || "Email inválido para cadastro.";
+      }
+
+      if (phoneNumber && contactValidation.phoneNumber) {
+        if (!contactValidation.phoneNumber.valid) {
+          newErrors.phoneNumber =
+            contactValidation.phoneNumber.reason ||
+            "Telefone inválido para cadastro.";
+        }
+      }
+
+      if (Object.keys(newErrors).length > 0) {
+        setErrors((prev) => ({ ...prev, ...newErrors }));
+        setError(
+          newErrors.email ||
+            newErrors.phoneNumber ||
+            "Verifique os dados de contato informados.",
+        );
+        return;
+      }
+    } catch (validationError) {
+      console.error("Contact validation failed:", validationError);
+      setError(
+        "Não foi possível validar email/telefone agora. Tente novamente.",
+      );
       return;
     }
 

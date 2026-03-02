@@ -1,27 +1,21 @@
 ﻿import { Request, Response } from "express";
 import { db, auth } from "../../init";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { generateRandomPassword, isValidEmail } from "../../lib/admin-helpers";
+import { generateRandomPassword } from "../../lib/admin-helpers";
 import { UserDoc } from "../../lib/auth-helpers";
 import { isSuperAdminClaim, isTenantAdminClaim } from "../../lib/request-auth";
 import {
   enforceTenantPlanLimit,
   getTenantUsersUsage,
 } from "../../lib/tenant-plan-policy";
+import {
+  normalizeBrazilPhoneNumber,
+  validateBrazilMobilePhone,
+  validateEmailForSignup,
+} from "../../lib/contact-validation";
 
 export function normalizePhoneNumber(value: unknown): string {
-  if (!value) return "";
-  let digits = String(value).replace(/\D/g, "");
-
-  if (digits.length === 10 || digits.length === 11) {
-    digits = "55" + digits;
-  }
-
-  if (digits.length === 12 && digits.startsWith("55")) {
-    digits = `${digits.substring(0, 4)}9${digits.substring(4)}`;
-  }
-
-  return digits;
+  return normalizeBrazilPhoneNumber(value);
 }
 
 export async function upsertPhoneNumberIndexTx(
@@ -93,8 +87,20 @@ export const createMember = async (req: Request, res: Response) => {
         .status(400)
         .json({ message: "Nome deve ter pelo menos 2 caracteres" });
     }
-    if (!input.email || !isValidEmail(input.email)) {
-      return res.status(400).json({ message: "Email inválido" });
+    const emailValidation = await validateEmailForSignup(input.email);
+    if (!emailValidation.valid) {
+      return res.status(400).json({
+        message: emailValidation.reason || "Email inválido",
+      });
+    }
+
+    if (input.phoneNumber !== undefined && input.phoneNumber !== null) {
+      const phoneValidation = validateBrazilMobilePhone(input.phoneNumber);
+      if (!phoneValidation.valid) {
+        return res.status(400).json({
+          message: phoneValidation.reason || "Telefone inválido",
+        });
+      }
     }
 
     const isSuperAdmin = isSuperAdminClaim(req);
@@ -150,7 +156,7 @@ export const createMember = async (req: Request, res: Response) => {
 
     // Check Email in Auth
     try {
-      await auth.getUserByEmail(input.email);
+      await auth.getUserByEmail(emailValidation.normalizedEmail);
       return res
         .status(409)
         .json({ message: "Este email já está cadastrado no sistema" });
@@ -170,7 +176,7 @@ export const createMember = async (req: Request, res: Response) => {
     let memberAuthUser;
     try {
       memberAuthUser = await auth.createUser({
-        email: input.email,
+        email: emailValidation.normalizedEmail,
         password: password,
         displayName: input.name,
         emailVerified: false,
@@ -215,7 +221,7 @@ export const createMember = async (req: Request, res: Response) => {
 
         transaction.set(memberRef, {
           name: input.name.trim(),
-          email: input.email.toLowerCase().trim(),
+          email: emailValidation.normalizedEmail,
           phoneNumber: normalizePhoneNumber(input.phoneNumber) || null,
           photoUrl: null,
           role: "MEMBER",
@@ -307,13 +313,38 @@ export const updateMember = async (req: Request, res: Response) => {
     if (!isSuperAdmin && memberData?.masterId !== masterId)
       return res.status(403).json({ message: "Permissão negada." });
 
+    let normalizedEmail: string | null = null;
+    if (email !== undefined && email !== null && String(email).trim() !== "") {
+      const emailValidation = await validateEmailForSignup(email);
+      if (!emailValidation.valid) {
+        return res.status(400).json({
+          message: emailValidation.reason || "Email inválido",
+        });
+      }
+      normalizedEmail = emailValidation.normalizedEmail;
+    }
+
+    if (phoneNumber !== undefined && phoneNumber !== null) {
+      const phoneValidation = validateBrazilMobilePhone(phoneNumber);
+      if (!phoneValidation.valid) {
+        return res.status(400).json({
+          message: phoneValidation.reason || "Telefone inválido",
+        });
+      }
+    }
+
     // Update Auth
     const authUpdates: {
       email?: string;
       password?: string;
       displayName?: string;
     } = {};
-    if (email && email !== memberData?.email) authUpdates.email = email;
+    if (
+      normalizedEmail &&
+      normalizedEmail !== String(memberData?.email || "").toLowerCase()
+    ) {
+      authUpdates.email = normalizedEmail;
+    }
     if (password && password.length >= 6) authUpdates.password = password;
     if (name) authUpdates.displayName = name;
 
@@ -339,7 +370,7 @@ export const updateMember = async (req: Request, res: Response) => {
       updatedAt: Timestamp.now(),
     };
     if (name) firestoreUpdates.name = name;
-    if (email) firestoreUpdates.email = email;
+    if (normalizedEmail) firestoreUpdates.email = normalizedEmail;
     if (phoneNumber !== undefined) {
       firestoreUpdates.phoneNumber = normalizePhoneNumber(phoneNumber);
     }
@@ -1095,10 +1126,12 @@ export const createTenant = async (req: Request, res: Response) => {
       });
     }
 
-    if (!isValidEmail(adminEmail)) {
-      return res
-        .status(400)
-        .json({ message: "Email do administrador inválido." });
+    const adminEmailValidation = await validateEmailForSignup(adminEmail);
+    if (!adminEmailValidation.valid) {
+      return res.status(400).json({
+        message:
+          adminEmailValidation.reason || "Email do administrador inválido.",
+      });
     }
 
     if (adminPassword.length < 6) {
@@ -1108,7 +1141,7 @@ export const createTenant = async (req: Request, res: Response) => {
     }
 
     try {
-      await auth.getUserByEmail(adminEmail);
+      await auth.getUserByEmail(adminEmailValidation.normalizedEmail);
       return res.status(409).json({ message: "Este email já está em uso." });
     } catch (err: unknown) {
       if (
@@ -1134,7 +1167,7 @@ export const createTenant = async (req: Request, res: Response) => {
       .toLowerCase();
 
     const adminAuth = await auth.createUser({
-      email: adminEmail,
+      email: adminEmailValidation.normalizedEmail,
       password: adminPassword,
       displayName: adminName,
       emailVerified: false,
@@ -1186,7 +1219,7 @@ export const createTenant = async (req: Request, res: Response) => {
       const userRef = db.collection("users").doc(adminAuth.uid);
       transaction.set(userRef, {
         name: adminName,
-        email: adminEmail,
+        email: adminEmailValidation.normalizedEmail,
         phoneNumber: normalizePhoneNumber(body.adminPhoneNumber) || null,
         role: "admin",
         tenantId,

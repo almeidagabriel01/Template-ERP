@@ -305,6 +305,11 @@ function LoginContent() {
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
                     />
+                    {errors.phoneNumber && (
+                      <p className="text-sm text-destructive">
+                        {errors.phoneNumber}
+                      </p>
+                    )}
                   </div>
                   <CredentialFields
                     email={email}
