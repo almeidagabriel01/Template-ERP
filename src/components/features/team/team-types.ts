@@ -27,16 +27,37 @@ export const AVAILABLE_PAGES = [
     viewOnly: true,
   },
   {
+    id: "kanban",
+    name: "Kanban",
+    description: "Gestão de tarefas e fluxos",
+  },
+  {
     id: "proposals",
     name: "Propostas",
     description: "Criar e gerenciar propostas",
   },
   { id: "clients", name: "Clientes", description: "Base de clientes" },
   { id: "products", name: "Produtos", description: "Catálogo de produtos" },
+  { id: "services", name: "Serviços", description: "Catálogo de serviços" },
   {
-    id: "financial",
-    name: "Financeiro",
-    description: "Fluxo de caixa e transações",
+    id: "spreadsheets",
+    name: "Planilhas",
+    description: "Planilhas integradas",
+  },
+  {
+    id: "transactions",
+    name: "Lançamentos (Financeiro)",
+    description: "Registros e movimentações financeiras",
+  },
+  {
+    id: "wallet",
+    name: "Carteira (Financeiro)",
+    description: "Gestão de saldos e contas",
+  },
+  {
+    id: "solutions",
+    name: "Soluções",
+    description: "Aplicativos e automações",
   },
 ];
 

@@ -118,11 +118,22 @@ export function Header({}: HeaderProps) {
 
     const fetchPlanName = async () => {
       // Determine which user's plan to fetch
-      const targetUser = isViewingAsTenant && tenant?.id ? tenantOwner : user;
+      // If superadmin impersonating -> use tenantOwner
+      // If normal user -> use user
+      // If member user -> their planId is actually null/free in their own object but they should inherit the master's,
+      // which we can get by fetching the master if we don't have tenantOwner easily available, or just rely on tenantOwner if provided by useTenant
+      const isMember = user?.role === "member" || !!user?.masterId;
+      let targetUser = isViewingAsTenant && tenant?.id ? tenantOwner : user;
 
-      // Wait tenant owner when impersonating. If still missing after loading, fallback safely.
+      // If the current user is a member, their true plan is the tenantOwner's plan
+      // (which the tenant provider fetches when loading the tenant).
+      if (isMember && tenantOwner) {
+        targetUser = tenantOwner;
+      }
+
+      // Wait tenant owner when impersonating or member. If still missing after loading, fallback safely.
       if (!targetUser) {
-        if (isViewingAsTenant && !isTenantLoading) {
+        if ((isViewingAsTenant || isMember) && !isTenantLoading) {
           setUserPlanName("Sem Plano");
         }
         return;

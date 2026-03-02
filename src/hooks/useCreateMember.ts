@@ -15,7 +15,7 @@
 
 import { useState, useCallback } from "react";
 import { callApi } from "@/lib/api-client";
-import { toast } from '@/lib/toast';
+import { toast } from "@/lib/toast";
 
 // ============================================
 // TYPES
@@ -172,22 +172,32 @@ export function getDefaultPermissions(
   // Dashboard is view-only (no create/edit/delete functionality)
   const basePermissions: MemberPermissions = {
     dashboard: { canView: true },
+    kanban: { canView: true },
     proposals: { canView: true },
     clients: { canView: true },
     products: { canView: true },
     services: { canView: true },
-    ...(hasFinancial && { financial: { canView: true } }),
+    spreadsheets: { canView: true },
+    solutions: { canView: true },
+    ...(hasFinancial && {
+      transactions: { canView: true },
+      wallet: { canView: true },
+    }),
   };
 
   if (roleType === "editor") {
     return {
       dashboard: { canView: true },
+      kanban: { canView: true, canCreate: true, canEdit: true },
       proposals: { canView: true, canCreate: true, canEdit: true },
       clients: { canView: true, canCreate: true, canEdit: true },
       products: { canView: true, canCreate: true, canEdit: true },
       services: { canView: true, canCreate: true, canEdit: true },
+      spreadsheets: { canView: true, canCreate: true, canEdit: true },
+      solutions: { canView: true, canCreate: true, canEdit: true },
       ...(hasFinancial && {
-        financial: { canView: true, canCreate: true, canEdit: true },
+        transactions: { canView: true, canCreate: true, canEdit: true },
+        wallet: { canView: true, canCreate: true, canEdit: true },
       }),
     };
   }
@@ -195,6 +205,12 @@ export function getDefaultPermissions(
   if (roleType === "admin") {
     return {
       dashboard: { canView: true },
+      kanban: {
+        canView: true,
+        canCreate: true,
+        canEdit: true,
+        canDelete: true,
+      },
       proposals: {
         canView: true,
         canCreate: true,
@@ -219,8 +235,26 @@ export function getDefaultPermissions(
         canEdit: true,
         canDelete: true,
       },
+      spreadsheets: {
+        canView: true,
+        canCreate: true,
+        canEdit: true,
+        canDelete: true,
+      },
+      solutions: {
+        canView: true,
+        canCreate: true,
+        canEdit: true,
+        canDelete: true,
+      },
       ...(hasFinancial && {
-        financial: {
+        transactions: {
+          canView: true,
+          canCreate: true,
+          canEdit: true,
+          canDelete: true,
+        },
+        wallet: {
           canView: true,
           canCreate: true,
           canEdit: true,

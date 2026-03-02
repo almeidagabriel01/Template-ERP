@@ -80,7 +80,7 @@ interface UsePlanLimitsReturn {
 
 export function usePlanLimits(): UsePlanLimitsReturn {
   const { user } = useAuth();
-  const { tenant, isLoading: isTenantLoading } = useTenant();
+  const { tenant, tenantOwner, isLoading: isTenantLoading } = useTenant();
   const [baseFeatures, setBaseFeatures] = useState<PlanFeatures | null>(null);
   const [planTier, setPlanTier] = useState<PlanTier>("starter");
   const [purchasedAddons, setPurchasedAddons] = useState<AddonType[]>([]);
@@ -133,7 +133,17 @@ export function usePlanLimits(): UsePlanLimitsReturn {
             effectivePlanId = masterSnap.data().planId;
           }
         } catch (err) {
-          console.error("Error fetching master plan:", err);
+          console.warn(
+            "Expected permission error fetching master plan directly in usePlanLimits. Using tenant owner plan if available.",
+            err,
+          );
+          // If we can't read the master doc (because we are a member), we can rely on the tenant context
+          // However, usePlanLimits is called before/during tenant loading sometimes.
+          // The best approach here is to just let the standard plan load fallback if we can't get it immediately,
+          // or use the tenant's cached plan info if available globally.
+          if (tenantOwner?.planId) {
+            effectivePlanId = tenantOwner.planId;
+          }
         }
       }
 
@@ -187,7 +197,7 @@ export function usePlanLimits(): UsePlanLimitsReturn {
 
     loadFeatures();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.role, user?.planId, masterId]);
+  }, [user?.role, user?.planId, masterId, tenantOwner]);
 
   // Load addons when tenant changes or finishes loading
   useEffect(() => {

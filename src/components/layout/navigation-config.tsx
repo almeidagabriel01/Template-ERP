@@ -29,6 +29,7 @@ export type SubMenuItem = {
   label: string;
   href: string;
   masterOnly?: boolean;
+  pageId?: string;
 };
 
 export const menuItems: MenuItem[] = [
@@ -62,11 +63,13 @@ export const menuItems: MenuItem[] = [
         icon: ReceiptText,
         label: "Lançamentos",
         href: "/financial",
+        pageId: "transactions",
       },
       {
         icon: WalletCards,
         label: "Carteiras",
         href: "/wallets",
+        pageId: "wallet",
       },
     ],
   },
@@ -82,11 +85,13 @@ export const menuItems: MenuItem[] = [
     icon: FileSpreadsheet,
     label: "Planilhas",
     href: "/spreadsheets",
+    pageId: "spreadsheets",
   },
   {
     icon: Bot,
     label: "Soluções",
     href: "/solutions",
+    pageId: "solutions",
   },
   {
     icon: UsersRound,

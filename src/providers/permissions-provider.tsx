@@ -138,13 +138,21 @@ export function PermissionsProvider({
         companyId = user.tenantId || "";
       }
 
-      // 2. If MEMBER, fetch MASTER's name
+      // 2. If MEMBER, fetch MASTER's name (Try-catch to prevent permission errors)
       let masterName: string | undefined;
       if (role === "MEMBER" && masterId) {
-        const masterRef = doc(db, "users", masterId);
-        const masterSnap = await getDoc(masterRef);
-        if (masterSnap.exists()) {
-          masterName = masterSnap.data().name;
+        try {
+          const masterRef = doc(db, "users", masterId);
+          const masterSnap = await getDoc(masterRef);
+          if (masterSnap.exists()) {
+            masterName = masterSnap.data().name;
+          }
+        } catch (err) {
+          console.warn(
+            "Could not fetch master name (likely expected permission denial):",
+            err,
+          );
+          masterName = "Administrador"; // Safe fallback
         }
       }
 
