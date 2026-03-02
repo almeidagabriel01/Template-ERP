@@ -16,6 +16,7 @@ import { sharedTransactionsRoutes } from "./routes/shared-transactions.routes";
 import notificationsRoutes from "./routes/notifications.routes";
 import { whatsappRoutes } from "./routes/whatsapp.routes";
 import { kanbanRoutes } from "./routes/kanban.routes";
+import { validationRoutes } from "./routes/validation.routes";
 import {
   allowCorsFallbackInCurrentEnvironment,
   evaluateCorsDecision,
@@ -355,6 +356,9 @@ app.use("/webhooks/whatsapp", publicWebhookLimiter, whatsappRoutes);
 
 // Public Stripe Routes (Plans)
 app.use("/v1/stripe", publicGeneralLimiter, publicStripeRoutes);
+
+// Public validation routes (register pre-check)
+app.use("/v1/validation", publicGeneralLimiter, validationRoutes);
 
 // Public shared links
 app.use("/v1", publicShareLimiter, sharedProposalsRoutes);

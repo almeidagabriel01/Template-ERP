@@ -5,6 +5,7 @@ import {
   upsertPhoneNumberIndexTx,
   normalizePhoneNumber,
 } from "./admin.controller";
+import { validateBrazilMobilePhone } from "../../lib/contact-validation";
 
 export const updateProfile = async (req: Request, res: Response) => {
   try {
@@ -42,6 +43,13 @@ export const updateProfile = async (req: Request, res: Response) => {
     }
 
     if (phoneNumber !== undefined) {
+      const phoneValidation = validateBrazilMobilePhone(phoneNumber);
+      if (!phoneValidation.valid) {
+        return res.status(400).json({
+          message: phoneValidation.reason || "Telefone inválido.",
+        });
+      }
+
       // Normalize inside the tx function
       updateData.phoneNumber = normalizePhoneNumber(phoneNumber) || null;
 
