@@ -112,13 +112,14 @@ export function useLoginForm(): UseLoginFormReturn {
   const searchParams = useSearchParams();
 
   const modeParam = searchParams.get("mode");
-  const mode: AuthMode = pathname === "/register"
-    ? "register"
-    : pathname === "/forgot-password"
-      ? "forgot"
-    : AUTH_MODES.includes(modeParam as AuthMode)
-      ? (modeParam as AuthMode)
-      : "login";
+  const mode: AuthMode =
+    pathname === "/register"
+      ? "register"
+      : pathname === "/forgot-password"
+        ? "forgot"
+        : AUTH_MODES.includes(modeParam as AuthMode)
+          ? (modeParam as AuthMode)
+          : "login";
 
   const setMode = React.useCallback(
     (value: AuthMode) => {
@@ -182,18 +183,37 @@ export function useLoginForm(): UseLoginFormReturn {
         router.replace("/dashboard");
       } else {
         const pages = [
+          "kanban",
           "proposals",
           "clients",
           "products",
-          "financial",
+          "services",
+          "spreadsheets",
+          "transactions",
+          "wallet",
+          "financial", // fallback for older perms
           "profile",
         ];
+
+        const routeMap: Record<string, string> = {
+          kanban: "/kanban",
+          proposals: "/proposals",
+          clients: "/contacts",
+          products: "/products",
+          services: "/services",
+          spreadsheets: "/spreadsheets",
+          transactions: "/financial",
+          wallet: "/wallets",
+          financial: "/financial",
+          profile: "/profile",
+        };
+
         const firstAllowed = pages.find(
           (page) => perms[page]?.canView === true || page === "profile",
         );
 
-        if (firstAllowed) {
-          router.replace(`/${firstAllowed}`);
+        if (firstAllowed && routeMap[firstAllowed]) {
+          router.replace(routeMap[firstAllowed]);
         } else {
           router.replace("/403");
         }

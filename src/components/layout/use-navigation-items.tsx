@@ -22,9 +22,13 @@ export function useNavigationItems(): { visibleMenuItems: MenuItem[] } {
 
       if (item.pageId) {
         if (item.children) {
-          const visibleChildren = item.children.filter(
-            (child) => !child.masterOnly,
-          );
+          const visibleChildren = item.children.filter((child) => {
+            if (child.masterOnly && !isMaster) return false;
+            if (child.pageId && !isMaster) {
+              return hasPermission(child.pageId, "view");
+            }
+            return true;
+          });
           return visibleChildren.length > 0;
         }
         return hasPermission(item.pageId, "view");

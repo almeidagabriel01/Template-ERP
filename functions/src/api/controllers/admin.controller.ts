@@ -40,9 +40,24 @@ export async function upsertPhoneNumberIndexTx(
 
   if (!nextPhone && !prevPhone) return;
 
+  let indexSnap: FirebaseFirestore.DocumentSnapshot | undefined;
+  let prevSnap: FirebaseFirestore.DocumentSnapshot | undefined;
+  let indexRef: FirebaseFirestore.DocumentReference | undefined;
+  let prevRef: FirebaseFirestore.DocumentReference | undefined;
+
+  // 1. DO ALL GETS FIRST
   if (nextPhone) {
-    const indexRef = db.collection("phoneNumberIndex").doc(nextPhone);
-    const indexSnap = await transaction.get(indexRef);
+    indexRef = db.collection("phoneNumberIndex").doc(nextPhone);
+    indexSnap = await transaction.get(indexRef);
+  }
+
+  if (prevPhone && prevPhone !== nextPhone) {
+    prevRef = db.collection("phoneNumberIndex").doc(prevPhone);
+    prevSnap = await transaction.get(prevRef);
+  }
+
+  // 2. DO ALL WRITES AFTER GETS
+  if (nextPhone && indexRef && indexSnap) {
     const indexData = indexSnap.data() as { userId?: string } | undefined;
 
     if (indexSnap.exists && indexData?.userId && indexData.userId !== userId) {
@@ -60,9 +75,7 @@ export async function upsertPhoneNumberIndexTx(
     );
   }
 
-  if (prevPhone && prevPhone !== nextPhone) {
-    const prevRef = db.collection("phoneNumberIndex").doc(prevPhone);
-    const prevSnap = await transaction.get(prevRef);
+  if (prevPhone && prevPhone !== nextPhone && prevRef && prevSnap) {
     const prevData = prevSnap.data() as { userId?: string } | undefined;
     if (prevSnap.exists && prevData?.userId === userId) {
       transaction.delete(prevRef);
@@ -169,6 +182,21 @@ export const createMember = async (req: Request, res: Response) => {
 
     const memberId = memberAuthUser.uid;
 
+    try {
+      await auth.setCustomUserClaims(memberId, {
+        role: "MEMBER",
+        masterId: masterId,
+        tenantId: tenantId,
+        companyId: tenantId,
+      });
+    } catch (err) {
+      console.error("Error setting custom claims:", err);
+      await auth.deleteUser(memberId);
+      return res
+        .status(500)
+        .json({ message: "Erro ao configurar permissões do usuário." });
+    }
+
     // Transactional Write
     try {
       await db.runTransaction(async (transaction) => {
@@ -177,6 +205,13 @@ export const createMember = async (req: Request, res: Response) => {
         const companySnap = await transaction.get(companyRef);
 
         const memberRef = db.collection("users").doc(memberId);
+
+        await upsertPhoneNumberIndexTx(transaction, {
+          userId: memberId,
+          tenantId,
+          newPhoneNumber: input.phoneNumber,
+          now,
+        });
 
         transaction.set(memberRef, {
           name: input.name.trim(),
@@ -190,13 +225,6 @@ export const createMember = async (req: Request, res: Response) => {
           companyId: tenantId, // Standardize
           createdAt: now,
           updatedAt: now,
-        });
-
-        await upsertPhoneNumberIndexTx(transaction, {
-          userId: memberId,
-          tenantId,
-          newPhoneNumber: input.phoneNumber,
-          now,
         });
 
         const permissionsInput = input.permissions || {};
@@ -409,15 +437,25 @@ export const deleteMember = async (req: Request, res: Response) => {
       const companySnap = await t.get(companyRef);
       const memberPhone = normalizePhoneNumber(memberData?.phoneNumber);
 
-      t.delete(db.collection("users").doc(id));
+      let phoneSnap: FirebaseFirestore.DocumentSnapshot | undefined;
+      let phoneRef: FirebaseFirestore.DocumentReference | undefined;
+
+      // 1. ALL GETS FIRST
       if (memberPhone) {
-        const phoneRef = db.collection("phoneNumberIndex").doc(memberPhone);
-        const phoneSnap = await t.get(phoneRef);
+        phoneRef = db.collection("phoneNumberIndex").doc(memberPhone);
+        phoneSnap = await t.get(phoneRef);
+      }
+
+      // 2. ALL WRITES
+      t.delete(db.collection("users").doc(id));
+
+      if (memberPhone && phoneSnap && phoneRef) {
         const phoneData = phoneSnap.data() as { userId?: string } | undefined;
         if (phoneSnap.exists && phoneData?.userId === id) {
           t.delete(phoneRef);
         }
       }
+
       t.update(db.collection("users").doc(actualMasterId), {
         "usage.users": FieldValue.increment(-1),
       });
@@ -817,9 +855,7 @@ export const updateCredentials = async (req: Request, res: Response) => {
     const { userId, email, password, phoneNumber } = req.body;
 
     if (!userId) {
-      return res
-        .status(400)
-        .json({ message: "ID do usuário é obrigatório" });
+      return res.status(400).json({ message: "ID do usuário é obrigatório" });
     }
 
     if (!isSuperAdminClaim(req)) {
@@ -927,9 +963,7 @@ export const updateUserSubscription = async (req: Request, res: Response) => {
     const updates = req.body;
 
     if (!userId) {
-      return res
-        .status(400)
-        .json({ message: "ID do usuário é obrigatório" });
+      return res.status(400).json({ message: "ID do usuário é obrigatório" });
     }
 
     if (!isSuperAdminClaim(req)) {

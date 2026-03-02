@@ -20,7 +20,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormContainer, FormHeader } from "@/components/ui/form-components";
 import { Users, Shield, UserPlus, X, Loader2 } from "lucide-react";
-import { toast } from '@/lib/toast';
+import { toast } from "@/lib/toast";
 import {
   TeamMember,
   Permission,
@@ -52,68 +52,71 @@ export default function TeamPage() {
   const isFirstLoad = React.useRef(true);
 
   // Fetch team members
-  const fetchMembers = React.useCallback(async () => {
-    if (!user?.id) return;
+  const fetchMembers = React.useCallback(
+    async (forceLoader?: boolean) => {
+      if (!user?.id) return;
 
-    try {
-      if (isFirstLoad.current) setIsLoading(true);
+      try {
+        if (isFirstLoad.current || forceLoader) setIsLoading(true);
 
-      // Check if super admin is viewing another tenant
-      const viewingAsTenant =
-        typeof window !== "undefined"
-          ? sessionStorage.getItem("viewingAsTenant")
-          : null;
+        // Check if super admin is viewing another tenant
+        const viewingAsTenant =
+          typeof window !== "undefined"
+            ? sessionStorage.getItem("viewingAsTenant")
+            : null;
 
-      // Determine the master ID to query
-      let masterId = user.id;
-      if (user.role === "superadmin" && viewingAsTenant) {
-        // Extract owner ID from tenant ID (format: tenant_{userId})
-        masterId = viewingAsTenant.replace("tenant_", "");
-      }
+        // Determine the master ID to query
+        let masterId = user.id;
+        if (user.role === "superadmin" && viewingAsTenant) {
+          // Extract owner ID from tenant ID (format: tenant_{userId})
+          masterId = viewingAsTenant.replace("tenant_", "");
+        }
 
-      const membersQuery = query(
-        collection(db, "users"),
-        where("masterId", "==", masterId),
-      );
-
-      const snapshot = await getDocs(membersQuery);
-      const membersList: TeamMember[] = [];
-
-      for (const memberDoc of snapshot.docs) {
-        const data = memberDoc.data();
-
-        const permissionsSnapshot = await getDocs(
-          collection(db, "users", memberDoc.id, "permissions"),
+        const membersQuery = query(
+          collection(db, "users"),
+          where("masterId", "==", masterId),
         );
 
-        const permissions: Record<string, Permission> = {};
-        permissionsSnapshot.forEach((permDoc) => {
-          permissions[permDoc.id] = permDoc.data() as Permission;
-        });
+        const snapshot = await getDocs(membersQuery);
+        const membersList: TeamMember[] = [];
 
-        membersList.push({
-          id: memberDoc.id,
-          name: data.name || "Sem nome",
-          email: data.email || "",
-          role: data.role || "MEMBER",
-          createdAt: data.createdAt || new Date().toISOString(),
-          permissions,
-        });
+        for (const memberDoc of snapshot.docs) {
+          const data = memberDoc.data();
+
+          const permissionsSnapshot = await getDocs(
+            collection(db, "users", memberDoc.id, "permissions"),
+          );
+
+          const permissions: Record<string, Permission> = {};
+          permissionsSnapshot.forEach((permDoc) => {
+            permissions[permDoc.id] = permDoc.data() as Permission;
+          });
+
+          membersList.push({
+            id: memberDoc.id,
+            name: data.name || "Sem nome",
+            email: data.email || "",
+            role: data.role || "MEMBER",
+            createdAt: data.createdAt || new Date().toISOString(),
+            permissions,
+          });
+        }
+
+        setMembers(membersList);
+      } catch (error: unknown) {
+        console.error("Error fetching team members:", error);
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Erro ao carregar membros da equipe.";
+        toast.error(message);
+      } finally {
+        setIsLoading(false);
+        isFirstLoad.current = false;
       }
-
-      setMembers(membersList);
-    } catch (error: unknown) {
-      console.error("Error fetching team members:", error);
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Erro ao carregar membros da equipe.";
-      toast.error(message);
-    } finally {
-      setIsLoading(false);
-      isFirstLoad.current = false;
-    }
-  }, [user?.id, user?.role]);
+    },
+    [user?.id, user?.role],
+  );
 
   React.useEffect(() => {
     fetchMembers();
@@ -234,7 +237,7 @@ export default function TeamPage() {
         <div className="animate-in slide-in-from-top-4 fade-in duration-300 shrink-0">
           <CreateMemberSection
             onSuccess={() => {
-              fetchMembers();
+              fetchMembers(true);
               setIsCreatingMember(false);
             }}
           />
@@ -259,7 +262,7 @@ export default function TeamPage() {
                     onUpdatePermission={updatePermission}
                     saving={savingPermissions}
                     updatingKey={updatingKey}
-                    onRefresh={fetchMembers}
+                    onRefresh={() => fetchMembers(true)}
                   />
                 ))}
               </div>
