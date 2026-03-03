@@ -1,13 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Sparkles,
-  Users,
-  ChevronDown,
-  LogOut,
-  ArrowRight,
-} from "lucide-react";
+import { Sparkles, Users, ChevronDown, LogOut, ArrowRight } from "lucide-react";
 import { MobileMenu } from "@/components/ui/mobile-menu";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import { User } from "@/types";
@@ -63,9 +57,7 @@ export function LandingNavbar({ currentUser, onSignOut }: LandingNavbarProps) {
         {/* Buttons / User Menu */}
         <div className="flex items-center gap-3">
           {/* Theme Toggle */}
-          <AnimatedThemeToggler
-            className="p-2.5 rounded-xl bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-all duration-200"
-          />
+          <AnimatedThemeToggler className="p-2.5 rounded-xl bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-all duration-200" />
 
           {currentUser ? (
             <div className="relative group">
@@ -113,7 +105,7 @@ export function LandingNavbar({ currentUser, onSignOut }: LandingNavbarProps) {
                   Entrar
                 </button>
               </Link>
-              <Link href="/login" className="hidden md:block">
+              <Link href="/register" className="hidden md:block">
                 <button className="group relative px-5 py-2.5 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground rounded-xl font-medium flex items-center gap-2 transition-all duration-300 cursor-pointer shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:scale-105">
                   <span>Começar Agora</span>
                   <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
