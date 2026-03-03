@@ -205,7 +205,7 @@ export function LandingPricing({
 
                 {/* Button always at bottom */}
                 <Link
-                  href={`/subscribe?plan=${plan.tier}&interval=${billingInterval}`}
+                  href={`/register?plan=${plan.tier}&interval=${billingInterval}`}
                   className="mt-auto"
                 >
                   <motion.button
