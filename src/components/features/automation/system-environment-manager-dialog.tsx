@@ -58,9 +58,9 @@ export function SystemEnvironmentManagerDialog({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[800px] h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
         <div className="sr-only">
-          <DialogTitle>Gerenciador de Sistemas e Ambientes</DialogTitle>
+          <DialogTitle>Gerenciador de Soluções e Ambientes</DialogTitle>
           <DialogDescription>
-            Gerencie seus sistemas de automação, vincule ambientes e configure
+            Gerencie suas soluções de automação, vincule ambientes e configure
             produtos padrão para cada ambiente.
           </DialogDescription>
         </div>
@@ -100,7 +100,7 @@ export function SystemEnvironmentManagerDialog({
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50">
                     <Cpu className="w-12 h-12 mb-4" />
-                    <p>Selecione um sistema para gerenciar</p>
+                    <p>Selecione uma solução para gerenciar</p>
                   </div>
                 )}
               </div>
@@ -120,8 +120,8 @@ export function SystemEnvironmentManagerDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>Desvincular Ambiente</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja remover este ambiente deste sistema? A
-              configuração de produtos para este ambiente neste sistema será
+              Tem certeza que deseja remover este ambiente desta solução? A
+              configuração de produtos para este ambiente nesta solução será
               perdida.
             </AlertDialogDescription>
           </AlertDialogHeader>

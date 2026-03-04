@@ -311,7 +311,7 @@ export function SistemaSelector({
       {/* 1. Sistema Selection (First) */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label>Sistema</Label>
+          <Label>Solução</Label>
         </div>
         <div className="flex gap-2">
           <div className="flex-1 relative">
@@ -325,8 +325,8 @@ export function SistemaSelector({
                 value: sistema.id,
                 label: sistema.name,
               }))}
-              placeholder="Selecione um sistema..."
-              searchPlaceholder="Buscar sistema..."
+              placeholder="Selecione uma solução..."
+              searchPlaceholder="Buscar solução..."
             />
           </div>
 
@@ -341,7 +341,7 @@ export function SistemaSelector({
                   setIsSistemaDialogOpen(true);
                 }
               }}
-              title="Editar Sistema"
+              title="Editar Solução"
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -368,12 +368,12 @@ export function SistemaSelector({
             placeholder={
               selectedSistemaId
                 ? "Selecione um ambiente..."
-                : "Selecione um sistema primeiro"
+                : "Selecione uma solução primeiro"
             }
             searchPlaceholder={
               selectedSistemaId
                 ? "Buscar ambiente..."
-                : "Selecione um sistema primeiro"
+                : "Selecione uma solução primeiro"
             }
           />
         </div>

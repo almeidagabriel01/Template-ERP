@@ -228,7 +228,7 @@ export function ProposalSystemsSection({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Cpu className="w-5 h-5" />
-            <CardTitle>Sistemas de Automação</CardTitle>
+            <CardTitle>Soluções de Automação</CardTitle>
           </div>
           {visibleProducts.length > 0 && (
             <ProposalFinancialSummarySmall
@@ -239,7 +239,7 @@ export function ProposalSystemsSection({
         </div>
         <div className="flex items-center justify-between">
           <CardDescription>
-            Adicione um ou mais sistemas de automação à proposta
+            Adicione uma ou mais soluções de automação à proposta
           </CardDescription>
           <Button
             variant="ghost"
@@ -339,8 +339,8 @@ export function ProposalSystemsSection({
         <div className="mt-4">
           <p className="text-sm text-muted-foreground mb-3 text-center">
             {renderedSistemas.length === 0 && !pendingSelectorValue
-              ? "Selecione o primeiro sistema para esta proposta"
-              : "+ Adicionar outro sistema"}
+              ? "Selecione a primeira solução para esta proposta"
+              : "+ Adicionar outra solução"}
           </p>
           <SistemaSelectorComponent
             key={selectorKey}
@@ -517,16 +517,16 @@ function SystemCard({
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    title="Remover sistema"
+                    title="Remover solução"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Remover Sistema</AlertDialogTitle>
+                    <AlertDialogTitle>Remover Solução</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Tem certeza que deseja remover o sistema{" "}
+                      Tem certeza que deseja remover a solução{" "}
                       <strong>{sistema.sistemaName}</strong> (
                       {sistema.ambienteName}
                       ) desta proposta?
@@ -539,7 +539,7 @@ function SystemCard({
                       className="bg-destructive hover:bg-destructive/90"
                       onClick={onRemove}
                     >
-                      Remover Sistema
+                      Remover Solução
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -549,7 +549,7 @@ function SystemCard({
         </div>
 
         {sistema.description && (
-          <p className="text-sm text-muted-foreground leading-relaxed break-words w-full max-w-none px-1">
+          <p className="text-sm text-muted-foreground leading-relaxed wrap-break-word w-full max-w-none px-1">
             {sistema.description}
           </p>
         )}

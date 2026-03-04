@@ -23,13 +23,13 @@ export function SystemPanel({
     <>
       <div
         className={cn(
-          "w-64 border-r bg-muted/20 flex flex-col transition-transform absolute z-20 h-full md:relative md:translate-x-0 bg-background md:bg-muted/20",
+          "w-64 border-r flex flex-col transition-transform absolute z-20 h-full md:relative md:translate-x-0 bg-background md:bg-muted/20",
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="p-4 border-b flex items-center justify-between bg-muted/10">
           <h3 className="font-semibold flex items-center gap-2">
-            <Cpu className="w-4 h-4" /> Sistemas
+            <Cpu className="w-4 h-4" /> Soluções
           </h3>
           <Button
             size="icon"
@@ -68,7 +68,7 @@ export function SystemPanel({
             className="w-full justify-start gap-2 text-muted-foreground"
           >
             <a href="/solutions?editSistemaId=new" target="_blank">
-              <Plus className="w-3 h-3" /> Novo Sistema
+              <Plus className="w-3 h-3" /> Nova Solução
             </a>
           </Button>
         </div>

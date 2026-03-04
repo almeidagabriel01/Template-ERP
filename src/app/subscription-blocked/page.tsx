@@ -84,7 +84,7 @@ export default function SubscriptionBlockedPage() {
         return {
           title: "Falha no Pagamento",
           description:
-            "Não foi possível processar o pagamento da sua assinatura. Atualize seu método de pagamento para continuar usando o sistema.",
+            "Não foi possível processar o pagamento da sua assinatura. Atualize seu método de pagamento para continuar usando a solução.",
           icon: CreditCard,
         };
       case "canceled":
@@ -92,7 +92,7 @@ export default function SubscriptionBlockedPage() {
         return {
           title: "Assinatura Cancelada",
           description:
-            "Sua assinatura foi cancelada. Para continuar usando o sistema, você precisa reativar sua assinatura.",
+            "Sua assinatura foi cancelada. Para continuar usando a solução, você precisa reativar sua assinatura.",
           icon: AlertTriangle,
         };
       case "inactive":

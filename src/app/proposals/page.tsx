@@ -752,7 +752,7 @@ export default function ProposalsPage() {
       },
       {
         key: "primarySystem",
-        header: "Sistema",
+        header: "Solução",
         sortable: true,
         render: (proposal) => {
           const systemsFromArray =

@@ -16,7 +16,7 @@ import { SistemaService } from "@/services/sistema-service";
 import { AmbienteService } from "@/services/ambiente-service";
 import { useTenant } from "@/providers/tenant-provider";
 import { Spinner } from "@/components/ui/spinner";
-import { toast } from '@/lib/toast';
+import { toast } from "@/lib/toast";
 import { MasterDataAction } from "@/hooks/proposal/useMasterDataTransaction";
 
 interface SistemaManagerDialogProps {
@@ -98,7 +98,9 @@ export function SistemaManagerDialog({
 
   const handleDelete = async (sistema: Sistema) => {
     if (
-      confirm(`Tem certeza que deseja excluir o template "${sistema.name}"?`)
+      confirm(
+        `Tem certeza que deseja excluir o template da solução "${sistema.name}"?`,
+      )
     ) {
       setDeletingId(sistema.id);
       try {
@@ -109,7 +111,7 @@ export function SistemaManagerDialog({
             id: sistema.id,
           });
           onSistemasChange?.();
-          toast.success("Sistema removido!");
+          toast.success("Solução removida!");
         } else {
           await SistemaService.deleteSistema(sistema.id);
           await loadData();
@@ -117,7 +119,7 @@ export function SistemaManagerDialog({
         }
       } catch (error) {
         console.error("Error deleting sistema:", error);
-        toast.error("Erro ao excluir sistema");
+        toast.error("Erro ao excluir solução");
       } finally {
         setDeletingId(null);
       }
@@ -135,9 +137,9 @@ export function SistemaManagerDialog({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Gerenciar Templates de Sistema</DialogTitle>
+          <DialogTitle>Gerenciar Templates da Solução</DialogTitle>
           <DialogDescription>
-            Visualize, edite ou exclua os templates de sistema criados.
+            Visualize, edite ou exclua os templates da solução criados.
           </DialogDescription>
         </DialogHeader>
 
@@ -163,7 +165,7 @@ export function SistemaManagerDialog({
           ) : sistemas.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Package className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              <p>Nenhum template de sistema criado.</p>
+              <p>Nenhum template da solução criado.</p>
               <p className="text-sm">
                 Clique em &quot;Novo Template&quot; para criar.
               </p>

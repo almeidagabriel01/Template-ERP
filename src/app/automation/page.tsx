@@ -18,7 +18,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { AmbienteService } from "@/services/ambiente-service";
 import { SistemaService } from "@/services/sistema-service";
 import { Ambiente, Sistema } from "@/types/automation";
-import { toast } from '@/lib/toast';
+import { toast } from "@/lib/toast";
 import { SistemaList } from "./_components/sistema-list";
 import { AmbienteList } from "./_components/ambiente-list";
 import { SistemaEditor } from "./_components/sistema-editor";
@@ -424,7 +424,7 @@ export default function AutomationAdminPage() {
             </h1>
           </div>
           <p className="text-muted-foreground text-lg pl-12">
-            Central de gerenciamento de sistemas e ambientes.
+            Central de gerenciamento de soluções e ambientes.
           </p>
         </div>
       </motion.div>
@@ -442,7 +442,7 @@ export default function AutomationAdminPage() {
               className="px-6 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all gap-2"
             >
               <Box className="w-4 h-4" />
-              Sistemas
+              Soluções
             </TabsTrigger>
             <TabsTrigger
               value="ambientes"
@@ -463,7 +463,7 @@ export default function AutomationAdminPage() {
                 onClick={() => setEditingSistemaId("new")}
                 className="gap-2"
               >
-                <Plus className="w-5 h-5" /> Novo Sistema
+                <Plus className="w-5 h-5" /> Nova Solução
               </Button>
             </motion.div>
           )}
@@ -527,7 +527,7 @@ export default function AutomationAdminPage() {
                   </CardTitle>
                   <CardDescription>
                     Crie ambientes padronizados (ex: Sala, Quarto) para usar em
-                    todos os seus sistemas.
+                    todas as suas soluções.
                   </CardDescription>
                 </div>
               </CardHeader>
@@ -578,9 +578,9 @@ export default function AutomationAdminPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Sistema</AlertDialogTitle>
+            <AlertDialogTitle>Excluir Solução</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação é irreversível. O sistema será excluído permanentemente,
+              Esta ação é irreversível. A solução será excluída permanentemente,
               juntamente com todas as suas configurações em ambientes.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -597,12 +597,12 @@ export default function AutomationAdminPage() {
                 setIsDeleting(true);
                 try {
                   await SistemaService.deleteSistema(deleteId);
-                  toast.success("Sistema removido com sucesso!");
+                  toast.success("Solução removida com sucesso!");
                   loadData(true);
                   setDeleteId(null);
                 } catch (error) {
                   console.error("Error deleting sistema:", error);
-                  toast.error("Erro ao excluir sistema.");
+                  toast.error("Erro ao excluir solução.");
                 } finally {
                   setIsDeleting(false);
                 }

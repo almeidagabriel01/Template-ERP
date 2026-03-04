@@ -332,7 +332,7 @@ export function PdfSistemaBlock({
               style={{ borderTop: `2px dashed ${primaryColor}30` }}
             >
               <span className="font-semibold text-gray-700 text-sm">
-                Subtotal do Sistema:
+                Subtotal da Solução:
               </span>
               <span
                 className="text-lg font-bold"
@@ -438,7 +438,7 @@ export function PdfSistemaFooter({
             style={{ borderTop: `2px dashed ${primaryColor}30` }}
           >
             <span className="font-semibold text-gray-700">
-              Subtotal do Sistema:
+              Subtotal da Solução:
             </span>
             <span className="text-xl font-bold" style={{ color: primaryColor }}>
               {formatCurrency(sistemaSubtotal)}

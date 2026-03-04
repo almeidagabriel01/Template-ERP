@@ -15,7 +15,7 @@ import {
   X,
   LayoutGrid,
 } from "lucide-react";
-import { toast } from '@/lib/toast';
+import { toast } from "@/lib/toast";
 import { AmbienteService } from "@/services/ambiente-service";
 import { useTenant } from "@/providers/tenant-provider";
 import {
@@ -81,10 +81,7 @@ export function AmbienteList({ ambientes, onUpdate }: AmbienteListProps) {
     if (!editingName.trim()) return;
 
     const targetAmbiente = ambientes.find((amb) => amb.id === id);
-    if (
-      targetAmbiente &&
-      editingName.trim() === targetAmbiente.name.trim()
-    ) {
+    if (targetAmbiente && editingName.trim() === targetAmbiente.name.trim()) {
       setEditingId(null);
       setEditingName("");
       return;
@@ -158,7 +155,7 @@ export function AmbienteList({ ambientes, onUpdate }: AmbienteListProps) {
           </Button>
         </div>
         <p className="text-sm text-muted-foreground mt-2 px-1">
-          Adicione ambientes globais para serem utilizados em seus sistemas.
+          Adicione ambientes globais para serem utilizados em suas soluções.
         </p>
       </div>
 
@@ -275,7 +272,7 @@ export function AmbienteList({ ambientes, onUpdate }: AmbienteListProps) {
             <AlertDialogDescription>
               Esta ação removerá o ambiente &quot;
               {ambientes.find((a) => a.id === deletingId)?.name}&quot; da lista
-              global. Sistemas que usam este ambiente podem ficar com
+              global. Soluções que usam este ambiente podem ficar com
               referências quebradas.
             </AlertDialogDescription>
           </AlertDialogHeader>
