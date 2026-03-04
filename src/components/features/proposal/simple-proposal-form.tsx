@@ -30,10 +30,7 @@ import { LimitReachedModal } from "@/components/ui/limit-reached-modal";
 import { UnsavedChangesModal } from "@/components/ui/unsaved-changes-modal";
 import { useProposalForm } from "@/hooks/proposal/useProposalForm";
 import { FormContainer } from "@/components/ui/form-components";
-import {
-  StepWizard,
-  StepNavigation,
-} from "@/components/ui/step-wizard";
+import { StepWizard, StepNavigation } from "@/components/ui/step-wizard";
 import { FormStepCard } from "@/components/ui/form-step-card";
 
 // Import extracted components
@@ -61,7 +58,7 @@ const stepsAutomation = [
     description: "Dados do contato",
     icon: User,
   },
-  { id: "systems", title: "Sistemas", description: "Automação", icon: Cpu },
+  { id: "systems", title: "Soluções", description: "Automação", icon: Cpu },
   {
     id: "payment",
     title: "Pagamento",
@@ -644,7 +641,9 @@ export function SimpleProposalForm({
                 ? 0
                 : productDef
                   ? parseFloat(
-                      "manufacturer" in productDef ? productDef.markup || "0" : "0",
+                      "manufacturer" in productDef
+                        ? productDef.markup || "0"
+                        : "0",
                     )
                   : 0;
             return {
@@ -778,9 +777,9 @@ export function SimpleProposalForm({
     updateSistema(index, sistema);
   };
 
-  const handleFormSubmit = async (
-    options?: { finalize?: boolean },
-  ): Promise<boolean> => {
+  const handleFormSubmit = async (options?: {
+    finalize?: boolean;
+  }): Promise<boolean> => {
     if (!validateStep3()) {
       return false;
     }
@@ -941,10 +940,10 @@ export function SimpleProposalForm({
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold">
-                      Sistemas de Automação
+                      Soluções de Automação
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      Adicione os sistemas da proposta
+                      Adicione as soluções da proposta
                     </p>
                   </div>
                 </div>

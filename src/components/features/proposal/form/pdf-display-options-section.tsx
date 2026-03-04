@@ -139,7 +139,7 @@ export function PdfDisplayOptionsSection({
               onChange={(v) => updateSetting("showProductPrices", v)}
             />
             <CheckboxOption
-              label="Mostrar subtotais"
+              label="Mostrar subtotal por solução"
               checked={settings.showSubtotals}
               onChange={(v) => updateSetting("showSubtotals", v)}
             />

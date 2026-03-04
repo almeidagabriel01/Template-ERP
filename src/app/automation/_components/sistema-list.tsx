@@ -19,9 +19,9 @@ export function SistemaList({ sistemas, onEdit, onDelete }: SistemaListProps) {
         <div className="bg-background p-4 rounded-full shadow-sm mb-4">
           <Box className="w-8 h-8 text-muted-foreground" />
         </div>
-        <h3 className="text-lg font-semibold">Nenhum sistema encontrado</h3>
+        <h3 className="text-lg font-semibold">Nenhuma solução encontrada</h3>
         <p className="text-muted-foreground max-w-sm mt-2 mb-6">
-          Comece criando seu primeiro sistema de automação para configurar
+          Comece criando sua primeira solução de automação para configurar
           ambientes e produtos.
         </p>
       </div>

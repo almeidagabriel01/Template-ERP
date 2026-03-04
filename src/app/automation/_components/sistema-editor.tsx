@@ -269,18 +269,18 @@ export function SistemaEditor({
 
       if (sistema?.id) {
         await SistemaService.updateSistema(sistema.id, payload);
-        toast.success("Sistema atualizado!");
+        toast.success("Solução atualizada!");
         onSave(sistema.id);
       } else {
         const newSystem = await SistemaService.createSistema(
           payload as unknown as Omit<Sistema, "id">,
         );
-        toast.success("Sistema criado!");
+        toast.success("Solução criada!");
         onSave(newSystem.id); // Pass the new ID back
       }
     } catch (e) {
       console.error(e);
-      toast.error("Erro ao salvar sistema");
+      toast.error("Erro ao salvar solução");
     } finally {
       setIsSaving(false);
     }
@@ -458,12 +458,7 @@ export function SistemaEditor({
             p.category?.toLowerCase().includes(productSearch.toLowerCase())),
       )
       .sort((a, b) => compareDisplayText(a.name, b.name));
-  }, [
-    products,
-    activeConfig?.products,
-    catalogTypeFilter,
-    productSearch,
-  ]);
+  }, [products, activeConfig?.products, catalogTypeFilter, productSearch]);
 
   React.useEffect(() => {
     if (
@@ -493,9 +488,9 @@ export function SistemaEditor({
           </Button>
           <div className="flex flex-col">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
-              Editor de Sistema
+              Editor da Solução
             </span>
-            <h2 className="text-xl font-bold">{name || "Novo Sistema"}</h2>
+            <h2 className="text-xl font-bold">{name || "Nova Solução"}</h2>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -960,8 +955,8 @@ export function SistemaEditor({
           <DialogHeader>
             <DialogTitle>Criar Novo Ambiente</DialogTitle>
             <DialogDescription>
-              Crie um novo ambiente global para utilizar neste e em outros
-              sistemas.
+              Crie um novo ambiente global para utilizar nesta e em outras
+              soluções.
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center space-x-2 py-4">

@@ -43,12 +43,12 @@ export function SystemHeader({
             </div>
           ) : (
             <h2 className="text-xl font-bold text-muted-foreground">
-              Selecione um sistema
+              Selecione uma solução
             </h2>
           )}
         </div>
         <p className="text-sm text-muted-foreground ml-8 md:ml-0">
-          Gerencie os ambientes e produtos deste sistema.
+          Gerencie os ambientes e produtos desta solução.
         </p>
       </div>
     </div>

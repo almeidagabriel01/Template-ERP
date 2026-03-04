@@ -72,10 +72,10 @@ export function SistemaTemplateDialog({
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl">
-            {isEditing ? "Editar Sistema" : "Novo Template de Sistema"}
+            {isEditing ? "Editar Solução" : "Novo Template de Solução"}
           </DialogTitle>
           <DialogDescription>
-            Configure o sistema com descrição e produtos padrão.
+            Configure a solução com descrição e produtos padrão.
           </DialogDescription>
         </DialogHeader>
 
@@ -130,7 +130,9 @@ export function SistemaTemplateDialog({
               )}
               <Button
                 onClick={handleSave}
-                disabled={!name.trim() || isSaving || (isEditing && !hasChanges)}
+                disabled={
+                  !name.trim() || isSaving || (isEditing && !hasChanges)
+                }
                 className="gap-2"
               >
                 {isSaving && <Spinner className="h-4 w-4 text-white" />}
@@ -150,7 +152,9 @@ export function SistemaTemplateDialog({
               )}
               <Button
                 onClick={handleSave}
-                disabled={!name.trim() || isSaving || (isEditing && !hasChanges)}
+                disabled={
+                  !name.trim() || isSaving || (isEditing && !hasChanges)
+                }
                 className="gap-2"
               >
                 {isSaving && <Spinner className="h-4 w-4 text-white" />}
@@ -158,7 +162,7 @@ export function SistemaTemplateDialog({
                   ? "Salvando..."
                   : isEditing
                     ? "Salvar Alterações"
-                    : "Criar Sistema"}
+                    : "Criar Solução"}
               </Button>
             </>
           )}

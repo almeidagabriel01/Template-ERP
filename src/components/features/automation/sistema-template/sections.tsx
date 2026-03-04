@@ -26,12 +26,12 @@ export function SistemaInfoSection({
   return (
     <div className="space-y-4 p-4 rounded-xl bg-muted/30 border">
       <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-        Informações do Sistema
+        Informações da Solução
       </h3>
       <div className="space-y-3">
         <div className="space-y-1.5">
           <Label htmlFor="name" className="text-sm">
-            Nome do Sistema *
+            Nome da Solução *
           </Label>
           <Input
             id="name"
@@ -49,7 +49,7 @@ export function SistemaInfoSection({
           </Label>
           <Textarea
             id="description"
-            placeholder="Descreva o que este sistema inclui..."
+            placeholder="Descreva o que esta solução inclui..."
             value={description}
             onChange={(e) => onDescriptionChange(e.target.value)}
             rows={2}
@@ -153,7 +153,7 @@ export function ProductSelectorSection({
   return (
     <div className="space-y-3 p-4 rounded-xl bg-muted/30 border">
       <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-        Produtos do Sistema
+        Produtos da Solução
       </h3>
 
       {/* Selected Products - Grid Layout */}
