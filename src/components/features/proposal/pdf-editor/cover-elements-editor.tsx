@@ -116,6 +116,92 @@ export function CoverElementsEditor({
     });
   };
 
+  const [draggedId, setDraggedId] = React.useState<string | null>(null);
+  const [dragOverId, setDragOverId] = React.useState<string | null>(null);
+  const [dropPlacement, setDropPlacement] = React.useState<
+    "top" | "bottom" | null
+  >(null);
+  const [hoveredHandleId, setHoveredHandleId] = React.useState<string | null>(
+    null,
+  );
+
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedId(id);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", id);
+  };
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    if (!draggedId || draggedId === id) return;
+
+    setDragOverId(id);
+
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const offsetY = e.clientY - rect.top;
+
+    if (offsetY < rect.height * 0.5) setDropPlacement("top");
+    else setDropPlacement("bottom");
+  };
+
+  const handleDragLeave = () => {
+    setDragOverId(null);
+    setDropPlacement(null);
+  };
+
+  // Re-calculates and re-assigns Y coordinates from top to bottom based on array order
+  const reapplyVerticalPositions = (newElements: CoverElement[]) => {
+    // Extrai e ordena todos os valores Y verticalmente (de cima para baixo)
+    const sortedYs = [...newElements]
+      .map((e) => e.y ?? 50)
+      .sort((a, b) => a - b);
+
+    // Aplica os Ys na nova ordem correspondente da array visual
+    return newElements.map((el, index) => {
+      return { ...el, y: sortedYs[index] };
+    });
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!draggedId || draggedId === targetId) return;
+
+    const sortedElements = [...elements].sort((a, b) => a.order - b.order);
+    const draggedIdx = sortedElements.findIndex((s) => s.id === draggedId);
+    let targetIdx = sortedElements.findIndex((s) => s.id === targetId);
+
+    if (draggedIdx === -1 || targetIdx === -1) return;
+
+    const newElements = [...sortedElements];
+    const [movedElement] = newElements.splice(draggedIdx, 1);
+
+    // Adjust target index because we removed an item
+    targetIdx = newElements.findIndex((s) => s.id === targetId);
+
+    const insertIndex = dropPlacement === "bottom" ? targetIdx + 1 : targetIdx;
+
+    newElements.splice(insertIndex, 0, movedElement);
+
+    // Update order values
+    newElements.forEach((el, i) => {
+      el.order = i;
+    });
+
+    const finalizedElements = reapplyVerticalPositions(newElements);
+    onChange(finalizedElements);
+    setDraggedId(null);
+    setDragOverId(null);
+    setDropPlacement(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedId(null);
+    setDragOverId(null);
+    setDropPlacement(null);
+  };
+
   const addElement = (type: CoverElement["type"]) => {
     const maxOrder = Math.max(0, ...elements.map((e) => e.order));
     const newElement: CoverElement = {
@@ -203,7 +289,8 @@ export function CoverElementsEditor({
       el.order = i;
     });
 
-    onChange(newElements);
+    const finalizedElements = reapplyVerticalPositions(newElements);
+    onChange(finalizedElements);
   };
 
   const updateElement = (id: string, updates: Partial<CoverElement>) => {
@@ -272,7 +359,58 @@ export function CoverElementsEditor({
   return (
     <div className="space-y-4">
       {/* Element list */}
-      <div className="space-y-2 px-0.5 w-full max-w-full overflow-hidden">
+      <div
+        className="space-y-2 px-0.5 w-full max-w-full overflow-hidden min-h-[100px] rounded-lg border border-transparent transition-colors"
+        onDrop={(e) => {
+          e.preventDefault();
+          if (!draggedId) return;
+
+          const sortedElements = [...elements].sort(
+            (a, b) => a.order - b.order,
+          );
+          const draggedIdx = sortedElements.findIndex(
+            (s) => s.id === draggedId,
+          );
+          if (draggedIdx === -1) return;
+
+          const newElements = [...sortedElements];
+          const [movedElement] = newElements.splice(draggedIdx, 1);
+          newElements.push(movedElement);
+
+          newElements.forEach((el, i) => {
+            el.order = i;
+          });
+
+          const finalizedElements = reapplyVerticalPositions(newElements);
+          onChange(finalizedElements);
+          setDraggedId(null);
+          setDragOverId(null);
+          setDropPlacement(null);
+
+          e.currentTarget.classList.remove(
+            "bg-muted/30",
+            "border-dashed",
+            "border-muted",
+          );
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          if (draggedId) {
+            e.currentTarget.classList.add(
+              "bg-muted/30",
+              "border-dashed",
+              "border-muted",
+            );
+          }
+        }}
+        onDragLeave={(e) => {
+          e.currentTarget.classList.remove(
+            "bg-muted/30",
+            "border-dashed",
+            "border-muted",
+          );
+        }}
+      >
         {elements.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             Nenhum elemento na capa. Adicione elementos usando os botões abaixo.
@@ -283,17 +421,45 @@ export function CoverElementsEditor({
             .map((element, index) => (
               <Card
                 key={element.id}
-                className="overflow-hidden w-full max-w-full border shadow-sm"
+                className={`overflow-hidden w-full max-w-full border shadow-sm relative transition-all ${draggedId === element.id ? "opacity-50 scale-95" : ""} ${dragOverId === element.id && !dropPlacement ? "ring-2 ring-primary ring-offset-2" : ""}`}
+                draggable={hoveredHandleId === element.id}
+                onDragStart={(e) => handleDragStart(e, element.id)}
+                onDragOver={(e) => handleDragOver(e, element.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, element.id)}
+                onDragEnd={handleDragEnd}
               >
+                {dragOverId === element.id && dropPlacement === "top" && (
+                  <div className="absolute left-0 right-0 top-0 h-1/2 border-2 border-dashed border-primary bg-primary/5 z-50 pointer-events-none rounded">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="bg-background/80 text-primary px-2 py-1 rounded text-xs font-medium border border-primary/20 shadow-sm">
+                        Mover para Cima
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {dragOverId === element.id && dropPlacement === "bottom" && (
+                  <div className="absolute left-0 right-0 bottom-0 h-1/2 border-2 border-dashed border-primary bg-primary/5 z-50 pointer-events-none rounded">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="bg-background/80 text-primary px-2 py-1 rounded text-xs font-medium border border-primary/20 shadow-sm">
+                        Mover para Baixo
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {/* Header */}
                 {/* Header - Aligned with SectionCard structure */}
                 <div
                   className={`flex items-center gap-3 p-3 pr-4 bg-muted/50 hover:bg-muted transition-colors cursor-pointer border-l-2 w-full max-w-full overflow-hidden ${expandedIds.has(element.id) ? "border-primary" : "border-transparent hover:border-primary/50"}`}
-                  onMouseEnter={() => {}} // Placeholder
+                  onMouseEnter={() => setHoveredHandleId(element.id)}
+                  onMouseLeave={() => setHoveredHandleId(null)}
                   onClick={() => toggleElement(element.id)}
                 >
                   {/* Drag Handle */}
-                  <div className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted-foreground/10 rounded outline-none shrink-0">
+                  <div
+                    className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted-foreground/10 rounded outline-none shrink-0"
+                    title="Arraste para reordenar"
+                  >
                     <GripVertical className="w-4 h-4 text-muted-foreground/50 hover:text-foreground transition-colors" />
                   </div>
 
