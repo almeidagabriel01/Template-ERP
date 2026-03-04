@@ -189,12 +189,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
         if (firebaseUser) {
-          const userData = await fetchUserData(firebaseUser);
-          setUser(userData);
-          try {
-            await createServerSession(firebaseUser);
-          } catch (error) {
-            console.error("Unable to sync server session:", error);
+          const skipEmailVerification =
+            process.env.NEXT_PUBLIC_SKIP_EMAIL_VERIFICATION === "true";
+
+          // Only create a server session for email-verified users.
+          // Exception: dev mode with NEXT_PUBLIC_SKIP_EMAIL_VERIFICATION=true.
+          if (firebaseUser.emailVerified || skipEmailVerification) {
+            const userData = await fetchUserData(firebaseUser);
+            setUser(userData);
+            try {
+              await createServerSession(firebaseUser);
+            } catch (error) {
+              console.error("Unable to sync server session:", error);
+            }
+          } else {
+            // Email not verified — do NOT create a session cookie.
+            // The login() function will call signOut() which triggers this
+            // callback again with firebaseUser=null to clear the session.
+            setUser(null);
           }
         } else {
           setUser(null);
@@ -234,7 +246,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const currentUser = auth.currentUser;
       if (currentUser) {
         await currentUser.reload();
-        if (!currentUser.emailVerified) {
+        const skipEmailVerification =
+          process.env.NEXT_PUBLIC_SKIP_EMAIL_VERIFICATION === "true";
+        if (!currentUser.emailVerified && !skipEmailVerification) {
           try {
             if (typeof window !== "undefined") {
               await sendEmailVerification(currentUser, {
@@ -250,7 +264,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             );
           }
 
+          // Sign out the unverified user and explicitly clear the server session
+          // before returning, so there's no stale cookie that could cause an
+          // infinite loader if the user navigates to the home page immediately.
           await signOut(auth);
+          await clearServerSession().catch(() => {});
           setIsLoading(false);
           return { success: false, code: "email-not-verified" };
         }

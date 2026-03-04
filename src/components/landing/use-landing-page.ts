@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
@@ -38,6 +38,11 @@ export function useLandingPage() {
   // Fixed initial skeleton value
   const initialSkeleton = "list";
 
+  // Tracks whether Firebase auth state has already been determined.
+  // Used to prevent a stale server-session cookie response from overriding
+  // a settled "signed-out" auth state (race condition fix).
+  const authStateSettledRef = useRef(false);
+
   // ──────────────────────────────────────────────
   // 1. Server-side session pre-check via cookie
   //    Shows the loader IMMEDIATELY if a valid session exists
@@ -55,7 +60,15 @@ export function useLandingPage() {
         if (!res.ok) return;
 
         const data = await res.json();
-        if (!cancelled && data.authenticated) {
+
+        // IMPORTANT: If onAuthStateChanged already settled the auth state
+        // (e.g. user is confirmed signed out), ignore a stale cookie response.
+        // This prevents the race condition where the HTTP response arrives after
+        // Firebase already confirmed the user is signed out, causing a permanent
+        // 'Entrando...' loader with nothing left to clear it.
+        if (cancelled || authStateSettledRef.current) return;
+
+        if (data.authenticated) {
           const role = String(data.role || "").toLowerCase();
           const isKnownNonFreeRole = role !== "" && role !== "free";
 
@@ -77,16 +90,16 @@ export function useLandingPage() {
     };
   }, []);
 
+  // Safety timeout: if auth state takes too long, unlock the UI regardless.
+  // This covers both isCheckingAuth and isRedirecting to prevent any stuck state.
   useEffect(() => {
-    if (!isCheckingAuth) return;
-
     const timeout = window.setTimeout(() => {
       setIsCheckingAuth(false);
       setIsRedirecting(false);
     }, 10000);
 
     return () => window.clearTimeout(timeout);
-  }, [isCheckingAuth]);
+  }, []);
 
   // ──────────────────────────────────────────────
   // 2. Fetch plans on mount
@@ -166,6 +179,7 @@ export function useLandingPage() {
               if (userData.role === "superadmin") {
                 setIsRedirecting(true);
                 router.replace("/admin");
+                authStateSettledRef.current = true;
                 return;
               }
 
@@ -193,6 +207,7 @@ export function useLandingPage() {
                 );
                 router.replace(firstAllowed ? `/${firstAllowed}` : "/403");
               }
+              authStateSettledRef.current = true;
               return;
             }
             setCurrentUser({ id: user.uid, ...userData } as User);
@@ -211,10 +226,13 @@ export function useLandingPage() {
         } catch (error) {
           console.error("Error fetching user data:", error);
         }
+        authStateSettledRef.current = true;
         setIsCheckingAuth(false);
         setIsRedirecting(false);
       } else {
-        // User is NOT logged in
+        // User is NOT logged in — mark auth state as settled immediately so any
+        // pending checkServerSession response (stale cookie) is ignored.
+        authStateSettledRef.current = true;
         setCurrentUser(null);
         setIsCheckingAuth(false);
         setIsRedirecting(false);
