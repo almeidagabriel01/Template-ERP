@@ -9,14 +9,20 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 
 interface EditBlockDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  proposalId?: string | null;
 }
 
-export function EditBlockDialog({ open, onOpenChange }: EditBlockDialogProps) {
+export function EditBlockDialog({
+  open,
+  onOpenChange,
+  proposalId,
+}: EditBlockDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -34,9 +40,20 @@ export function EditBlockDialog({ open, onOpenChange }: EditBlockDialogProps) {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogAction onClick={() => onOpenChange(false)}>
-            Entendi
-          </AlertDialogAction>
+          {proposalId ? (
+            <>
+              <AlertDialogCancel onClick={() => onOpenChange(false)}>
+                Entendi
+              </AlertDialogCancel>
+              <a href={`/proposals/${proposalId}`}>
+                <AlertDialogAction>Ir para Proposta</AlertDialogAction>
+              </a>
+            </>
+          ) : (
+            <AlertDialogAction onClick={() => onOpenChange(false)}>
+              Entendi
+            </AlertDialogAction>
+          )}
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

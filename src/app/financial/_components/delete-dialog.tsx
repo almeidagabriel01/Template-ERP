@@ -78,9 +78,16 @@ export function DeleteTransactionDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           {isProposalTransaction ? (
-            <AlertDialogAction onClick={() => onOpenChange(false)}>
-              Entendi
-            </AlertDialogAction>
+            <>
+              <AlertDialogCancel onClick={() => onOpenChange(false)}>
+                Entendi
+              </AlertDialogCancel>
+              {transaction?.proposalId && (
+                <a href={`/proposals/${transaction.proposalId}`}>
+                  <AlertDialogAction>Ir para Proposta</AlertDialogAction>
+                </a>
+              )}
+            </>
           ) : (
             <>
               <AlertDialogCancel disabled={isDeleting}>

@@ -64,10 +64,7 @@ export function ProposalSummarySection({
       value: string;
       label: string;
     }[]
-  >([
-    { value: "draft", label: "Rascunho" },
-    ...statusOptions.filter((o) => o.value !== "draft"),
-  ]);
+  >([...statusOptions.filter((o) => o.value !== "draft")]);
 
   React.useEffect(() => {
     if (!tenant?.id) return;
@@ -83,29 +80,44 @@ export function ProposalSummarySection({
         }
 
         const newOptions = [
-          { value: "draft", label: "Rascunho" },
           ...activeColumns.map((c) => ({ value: c.id, label: c.label })),
         ];
 
-        // If the current proposal has a status that isn't in the new columns, add it as a fallback
+        // If the current proposal has a status that isn't in the new columns (e.g. an old status string like "in_progress")
         if (
           formData.status &&
           formData.status !== "draft" &&
           !newOptions.some((o) => o.value === formData.status)
         ) {
-          const fallback = statusOptions.find(
-            (o) => o.value === formData.status,
+          // Find if there's an active column that maps to this old status
+          const mappedColumn = activeColumns.find(
+            (c) => c.mappedStatus === formData.status,
           );
-          if (fallback) {
-            newOptions.push({
-              value: fallback.value,
-              label: fallback.label + " (Antigo)",
-            });
+
+          if (mappedColumn) {
+            // Auto-update the form data to use the new column ID instead of the old status string
+            onFormChange({
+              target: {
+                name: "status",
+                value: mappedColumn.id,
+              },
+            } as React.ChangeEvent<HTMLSelectElement>);
           } else {
-            newOptions.push({
-              value: formData.status,
-              label: "Desconhecido (Antigo)",
-            });
+            // If no active column maps to it, add it as a fallback option so it doesn't break
+            const fallback = statusOptions.find(
+              (o) => o.value === formData.status,
+            );
+            if (fallback) {
+              newOptions.push({
+                value: fallback.value,
+                label: fallback.label + " (Antigo)",
+              });
+            } else {
+              newOptions.push({
+                value: formData.status,
+                label: "Desconhecido (Antigo)",
+              });
+            }
           }
         }
 
@@ -115,7 +127,7 @@ export function ProposalSummarySection({
     return () => {
       cancelled = true;
     };
-  }, [tenant?.id, formData.status]);
+  }, [tenant?.id, formData.status, onFormChange]);
 
   if (selectedProducts.length === 0) {
     return null;
