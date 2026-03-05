@@ -1,6 +1,7 @@
 import { auth, db } from "../init";
 import { FieldValue } from "firebase-admin/firestore";
 import { getStripe } from "./stripeConfig";
+import { clearTenantPlanCache } from "../lib/tenant-plan-policy";
 
 export const WHATSAPP_OVERAGE_PRICE_ID = "price_1T20T7GrkF9UfsqcEtdBX9fY";
 
@@ -123,7 +124,9 @@ export async function updateUserPlan(
       if (tenantSnap.exists) {
         await tenantRef.update({
           whatsappEnabled: isWhatsappEnabled,
+          plan: planTier,
         });
+        clearTenantPlanCache(tenantId);
       }
     }
   } catch (err) {

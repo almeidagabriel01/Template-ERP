@@ -123,14 +123,14 @@ const PLAN_LIMITS_BY_TIER: Record<TenantPlanTier, TenantPlanLimits> = {
   starter: {
     maxProposalsPerMonth: 80,
     maxWallets: 5,
-    maxUsers: 2,
+    maxUsers: 1,
     storageQuotaMB: 200,
     maxSpreadsheets: 25,
   },
   pro: {
     maxProposalsPerMonth: -1,
     maxWallets: 30,
-    maxUsers: 10,
+    maxUsers: 2,
     storageQuotaMB: 2560,
     maxSpreadsheets: 250,
   },
@@ -167,13 +167,13 @@ function resolvePlanCacheTtlMs(): number {
 }
 
 function resolvePlanEnforcementMode(): PlanEnforcementMode {
-  const raw = String(process.env.TENANT_PLAN_ENFORCEMENT_MODE || "monitor")
+  const raw = String(process.env.TENANT_PLAN_ENFORCEMENT_MODE || "enforce")
     .trim()
     .toLowerCase();
   if (raw === "off" || raw === "monitor" || raw === "enforce") {
     return raw;
   }
-  return "monitor";
+  return "enforce";
 }
 
 function shouldAllowSuperAdminBypass(): boolean {
@@ -454,11 +454,11 @@ async function resolveTenantPlanProfileUncached(
 }
 
 function getFeatureLabel(feature: PlanLimitFeature): string {
-  if (feature === "maxProposalsPerMonth") return "monthly proposals";
-  if (feature === "maxWallets") return "wallets";
-  if (feature === "maxUsers") return "users";
-  if (feature === "storageQuotaMB") return "storage";
-  return "spreadsheets";
+  if (feature === "maxProposalsPerMonth") return "propostas mensais";
+  if (feature === "maxWallets") return "carteiras";
+  if (feature === "maxUsers") return "membros da equipe";
+  if (feature === "storageQuotaMB") return "armazenamento";
+  return "planilhas";
 }
 
 export function buildMonthlyPeriodWindowUtc(baseDate: Date = new Date()): MonthlyPeriodWindow {
@@ -526,8 +526,8 @@ export function evaluatePlanLimitExceedance(input: {
       : "PLAN_LIMIT_EXCEEDED";
   const message =
     input.feature === "maxProposalsPerMonth"
-      ? `Monthly ${label} limit reached (${currentUsage}/${limit}).`
-      : `${label} limit reached (${currentUsage}/${limit}).`;
+      ? `Limite de ${label} atingido (${currentUsage}/${limit}). Faça upgrade do plano para continuar.`
+      : `Limite de ${label} atingido (${currentUsage}/${limit}). Faça upgrade do plano para continuar.`;
   const exceeded = limit >= 0 && projectedUsage > limit;
 
   return {
@@ -1018,6 +1018,7 @@ export async function getTenantUsersUsage(tenantId: string): Promise<number> {
   const snap = await db
     .collection("users")
     .where("tenantId", "==", tenantId)
+    .where("role", "==", "MEMBER")
     .count()
     .get();
   return Number(snap.data().count || 0);
