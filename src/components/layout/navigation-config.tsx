@@ -42,7 +42,7 @@ export const menuItems: MenuItem[] = [
   {
     icon: Kanban,
     label: "CRM",
-    href: "/kanban",
+    href: "/crm",
     pageId: "kanban",
     requiresEnterprise: true,
   },
@@ -55,14 +55,14 @@ export const menuItems: MenuItem[] = [
   {
     icon: Wallet,
     label: "Financeiro",
-    href: "/financial",
+    href: "/transactions",
     pageId: "financial",
     requiresFinancial: true,
     children: [
       {
         icon: ReceiptText,
         label: "Lançamentos",
-        href: "/financial",
+        href: "/transactions",
         pageId: "transactions",
       },
       {

@@ -112,7 +112,7 @@ export function InstallmentsCard({
             return (
               <Link
                 key={installment.id}
-                href={`/financial/${installment.id}`}
+                href={`/transactions/${installment.id}`}
                 className="block"
               >
                 {Content}

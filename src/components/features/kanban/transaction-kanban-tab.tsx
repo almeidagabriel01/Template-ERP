@@ -13,18 +13,14 @@ import {
   TransactionStatus,
 } from "@/services/transaction-service";
 import { useTenant } from "@/providers/tenant-provider";
-import { KanbanBoardSkeleton } from "@/app/kanban/_components/kanban-skeleton";
+import { KanbanBoardSkeleton } from "@/app/crm/_components/kanban-skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { normalize } from "@/utils/text";
-import {
-  Clock,
-  Search,
-  ListFilter,
-} from "lucide-react";
+import { Clock, Search, ListFilter } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,7 +29,7 @@ import {
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { DatePicker } from "@/components/ui/date-picker";
 
-import { useTransactionStatuses } from "@/app/financial/_hooks/useTransactionStatuses";
+import { useTransactionStatuses } from "@/app/transactions/_hooks/useTransactionStatuses";
 
 // ============================================
 // STORAGE KEY

@@ -29,7 +29,7 @@ function getNotificationLink(notification: Notification): string | undefined {
   switch (notification.type) {
     case NotificationType.TRANSACTION_DUE_REMINDER:
     case NotificationType.TRANSACTION_VIEWED:
-      return "/financial";
+      return "/transactions";
     case NotificationType.PROPOSAL_EXPIRING:
       return notification.proposalId
         ? `/proposals/${notification.proposalId}/view`
@@ -221,16 +221,23 @@ export function NotificationBell() {
             </div>
           ) : (
             notifications.map((notification) => {
-              const Icon = getNotificationIcon(notification.type as NotificationType);
+              const Icon = getNotificationIcon(
+                notification.type as NotificationType,
+              );
               const linkHref = getNotificationLink(notification);
               const isExpanded = expandedIds.has(notification.id);
               const canExpand = notification.message.length > 120;
 
               return (
-                <div key={notification.id} className="flex gap-3 p-3 hover:bg-muted/50 transition-colors">
+                <div
+                  key={notification.id}
+                  className="flex gap-3 p-3 hover:bg-muted/50 transition-colors"
+                >
                   <div
                     className="flex-1 min-w-0 cursor-pointer"
-                    onClick={() => handleNotificationClick(notification, linkHref)}
+                    onClick={() =>
+                      handleNotificationClick(notification, linkHref)
+                    }
                   >
                     <div className="flex gap-3">
                       <div className="flex-shrink-0 mt-1">
@@ -241,7 +248,9 @@ export function NotificationBell() {
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <p className="font-medium text-sm">{notification.title}</p>
+                          <p className="font-medium text-sm">
+                            {notification.title}
+                          </p>
                           {!notification.isRead && (
                             <div className="w-2 h-2 rounded-full bg-foreground/60 flex-shrink-0 mt-1.5" />
                           )}

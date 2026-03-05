@@ -48,7 +48,7 @@ import { TransactionInstallmentsList } from "./transaction-installments-list";
 import { EditBlockDialog } from "./edit-block-dialog";
 import { PartialPaymentDialog } from "./partial-payment-dialog";
 import { ExtraCostDialog } from "./extra-cost-dialog";
-import { useTransactionStatuses } from "@/app/financial/_hooks/useTransactionStatuses";
+import { useTransactionStatuses } from "@/app/transactions/_hooks/useTransactionStatuses";
 import { TransactionService } from "@/services/transaction-service";
 import { SharedTransactionService } from "@/services/shared-transaction-service";
 import { useRouter } from "next/navigation";
@@ -1184,7 +1184,7 @@ export function TransactionCard({
                   <DollarSign className="w-4 h-4" />
                 </Button>
               )}
-              <Link href={`/financial/${transaction.id}/view`}>
+              <Link href={`/transactions/${transaction.id}/view`}>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -1206,7 +1206,7 @@ export function TransactionCard({
                     <Edit className="w-4 h-4" />
                   </Button>
                 ) : (
-                  <Link href={`/financial/${transaction.id}`}>
+                  <Link href={`/transactions/${transaction.id}`}>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -1343,7 +1343,7 @@ export function TransactionCard({
                           <Edit className="w-3.5 h-3.5" />
                         </Button>
                       ) : (
-                        <Link href={`/financial/${downPayment.id}`}>
+                        <Link href={`/transactions/${downPayment.id}`}>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -1496,7 +1496,7 @@ export function TransactionCard({
                                 <Edit className="w-3.5 h-3.5" />
                               </Button>
                             ) : (
-                              <Link href={`/financial/${inst.id}`}>
+                              <Link href={`/transactions/${inst.id}`}>
                                 <Button
                                   variant="ghost"
                                   size="icon"

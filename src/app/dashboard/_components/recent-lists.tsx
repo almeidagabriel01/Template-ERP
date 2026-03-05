@@ -29,7 +29,7 @@ export function RecentTransactionsList({
             Últimas Transações
           </CardTitle>
         </div>
-        <Link href="/financial">
+        <Link href="/transactions">
           <Button
             variant="outline"
             size="sm"

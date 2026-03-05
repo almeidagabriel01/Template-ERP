@@ -367,15 +367,15 @@ export function useLoginForm(): UseLoginFormReturn {
         ];
 
         const routeMap: Record<string, string> = {
-          kanban: "/kanban",
+          kanban: "/crm",
           proposals: "/proposals",
           clients: "/contacts",
           products: "/products",
           services: "/services",
           spreadsheets: "/spreadsheets",
-          transactions: "/financial",
+          transactions: "/transactions",
           wallet: "/wallets",
-          financial: "/financial",
+          financial: "/transactions",
           profile: "/profile",
         };
 

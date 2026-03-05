@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Proposal, ProposalStatus } from "@/types/proposal";
 import { Transaction, TransactionStatus } from "@/services/transaction-service";
+import { ProposalService } from "@/services/proposal-service";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -311,6 +312,31 @@ export function TransactionDetailModal({
   open,
   onOpenChange,
 }: TransactionDetailModalProps) {
+  const [proposal, setProposal] = React.useState<Proposal | null>(null);
+  const [isLoadingProposal, setIsLoadingProposal] = React.useState(false);
+
+  React.useEffect(() => {
+    if (open && transaction?.proposalId) {
+      const fetchProposal = async () => {
+        setIsLoadingProposal(true);
+        try {
+          const fetchedProposal = await ProposalService.getProposalById(
+            transaction.proposalId!,
+          );
+          setProposal(fetchedProposal);
+        } catch (error) {
+          console.error("Failed to fetch linked proposal details:", error);
+          setProposal(null);
+        } finally {
+          setIsLoadingProposal(false);
+        }
+      };
+      fetchProposal();
+    } else {
+      setProposal(null);
+    }
+  }, [open, transaction?.proposalId]);
+
   if (!transaction) return null;
 
   const statusInfo = TRANSACTION_STATUS_LABELS[
@@ -451,6 +477,50 @@ export function TransactionDetailModal({
               value={transaction.wallet}
             />
           )}
+
+          {/* Products (if linked to a proposal) */}
+          {isLoadingProposal && (
+            <div className="border-t border-border/20 mt-3 pt-3 flex items-center justify-center">
+              <span className="text-xs text-muted-foreground animate-pulse">
+                Carregando produtos...
+              </span>
+            </div>
+          )}
+          {!isLoadingProposal &&
+            proposal?.products &&
+            proposal.products.filter((p) => p.quantity > 0).length > 0 && (
+              <div className="border-t border-border/20 mt-3 pt-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <Package className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                    Produtos/Serviços Relacionados
+                  </span>
+                </div>
+                <div className="space-y-2 max-h-[200px] overflow-y-auto kanban-scrollbar">
+                  {proposal.products
+                    .filter((p) => p.quantity > 0)
+                    .map((product, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg border border-border/20 text-sm"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium text-foreground truncate">
+                            {product.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {product.quantity}x{" "}
+                            {formatCurrency(product.unitPrice)}
+                          </p>
+                        </div>
+                        <span className="font-semibold text-foreground shrink-0 ml-3">
+                          {formatCurrency(product.total)}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
         </div>
 
         {/* Actions */}
