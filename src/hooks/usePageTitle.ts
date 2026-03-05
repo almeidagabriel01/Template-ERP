@@ -19,9 +19,9 @@ const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard | ERP",
   "/products": "Produtos | ERP",
   "/proposals": "Propostas | ERP",
-  "/kanban": "CRM | ERP",
+  "/crm": "CRM | ERP",
   "/contacts": "Contatos | ERP",
-  "/financial": "Lançamentos | ERP",
+  "/transactions": "Lançamentos | ERP",
   "/wallets": "Carteiras | ERP",
   "/services": "Serviços | ERP",
   "/solutions": "Soluções | ERP",
@@ -70,8 +70,8 @@ function getDynamicTitle(pathname: string): string | null {
   if (pathname.match(/^\/contacts\/[^/]+$/)) return "Contato | ERP";
 
   // Financial
-  if (pathname.startsWith("/financial/new")) return "Novo Lançamento | ERP";
-  if (pathname.match(/^\/financial\/[^/]+$/)) return "Lançamento | ERP";
+  if (pathname.startsWith("/transactions/new")) return "Novo Lançamento | ERP";
+  if (pathname.match(/^\/transactions\/[^/]+$/)) return "Lançamento | ERP";
 
   // Services
   if (pathname.startsWith("/services/new")) return "Novo Serviço | ERP";

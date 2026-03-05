@@ -137,7 +137,7 @@ export default function ViewTransactionPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
         <p className="text-muted-foreground">Lançamento não encontrado</p>
-        <Button variant="outline" onClick={() => router.push("/financial")}>
+        <Button variant="outline" onClick={() => router.push("/transactions")}>
           Voltar para Financeiro
         </Button>
       </div>
@@ -171,7 +171,7 @@ export default function ViewTransactionPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => router.push("/financial")}
+            onClick={() => router.push("/transactions")}
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
@@ -185,7 +185,7 @@ export default function ViewTransactionPage() {
           </div>
         </div>
         {canEdit && (
-          <Link href={`/financial/${transactionId}`}>
+          <Link href={`/transactions/${transactionId}`}>
             <Button className="gap-2">
               <Edit className="w-4 h-4" />
               Editar

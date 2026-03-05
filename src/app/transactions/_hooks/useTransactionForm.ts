@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { toast } from '@/lib/toast';
+import { toast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import {
   TransactionService,
@@ -140,7 +140,8 @@ interface UseTransactionFormReturn {
 export function useTransactionForm(): UseTransactionFormReturn {
   const router = useRouter();
   const { tenant } = useTenant();
-  const { canCreate, isLoading: permLoading } = usePagePermission("financial");
+  const { canCreate, isLoading: permLoading } =
+    usePagePermission("transactions");
   const { createClient } = useClientActions();
   const [formData, setFormData] = React.useState<TransactionFormData>(() => {
     return {
@@ -171,7 +172,9 @@ export function useTransactionForm(): UseTransactionFormReturn {
             ? parseFloat(data.installmentValue || "0") *
               (data.installmentCount || 1)
             : parseFloat(data.amount || "0");
-        return (baseTotal * parseFloat(data.downPaymentPercentage || "0")) / 100;
+        return (
+          (baseTotal * parseFloat(data.downPaymentPercentage || "0")) / 100
+        );
       }
 
       return parseFloat(data.downPaymentValue || "0");
@@ -251,7 +254,8 @@ export function useTransactionForm(): UseTransactionFormReturn {
         computedValues = {
           amount: total.toFixed(2),
           wallet: formData.installmentsWallet || formData.wallet, // Try to keep some wallet
-          dueDate: formData.firstInstallmentDate || formData.dueDate || formData.date,
+          dueDate:
+            formData.firstInstallmentDate || formData.dueDate || formData.date,
           // Keep installment settings in case we switch back
           isInstallment: formData.isRecurring ? false : true,
           isRecurring: formData.isRecurring,
@@ -288,9 +292,7 @@ export function useTransactionForm(): UseTransactionFormReturn {
               computedValues.isInstallment ??
               false,
             isRecurring:
-              targetBuffer.isRecurring ??
-              computedValues.isRecurring ??
-              false,
+              targetBuffer.isRecurring ?? computedValues.isRecurring ?? false,
             installmentCount:
               targetBuffer.installmentCount ??
               computedValues.installmentCount ??
@@ -341,9 +343,7 @@ export function useTransactionForm(): UseTransactionFormReturn {
               computedValues.isInstallment ??
               true,
             isRecurring:
-              targetBuffer.isRecurring ??
-              computedValues.isRecurring ??
-              false,
+              targetBuffer.isRecurring ?? computedValues.isRecurring ?? false,
             installmentCount:
               targetBuffer.installmentCount ??
               computedValues.installmentCount ??
@@ -383,7 +383,7 @@ export function useTransactionForm(): UseTransactionFormReturn {
 
   React.useEffect(() => {
     if (!permLoading && !canCreate) {
-      router.push("/financial");
+      router.push("/transactions");
     }
   }, [permLoading, canCreate, router]);
 
@@ -512,12 +512,13 @@ export function useTransactionForm(): UseTransactionFormReturn {
       }
 
       // Generate Group ID
-      const submitDbCount = formData.isRecurring ? 1 : formData.installmentCount;
+      const submitDbCount = formData.isRecurring
+        ? 1
+        : formData.installmentCount;
       if (
         (formData.isInstallment && submitDbCount >= 1) ||
         (formData.isRecurring && submitDbCount >= 1) ||
-        (formData.downPaymentEnabled &&
-          downPaymentAmount > 0)
+        (formData.downPaymentEnabled && downPaymentAmount > 0)
       ) {
         installmentGroupId = `installment_${Date.now()}`;
       }
@@ -575,7 +576,9 @@ export function useTransactionForm(): UseTransactionFormReturn {
         isInstallment: formData.isInstallment && !formData.isRecurring,
         isRecurring: formData.isRecurring,
         installmentCount: submitDbCount,
-        installmentGroupId: formData.isInstallment ? installmentGroupId : undefined,
+        installmentGroupId: formData.isInstallment
+          ? installmentGroupId
+          : undefined,
         recurringGroupId: formData.isRecurring ? installmentGroupId : undefined,
         installmentInterval: formData.installmentInterval || 1,
         paymentMode: formData.paymentMode,
@@ -587,7 +590,7 @@ export function useTransactionForm(): UseTransactionFormReturn {
       toast.success(`Lancamento ${transactionLabel} criado com sucesso.`, {
         title: "Sucesso ao criar",
       });
-      router.push("/financial");
+      router.push("/transactions");
     } catch (error) {
       console.error("Error creating transaction:", error);
       const errorMessage =

@@ -54,7 +54,7 @@ export function QuickActionsCard() {
       )}
 
       {canShowFinancial && (
-        <Link href="/financial/new" className="group">
+        <Link href="/transactions/new" className="group">
           <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-background to-emerald-50/30 dark:to-emerald-950/10 border border-border/50 shadow-md hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1 h-36">
             <div className="absolute top-0 right-0 w-28 h-28 bg-emerald-500/5 rounded-full -mr-10 -mt-10 group-hover:bg-emerald-500/10 transition-colors" />
             <div className="p-6 h-full flex flex-col justify-between relative z-10">

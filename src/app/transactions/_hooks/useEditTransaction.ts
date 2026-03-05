@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { toast } from '@/lib/toast';
+import { toast } from "@/lib/toast";
 import { useRouter, useParams } from "next/navigation";
 import {
   TransactionService,
@@ -40,7 +40,9 @@ const isLikelyOrphanDownPaymentForGroup = (
   if (!isDownPaymentLike(candidate)) return false;
   if (candidate.installmentGroupId || candidate.proposalGroupId) return false;
   if (candidate.id === anchor.id) return false;
-  if ((candidate.description || "").trim() !== (anchor.description || "").trim())
+  if (
+    (candidate.description || "").trim() !== (anchor.description || "").trim()
+  )
     return false;
   if (candidate.type !== anchor.type) return false;
   if (!sameClient(candidate, anchor)) return false;
@@ -160,9 +162,9 @@ export function useEditTransaction() {
   const [relatedInstallments, setRelatedInstallments] = React.useState<
     Transaction[]
   >([]);
-  const [extraTransactionIds, setExtraTransactionIds] = React.useState<string[]>(
-    [],
-  );
+  const [extraTransactionIds, setExtraTransactionIds] = React.useState<
+    string[]
+  >([]);
 
   const [formData, setFormData] = React.useState<EditTransactionFormData>({
     type: "income",
@@ -252,7 +254,9 @@ export function useEditTransaction() {
       // If it's an installment or recurring, fetch related ones
       const groupId = safeData.installmentGroupId || safeData.recurringGroupId;
       if (
-        (safeData.isInstallment || safeData.isDownPayment || safeData.isRecurring) &&
+        (safeData.isInstallment ||
+          safeData.isDownPayment ||
+          safeData.isRecurring) &&
         groupId &&
         groupId !== "stub-group-id"
       ) {
@@ -260,9 +264,8 @@ export function useEditTransaction() {
           // For recurring, query by recurringGroupId since installmentGroupId is null
           let group: Transaction[];
           if (safeData.isRecurring && safeData.recurringGroupId) {
-            const allTenantTransactions = await TransactionService.getTransactions(
-              safeData.tenantId,
-            );
+            const allTenantTransactions =
+              await TransactionService.getTransactions(safeData.tenantId);
             group = allTenantTransactions
               .filter((t) => t.recurringGroupId === safeData.recurringGroupId)
               .sort(
@@ -289,7 +292,10 @@ export function useEditTransaction() {
             isLikelyOrphanDownPaymentForGroup(t, safeData),
           );
           if (orphanCandidates.length === 1) {
-            groupTransactions = [...groupTransactions, orphanCandidates[0]].sort(
+            groupTransactions = [
+              ...groupTransactions,
+              orphanCandidates[0],
+            ].sort(
               (a: Transaction, b: Transaction) =>
                 (a.installmentNumber || 0) - (b.installmentNumber || 0),
             );
@@ -320,16 +326,18 @@ export function useEditTransaction() {
       // Calculate Total Amount
       // If it's a group (installments), sum everyone (including down payment)
       // If single or recurring, just use safeData.amount (the base value)
-      const totalAmount = (hasGroup && !safeData.isRecurring)
-        ? groupTransactions.reduce((sum, t) => sum + t.amount, 0)
-        : safeData.amount;
+      const totalAmount =
+        hasGroup && !safeData.isRecurring
+          ? groupTransactions.reduce((sum, t) => sum + t.amount, 0)
+          : safeData.amount;
 
       // Installment Count:
       // If group, count regular installments.
       // If single or recurring, use safeData.installmentCount
-      const instCount = (hasGroup && !safeData.isRecurring)
-        ? regularInstallments.length
-        : safeData.installmentCount || 1;
+      const instCount =
+        hasGroup && !safeData.isRecurring
+          ? regularInstallments.length
+          : safeData.installmentCount || 1;
 
       // Installment Value (for form pre-fill if needed):
       // If group, take the first regular installment's amount (approximation)
@@ -360,11 +368,15 @@ export function useEditTransaction() {
             ? firstRegular.wallet
             : safeData.wallet || "",
         notes: safeData.notes || "",
-        isInstallment: safeData.isRecurring ? false : (hasGroup || (safeData.isInstallment ?? false)),
+        isInstallment: safeData.isRecurring
+          ? false
+          : hasGroup || (safeData.isInstallment ?? false),
         isRecurring: safeData.isRecurring ?? false,
         installmentCount: instCount > 0 ? instCount : 1,
         installmentInterval:
-          (hasGroup ? firstRegular?.installmentInterval : safeData.installmentInterval) || 1,
+          (hasGroup
+            ? firstRegular?.installmentInterval
+            : safeData.installmentInterval) || 1,
         paymentMode: safeData.paymentMode || "total",
         downPaymentEnabled: !!downPaymentItem,
         downPaymentType:
@@ -400,7 +412,7 @@ export function useEditTransaction() {
     } catch (error) {
       console.error("Error fetching transaction:", error);
       toast.error("Erro ao carregar lançamento.");
-      router.push("/financial");
+      router.push("/transactions");
     } finally {
       setIsLoading(false);
     }
@@ -477,7 +489,8 @@ export function useEditTransaction() {
         computedValues = {
           amount: total.toFixed(2),
           wallet: formData.installmentsWallet || formData.wallet,
-          dueDate: formData.firstInstallmentDate || formData.dueDate || formData.date,
+          dueDate:
+            formData.firstInstallmentDate || formData.dueDate || formData.date,
           // Keep these for potential switch back
           isInstallment: formData.isRecurring ? false : true,
           isRecurring: formData.isRecurring,
@@ -514,9 +527,7 @@ export function useEditTransaction() {
               computedValues.isInstallment ??
               false,
             isRecurring:
-              targetBuffer.isRecurring ??
-              computedValues.isRecurring ??
-              false,
+              targetBuffer.isRecurring ?? computedValues.isRecurring ?? false,
             installmentCount:
               targetBuffer.installmentCount ??
               computedValues.installmentCount ??
@@ -571,9 +582,7 @@ export function useEditTransaction() {
               computedValues.isInstallment ??
               true,
             isRecurring:
-              targetBuffer.isRecurring ??
-              computedValues.isRecurring ??
-              false,
+              targetBuffer.isRecurring ?? computedValues.isRecurring ?? false,
             installmentCount:
               targetBuffer.installmentCount ??
               computedValues.installmentCount ??
@@ -692,7 +701,7 @@ export function useEditTransaction() {
       toast.success(`Lancamento ${transactionLabel} atualizado com sucesso.`, {
         title: "Sucesso ao editar",
       });
-      router.push("/financial");
+      router.push("/transactions");
     } catch (error) {
       console.error("Error updating transaction:", error);
       const errorMessage =
@@ -738,4 +747,3 @@ export function useEditTransaction() {
     refetch: fetchTransaction,
   };
 }
-

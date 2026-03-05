@@ -224,7 +224,7 @@ export function BottomDock() {
 
       // Achatar o Financeiro: remover item pai e inserir os filhos como itens diretos.
       if (
-        (item.href === "/financial" || item.label === "Financeiro") &&
+        (item.href === "/transactions" || item.label === "Financeiro") &&
         children.length > 0
       ) {
         for (const child of children) {

@@ -5,10 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, Wallet } from "lucide-react";
 import { useTransactionForm } from "../_hooks/useTransactionForm";
 import { FormContainer, FormHeader } from "@/components/ui/form-components";
-import {
-  StepWizard,
-  StepNavigation,
-} from "@/components/ui/step-wizard";
+import { StepWizard, StepNavigation } from "@/components/ui/step-wizard";
 import { FormStepCard } from "@/components/ui/form-step-card";
 import {
   TypeSelectorStep,
@@ -69,7 +66,7 @@ export default function NewTransactionPage() {
   // Redirect if no create permission
   useEffect(() => {
     if (!permLoading && !canCreate) {
-      router.push("/financial");
+      router.push("/transactions");
     }
   }, [permLoading, canCreate, router]);
 
@@ -154,7 +151,10 @@ export default function NewTransactionPage() {
     } else {
       // Installment value mode: installmentValue and installmentsWallet are required
       if (formData.isInstallment) {
-        if (formData.paymentMode === "installmentValue" && !formData.firstInstallmentDate) {
+        if (
+          formData.paymentMode === "installmentValue" &&
+          !formData.firstInstallmentDate
+        ) {
           setFieldError(
             "firstInstallmentDate",
             "Data de vencimento da primeira parcela é obrigatória",
@@ -192,7 +192,9 @@ export default function NewTransactionPage() {
           }
 
           if (formData.downPaymentType === "percentage") {
-            const percentage = parseFloat(formData.downPaymentPercentage || "0");
+            const percentage = parseFloat(
+              formData.downPaymentPercentage || "0",
+            );
             if (!formData.downPaymentPercentage || percentage <= 0) {
               setFieldError(
                 "downPaymentPercentage",
@@ -223,7 +225,7 @@ export default function NewTransactionPage() {
         title="Novo Lançamento"
         subtitle="Registre uma nova movimentação financeira"
         icon={Wallet}
-        onBack={() => router.push("/financial")}
+        onBack={() => router.push("/transactions")}
       />
 
       <StepWizard steps={transactionSteps}>

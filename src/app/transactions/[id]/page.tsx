@@ -236,7 +236,7 @@ export default function EditTransactionPage() {
             </p>
           </div>
           <button
-            onClick={() => router.push("/financial")}
+            onClick={() => router.push("/transactions")}
             className="h-11 px-6 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
           >
             Voltar para Financeiro
@@ -263,7 +263,7 @@ export default function EditTransactionPage() {
           title="Visualizar Lançamento"
           subtitle="Detalhes do lançamento financeiro"
           icon={Wallet}
-          onBack={() => router.push("/financial")}
+          onBack={() => router.push("/transactions")}
         />
 
         <ReviewStep
@@ -275,7 +275,7 @@ export default function EditTransactionPage() {
 
         <div className="flex justify-end pt-6">
           <button
-            onClick={() => router.push("/financial")}
+            onClick={() => router.push("/transactions")}
             className="h-12 px-6 rounded-xl bg-card border border-border/50 text-sm font-medium hover:bg-muted transition-colors"
           >
             Voltar
@@ -291,7 +291,7 @@ export default function EditTransactionPage() {
         title="Editar Lançamento"
         subtitle="Atualize as informações do lançamento"
         icon={Wallet}
-        onBack={() => router.push("/financial")}
+        onBack={() => router.push("/transactions")}
       />
 
       <StepWizard

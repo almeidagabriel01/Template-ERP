@@ -10,7 +10,7 @@ import { ProposalKanbanTab } from "@/components/features/kanban/proposal-kanban-
 import { TransactionKanbanTab } from "@/components/features/kanban/transaction-kanban-tab";
 import { SelectTenantState } from "@/components/shared/select-tenant-state";
 import { LayoutDashboard, ReceiptText } from "lucide-react";
-import KanbanSkeleton from "@/app/kanban/loading";
+import KanbanSkeleton from "@/app/crm/loading";
 
 type KanbanTab = "proposals" | "transactions";
 
@@ -23,7 +23,7 @@ export default function KanbanPage() {
 
   const tabParam = searchParams.get("tab");
   const tabFromUrl: KanbanTab =
-    tabParam === "lancamentos" ? "transactions" : "proposals";
+    tabParam === "transactions" ? "transactions" : "proposals";
   const [activeTab, setActiveTab] = React.useState<KanbanTab>(tabFromUrl);
 
   React.useEffect(() => {
@@ -39,11 +39,11 @@ export default function KanbanPage() {
       if (nextTab === "proposals") {
         params.delete("tab");
       } else {
-        params.set("tab", "lancamentos");
+        params.set("tab", "transactions");
       }
 
       const query = params.toString();
-      router.replace(query ? `/kanban?${query}` : "/kanban", {
+      router.replace(query ? `/crm?${query}` : "/crm", {
         scroll: false,
       });
     },

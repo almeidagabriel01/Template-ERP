@@ -426,7 +426,8 @@ export function useFinancialData(): UseFinancialDataReturn {
       // so heuristic matching can correctly find them.
       sortedRaw.forEach((t) => {
         // Skip already-processed grouped transactions
-        if (t.proposalGroupId || t.installmentGroupId || t.recurringGroupId) return;
+        if (t.proposalGroupId || t.installmentGroupId || t.recurringGroupId)
+          return;
 
         // Orphan down payment — check if it matches a group representative
         if (
@@ -840,7 +841,8 @@ export function useFinancialData(): UseFinancialDataReturn {
 
       try {
         // If it's an installment or recurrence, delete all in the group
-        const groupId = transaction.installmentGroupId || transaction.recurringGroupId;
+        const groupId =
+          transaction.installmentGroupId || transaction.recurringGroupId;
         if (groupId) {
           const groupTransactions = transactions.filter(
             (t) => (t.installmentGroupId || t.recurringGroupId) === groupId,
@@ -871,7 +873,7 @@ export function useFinancialData(): UseFinancialDataReturn {
           setTransactions((prev) => prev.filter((t) => !groupIds.has(t.id)));
 
           toast.success(
-            `${groupTransactions.length} lancamentos vinculados a ${transactionLabel} foram excluidos com sucesso.`,
+            `${groupTransactions.length} lançamentos vinculados a ${transactionLabel} foram excluídos com sucesso.`,
             { title: "Sucesso ao excluir" },
           );
         } else {
@@ -902,10 +904,10 @@ export function useFinancialData(): UseFinancialDataReturn {
         console.error("Error deleting transaction group:", error);
         const errorMessage = getErrorMessage(
           error,
-          "Falha inesperada ao excluir os lancamentos.",
+          "Falha inesperada ao excluir os lançamentos.",
         );
         toast.error(
-          `Nao foi possivel excluir os lancamentos vinculados a ${transactionLabel}. Detalhes: ${errorMessage}`,
+          `Não foi possível excluir os lançamentos vinculados a ${transactionLabel}. Detalhes: ${errorMessage}`,
           { title: "Erro ao excluir" },
         );
         return false;
@@ -1042,7 +1044,7 @@ export function useFinancialData(): UseFinancialDataReturn {
         });
 
         toast.success(
-          `${updates.length} lancamentos foram atualizados com sucesso.`,
+          `${updates.length} lançamentos foram atualizados com sucesso.`,
           { title: "Sucesso ao editar" },
         );
 
@@ -1054,10 +1056,10 @@ export function useFinancialData(): UseFinancialDataReturn {
         console.error("Error updating batch:", error);
         const errorMessage = getErrorMessage(
           error,
-          "Falha inesperada ao editar os lancamentos.",
+          "Falha inesperada ao editar os lançamentos.",
         );
         toast.error(
-          `Nao foi possivel editar ${updates.length} lancamentos. Detalhes: ${errorMessage}`,
+          `Não foi possível editar ${updates.length} lançamentos. Detalhes: ${errorMessage}`,
           { title: "Erro ao editar" },
         );
         return false;
@@ -1080,7 +1082,9 @@ export function useFinancialData(): UseFinancialDataReturn {
         const hasProposalGroup = transaction.proposalGroupId && updateAll;
 
         // Check if this is an installment or recurring group
-        const hasInstallmentGroup = (transaction.installmentGroupId || transaction.recurringGroupId) && updateAll;
+        const hasInstallmentGroup =
+          (transaction.installmentGroupId || transaction.recurringGroupId) &&
+          updateAll;
 
         if (hasProposalGroup) {
           // Update all transactions in the proposal group (down payment + all installments)
@@ -1108,12 +1112,13 @@ export function useFinancialData(): UseFinancialDataReturn {
           );
 
           toast.success(
-            `${groupTransactions.length} lancamentos da proposta ${transactionLabel} tiveram status atualizado para "${formatStatusLabel(newStatus)}".`,
+            `${groupTransactions.length} lançamentos da proposta ${transactionLabel} tiveram status atualizado para "${formatStatusLabel(newStatus)}".`,
             { title: "Sucesso ao editar" },
           );
         } else if (hasInstallmentGroup) {
           // Update all elements in the installment or recurring group
-          const groupId = transaction.installmentGroupId || transaction.recurringGroupId;
+          const groupId =
+            transaction.installmentGroupId || transaction.recurringGroupId;
           const groupTransactions = transactions.filter(
             (t) => (t.installmentGroupId || t.recurringGroupId) === groupId,
           );

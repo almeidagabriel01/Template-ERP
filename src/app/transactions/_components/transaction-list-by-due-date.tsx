@@ -43,7 +43,7 @@ import { PartialPaymentDialog } from "./partial-payment-dialog";
 import { TransactionService } from "@/services/transaction-service";
 import { toast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
-import { useTransactionStatuses } from "@/app/financial/_hooks/useTransactionStatuses";
+import { useTransactionStatuses } from "@/app/transactions/_hooks/useTransactionStatuses";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -824,7 +824,7 @@ export function TransactionListByDueDate({
                         </Button>
                       )}
                       {!(tx as SyncTx).isExtraCostSync && (
-                        <Link href={`/financial/${tx.id}/view`}>
+                        <Link href={`/transactions/${tx.id}/view`}>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -837,7 +837,7 @@ export function TransactionListByDueDate({
                       )}
                       {(tx as SyncTx).isExtraCostSync && (
                         <Link
-                          href={`/financial/${(tx as SyncTx).parentTransactionId}/extra-cost/${tx.id}`}
+                          href={`/transactions/${(tx as SyncTx).parentTransactionId}/extra-cost/${tx.id}`}
                         >
                           <Button
                             variant="ghost"

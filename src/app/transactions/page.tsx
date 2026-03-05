@@ -544,7 +544,7 @@ export default function FinancialPage() {
           </div>
 
           {canCreate && (
-            <Link href="/financial/new">
+            <Link href="/transactions/new">
               <Button size="lg" className="gap-2">
                 <Plus className="w-5 h-5" />
                 Novo Lançamento
@@ -637,7 +637,7 @@ export default function FinancialPage() {
               Comece a registrar suas receitas e despesas.
             </p>
             {canCreate && (
-              <Link href="/financial/new">
+              <Link href="/transactions/new">
                 <Button className="gap-2">
                   <Plus className="w-4 h-4" />
                   Criar Primeiro Lançamento

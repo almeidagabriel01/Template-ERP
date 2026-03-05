@@ -4,7 +4,7 @@ import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { DashboardSkeleton } from "@/app/dashboard/_components/dashboard-skeleton";
 import { ProfileSkeleton } from "@/app/profile/_components/profile-skeleton";
-import { FinancialSkeleton } from "@/app/financial/_components/financial-skeleton";
+import { FinancialSkeleton } from "@/app/transactions/_components/financial-skeleton";
 import { TeamSkeleton } from "@/app/team/_components/team-skeleton";
 import { AdminSkeleton } from "@/app/admin/_components/admin-skeleton";
 import { AdminOverviewSkeleton } from "@/app/admin/overview/_components/admin-overview-skeleton";
@@ -17,7 +17,7 @@ import { AutomationSkeleton } from "@/components/features/automation/automation-
 import { WalletsSkeleton } from "@/app/wallets/_components/wallets-skeleton";
 import { SpreadsheetsSkeleton } from "@/app/spreadsheets/_components/spreadsheets-skeleton";
 import { SpreadsheetEditorSkeleton } from "@/app/spreadsheets/[id]/_components/spreadsheet-editor-skeleton";
-import { KanbanSkeleton } from "@/app/kanban/_components/kanban-skeleton";
+import { KanbanSkeleton } from "@/app/crm/_components/kanban-skeleton";
 
 /** Simple spinner used for create/edit sub-routes instead of the full page skeleton */
 function SpinnerFallback() {
@@ -54,8 +54,8 @@ export function RouteContentSkeleton({ pathname }: { pathname: string }) {
 
   // For modules with create/edit sub-routes, show spinner on sub-pages
   // and the full skeleton only on the list page itself
-  if (pathname.startsWith("/financial")) {
-    return pathname === "/financial" ? (
+  if (pathname.startsWith("/transactions")) {
+    return pathname === "/transactions" ? (
       <FinancialSkeleton />
     ) : (
       <SpinnerFallback />
@@ -110,7 +110,7 @@ export function RouteContentSkeleton({ pathname }: { pathname: string }) {
     return <AutomationSkeleton />;
   }
 
-  if (pathname.startsWith("/kanban")) {
+  if (pathname.startsWith("/crm")) {
     return <KanbanSkeleton />;
   }
 

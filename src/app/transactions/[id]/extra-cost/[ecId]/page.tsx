@@ -87,7 +87,7 @@ export default function ViewExtraCostPage() {
         <p className="text-muted-foreground">
           Acréscimo/Custo Extra não encontrado
         </p>
-        <Button variant="outline" onClick={() => router.push("/financial")}>
+        <Button variant="outline" onClick={() => router.push("/transactions")}>
           Voltar para Financeiro
         </Button>
       </div>
@@ -110,7 +110,7 @@ export default function ViewExtraCostPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => router.push("/financial")}
+            onClick={() => router.push("/transactions")}
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
@@ -246,7 +246,7 @@ export default function ViewExtraCostPage() {
                 )}
               </p>
             </div>
-            <Link href={`/financial/${parentId}/view`}>
+            <Link href={`/transactions/${parentId}/view`}>
               <Button variant="outline" size="sm" className="gap-2 shrink-0">
                 <FileText className="w-4 h-4" />
                 Ver Lançamento

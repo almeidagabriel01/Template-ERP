@@ -26,7 +26,7 @@ import {
 import { toast } from "@/lib/toast";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { cn } from "@/lib/utils";
-import { useTransactionStatuses } from "@/app/financial/_hooks/useTransactionStatuses";
+import { useTransactionStatuses } from "@/app/transactions/_hooks/useTransactionStatuses";
 
 interface TransactionInstallmentsListProps {
   installments: Transaction[];
