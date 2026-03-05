@@ -1327,6 +1327,34 @@ export function TransactionCard({
                         {statusConfig[downPayment.status].label}
                       </Badge>
                     )}
+                    {/* Down Payment Edit Button */}
+                    {canEdit &&
+                      (downPayment.proposalId ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-primary ml-1"
+                          title="Editar (Gerenciado pela Proposta)"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowEditBlockDialog(true);
+                          }}
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </Button>
+                      ) : (
+                        <Link href={`/financial/${downPayment.id}`}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 ml-1"
+                            title="Editar"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </Button>
+                        </Link>
+                      ))}
                   </div>
                 </div>
               )}
@@ -1452,6 +1480,34 @@ export function TransactionCard({
                               {statusConfig[inst.status].label}
                             </Badge>
                           )}
+                          {/* Individual Installment Edit Button */}
+                          {canEdit &&
+                            (inst.proposalId ? (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-primary ml-1"
+                                title="Editar (Gerenciado pela Proposta)"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setShowEditBlockDialog(true);
+                                }}
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </Button>
+                            ) : (
+                              <Link href={`/financial/${inst.id}`}>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 ml-1"
+                                  title="Editar"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Edit className="w-3.5 h-3.5" />
+                                </Button>
+                              </Link>
+                            ))}
                         </div>
                       </div>
                     ))}
@@ -1850,6 +1906,7 @@ export function TransactionCard({
       <EditBlockDialog
         open={showEditBlockDialog}
         onOpenChange={setShowEditBlockDialog}
+        proposalId={transaction.proposalId}
       />
       {partialPaymentTransaction && (
         <PartialPaymentDialog

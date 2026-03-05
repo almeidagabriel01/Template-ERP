@@ -147,6 +147,31 @@ function sanitizeAttachmentStoragePath(value: unknown): string | undefined {
   return normalized;
 }
 
+async function isStatusApproved(
+  statusId: string | undefined | null,
+): Promise<boolean> {
+  if (!statusId) return false;
+
+  // Classic mapped names
+  if (statusId === "approved") return true;
+  if (["draft", "in_progress", "sent", "rejected"].includes(statusId))
+    return false;
+
+  try {
+    const statusDoc = await db
+      .collection("kanban_statuses")
+      .doc(statusId)
+      .get();
+    if (statusDoc.exists) {
+      const mapped = statusDoc.data()?.mappedStatus;
+      return mapped === "approved";
+    }
+  } catch (err) {
+    console.error("isStatusApproved error checking kanban_statuses", err);
+  }
+  return false;
+}
+
 function sanitizeAttachmentsInput(rawValue: unknown): SanitizedAttachment[] {
   if (typeof rawValue === "undefined" || rawValue === null) {
     return [];
@@ -887,9 +912,10 @@ export const createProposal = async (req: Request, res: Response) => {
       }
     }
 
-    let proposalId = "";
+    let proposalId: string;
+    let createdProposal: { id: string; data: Record<string, unknown> };
     try {
-      proposalId = await db.runTransaction(async (t) => {
+      createdProposal = await db.runTransaction(async (t) => {
         // === ALL READS FIRST ===
         await t.get(masterRef);
 
@@ -1071,8 +1097,57 @@ export const createProposal = async (req: Request, res: Response) => {
           });
         }
 
-        return newRef.id;
+        return {
+          id: newRef.id,
+          data: {
+            title: input.title.trim(),
+            status: input.status || "draft",
+            totalValue: input.totalValue,
+            notes: input.notes?.trim() || null,
+            customNotes: input.customNotes?.trim() || null,
+            discount: input.discount || 0,
+            extraExpense: input.extraExpense || 0,
+            validUntil: input.validUntil || null,
+            clientId: input.clientId,
+            clientName: input.clientName,
+            clientEmail: input.clientEmail || null,
+            clientPhone: input.clientPhone || null,
+            clientAddress: input.clientAddress || null,
+            products: input.products || [],
+            sistemas: input.sistemas || [],
+            sections: input.sections || [],
+            downPaymentEnabled: input.downPaymentEnabled || false,
+            downPaymentType: input.downPaymentType || "value",
+            downPaymentPercentage: input.downPaymentPercentage || 0,
+            downPaymentValue: input.downPaymentValue || 0,
+            downPaymentWallet: input.downPaymentWallet || null,
+            downPaymentDueDate: input.downPaymentDueDate || null,
+            installmentsEnabled: input.installmentsEnabled || false,
+            installmentsCount: input.installmentsCount || 1,
+            installmentValue: input.installmentValue || 0,
+            installmentsWallet: input.installmentsWallet || null,
+            firstInstallmentDate: input.firstInstallmentDate || null,
+            pdfSettings: input.pdfSettings || null,
+            attachments: sanitizedAttachments,
+            createdById: userId,
+            createdByName: userData?.name || "Usuário",
+            companyId: userCompanyId,
+            tenantId: userCompanyId,
+          },
+        };
       });
+
+      if (await isStatusApproved(createdProposal.data.status as string)) {
+        await syncApprovedProposalTransactions({
+          proposalId: createdProposal.id,
+          proposalTenantId: createdProposal.data.tenantId as string,
+          proposalData: createdProposal.data as Record<string, unknown>,
+          userId: createdProposal.data.createdById as string,
+          initialStatus: input.initialPaymentStatus || "pending",
+        });
+      }
+
+      proposalId = createdProposal.id;
     } catch (transactionError) {
       if (transactionError instanceof ProposalMonthlyLimitError) {
         return res.status(402).json({
@@ -1241,18 +1316,23 @@ export const updateProposal = async (req: Request, res: Response) => {
     }
 
     // Criar receita automaticamente quando a proposta for aprovada
-    const isBeingApproved =
-      updateData.status === "approved" && proposalData?.status !== "approved";
+    const isCurrentlyApproved = await isStatusApproved(
+      proposalData?.status as string | undefined,
+    );
+    const willBeApproved =
+      updateData.status !== undefined
+        ? await isStatusApproved(updateData.status as string)
+        : isCurrentlyApproved;
+
+    const isBeingApproved = willBeApproved && !isCurrentlyApproved;
 
     // Remover receita se sair de aprovada (Rascunho/Enviada)
     const isBeingReverted =
-      proposalData?.status === "approved" &&
-      updateData.status &&
-      updateData.status !== "approved";
+      isCurrentlyApproved && updateData.status !== undefined && !willBeApproved;
 
     const isAlreadyApproved =
-      proposalData?.status === "approved" &&
-      (!updateData.status || updateData.status === "approved");
+      isCurrentlyApproved &&
+      (updateData.status === undefined || willBeApproved);
     const approvedSyncFields = new Set([
       "title",
       "clientId",
@@ -1642,281 +1722,6 @@ export const updateProposal = async (req: Request, res: Response) => {
           : undefined,
         metadataOnly: approvedSyncIsMetadataOnly,
       });
-    }
-
-    if (false && isBeingApproved) {
-      try {
-        const mergedData = { ...proposalData, ...safeUpdate } as any;
-        const proposalTenantId = mergedData.tenantId || tenantId;
-        const now = Timestamp.now();
-        const today = new Date();
-        const dateStr = today.toISOString().split("T")[0];
-
-        // Determinar carteira(s) - Prioriza o nome da carteira selecionada na proposta
-        // Se não houver, busca o NOME da carteira padrão
-        let defaultWalletName: string | null = null;
-
-        const getDefaultWalletName = async () => {
-          if (defaultWalletName) return defaultWalletName;
-
-          const walletsQuery = await db
-            .collection("wallets")
-            .where("tenantId", "==", proposalTenantId)
-            .where("isDefault", "==", true)
-            .limit(1)
-            .get();
-
-          if (!walletsQuery.empty) {
-            defaultWalletName = walletsQuery.docs[0].data().name;
-            return defaultWalletName;
-          }
-
-          // Fallback: qualquer carteira ativa
-          const anyWallet = await db
-            .collection("wallets")
-            .where("tenantId", "==", proposalTenantId)
-            .where("status", "==", "active")
-            .limit(1)
-            .get();
-
-          if (!anyWallet.empty) {
-            defaultWalletName = anyWallet.docs[0].data().name;
-            return defaultWalletName;
-          }
-          return null;
-        };
-
-        const transactionsToCreate: any[] = [];
-        const walletAdjustments = new Map<string, number>();
-
-        // Helper to track wallet adjustments
-        const trackAdjustment = (
-          walletName: string,
-          amount: number,
-          type: "income" | "expense",
-        ) => {
-          if (!walletName || amount === 0) return;
-          const sign = type === "income" ? 1 : -1;
-          const current = walletAdjustments.get(walletName) || 0;
-          walletAdjustments.set(walletName, current + amount * sign);
-        };
-
-        const initialStatus = updateData.initialPaymentStatus || "pending";
-
-        // ID único para agrupar entrada + parcelas da mesma proposta
-        const proposalGroupId = `proposal_${id}_${now.toMillis()}`;
-
-        // Verificar se tem tanto entrada quanto parcelas (para decidir se usa o groupId)
-        const hasDownPayment =
-          mergedData.downPaymentEnabled && mergedData.downPaymentValue > 0;
-        const hasInstallments =
-          mergedData.installmentsEnabled &&
-          mergedData.installmentsCount > 0 &&
-          mergedData.installmentValue > 0;
-        const useProposalGrouping = hasDownPayment && hasInstallments;
-
-        // 1. Entrada (Down Payment)
-        if (hasDownPayment) {
-          const wName =
-            mergedData.downPaymentWallet || (await getDefaultWalletName());
-
-          if (wName) {
-            transactionsToCreate.push({
-              tenantId: proposalTenantId,
-              type: "income",
-              description: `Entrada: ${mergedData.title || "Proposta"}`,
-              amount: mergedData.downPaymentValue,
-              date: dateStr,
-              dueDate: mergedData.downPaymentDueDate || dateStr, // Usa data configurada ou hoje
-              status: initialStatus,
-              clientId: mergedData.clientId || null,
-              clientName: mergedData.clientName || null,
-              proposalId: id,
-              proposalGroupId: useProposalGrouping ? proposalGroupId : null, // Agrupa se tiver parcelas também
-              category: null,
-              wallet: wName,
-              isDownPayment: true, // Nova flag para identificar entrada
-              downPaymentType: mergedData.downPaymentType || "value",
-              downPaymentPercentage: mergedData.downPaymentPercentage || 0,
-              isInstallment: false,
-              installmentCount: null,
-              installmentNumber: null,
-              installmentGroupId: null,
-              notes: "Entrada gerada automaticamente pela proposta",
-              createdAt: now,
-              updatedAt: now,
-              createdById: userId,
-            });
-            if (initialStatus === "paid") {
-              trackAdjustment(wName, mergedData.downPaymentValue, "income");
-            }
-          }
-        }
-
-        // 2. Parcelamento (Installments)
-        if (hasInstallments) {
-          const wName =
-            mergedData.installmentsWallet || (await getDefaultWalletName());
-          const installmentGroupId = `inst_${id}_${now.toMillis()}`;
-
-          if (wName) {
-            // Determinar a data base para a primeira parcela
-            let firstInstDate: Date;
-            if (mergedData.firstInstallmentDate) {
-              // Usa a data configurada pelo usuário
-              firstInstDate = new Date(
-                mergedData.firstInstallmentDate + "T12:00:00",
-              );
-            } else {
-              // Fallback: 30 dias a partir de hoje
-              firstInstDate = new Date(today);
-              firstInstDate.setDate(firstInstDate.getDate() + 30);
-            }
-
-            for (let i = 0; i < mergedData.installmentsCount; i++) {
-              // Cada parcela é +1 mês a partir da primeira parcela (mantendo o dia do mês)
-              const installmentDate = new Date(firstInstDate);
-              installmentDate.setMonth(firstInstDate.getMonth() + i);
-              const dueDate = installmentDate.toISOString().split("T")[0];
-
-              transactionsToCreate.push({
-                tenantId: proposalTenantId,
-                type: "income",
-                description: `Parcela ${i + 1}/${mergedData.installmentsCount}: ${mergedData.title || "Proposta"}`,
-                amount: mergedData.installmentValue,
-                date: dateStr,
-                dueDate: dueDate,
-                status: initialStatus,
-                clientId: mergedData.clientId || null,
-                clientName: mergedData.clientName || null,
-                proposalId: id,
-                proposalGroupId: useProposalGrouping ? proposalGroupId : null, // Agrupa se tiver entrada também
-                category: null,
-                wallet: wName,
-                isDownPayment: false,
-                isInstallment: true,
-                installmentCount: mergedData.installmentsCount,
-                installmentNumber: i + 1,
-                installmentGroupId: installmentGroupId,
-                notes: `Parcela ${i + 1}/${mergedData.installmentsCount} gerada automaticamente`,
-                createdAt: now,
-                updatedAt: now,
-                createdById: userId,
-              });
-
-              if (initialStatus === "paid") {
-                trackAdjustment(wName, mergedData.installmentValue, "income");
-              }
-            }
-          }
-        }
-
-        // 3. Fallback: Se não tem nem entrada nem parcelamento (pagamento único total)
-        const hasSpecifics =
-          (mergedData.downPaymentEnabled && mergedData.downPaymentValue > 0) ||
-          (mergedData.installmentsEnabled && mergedData.installmentsCount > 0);
-
-        if (!hasSpecifics) {
-          const finalTotalValue = mergedData.totalValue || 0;
-          if (finalTotalValue > 0) {
-            const wName = await getDefaultWalletName();
-            if (wName) {
-              let dueDate = mergedData.validUntil;
-              if (!dueDate) {
-                const d = new Date(today);
-                d.setDate(d.getDate() + 30);
-                dueDate = d.toISOString().split("T")[0];
-              }
-
-              transactionsToCreate.push({
-                tenantId: proposalTenantId,
-                type: "income",
-                description: `Proposta: ${mergedData.title || "Sem título"}`,
-                amount: finalTotalValue,
-                date: dateStr,
-                dueDate: dueDate,
-                status: initialStatus,
-                clientId: mergedData.clientId || null,
-                clientName: mergedData.clientName || null,
-                proposalId: id,
-                category: null,
-                wallet: wName,
-                isInstallment: false,
-                installmentCount: null,
-                installmentNumber: null,
-                installmentGroupId: null,
-                notes:
-                  "Receita gerada automaticamente pela aprovação da proposta",
-                createdAt: now,
-                updatedAt: now,
-                createdById: userId,
-              });
-
-              if (initialStatus === "paid") {
-                trackAdjustment(wName || "", finalTotalValue, "income");
-              }
-            }
-          }
-        }
-
-        // Batch save
-        if (transactionsToCreate.length > 0) {
-          // Batch save transactions and update wallets
-          const batch = db.batch();
-
-          // 1. Create Transactions
-          transactionsToCreate.forEach((docData) => {
-            const ref = db.collection("transactions").doc();
-            batch.set(ref, docData);
-          });
-
-          // 2. Batched wallet lookup: single query instead of N sequential ones
-          const walletNamesToResolve = Array.from(walletAdjustments.entries())
-            .filter(([, adj]) => adj !== 0)
-            .map(([name]) => name);
-
-          if (walletNamesToResolve.length > 0) {
-            const walletSnap = await db
-              .collection("wallets")
-              .where("tenantId", "==", proposalTenantId)
-              .where("name", "in", walletNamesToResolve)
-              .get();
-
-            const walletRefMap = new Map(
-              walletSnap.docs.map((d) => [d.data().name as string, d.ref]),
-            );
-
-            for (const [
-              walletName,
-              adjustment,
-            ] of walletAdjustments.entries()) {
-              if (adjustment === 0) continue;
-              const wRef = walletRefMap.get(walletName);
-              if (wRef) {
-                batch.update(wRef as FirebaseFirestore.DocumentReference, {
-                  balance: FieldValue.increment(adjustment),
-                  updatedAt: now,
-                });
-              }
-            }
-          }
-
-          await batch.commit();
-          console.log(
-            `${transactionsToCreate.length} transações criadas e carteiras atualizadas para proposta ${id}`,
-          );
-        } else {
-          console.warn(
-            `Nenhuma transação criada para proposta ${id} (valores zerados ou sem carteira)`,
-          );
-        }
-      } catch (transactionError) {
-        // Não falhar a atualização da proposta se a criação da receita falhar
-        console.error(
-          `Erro ao criar receita automática para proposta ${id}:`,
-          transactionError,
-        );
-      }
     }
 
     return res.json({ success: true, message: "Proposta atualizada." });

@@ -274,7 +274,6 @@ export function ProposalForm({ proposalId }: ProposalFormProps) {
                   value={formData.status}
                   onChange={handleChange}
                 >
-                  <option value="draft">Rascunho</option>
                   <option value="sent">Enviada</option>
                   <option value="approved">Aprovada</option>
                   <option value="rejected">Rejeitada</option>
