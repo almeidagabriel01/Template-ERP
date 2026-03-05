@@ -22,7 +22,7 @@ export const DEFAULT_PLANS: Omit<UserPlan, "id">[] = [
       maxProposals: 80,
       maxClients: 120,
       maxProducts: 220,
-      maxUsers: 2,
+      maxUsers: 1,
       hasFinancial: false,
       canCustomizeTheme: false,
       maxPdfTemplates: 1,
@@ -48,7 +48,7 @@ export const DEFAULT_PLANS: Omit<UserPlan, "id">[] = [
       maxProposals: -1, // Unlimited
       maxClients: -1,
       maxProducts: -1,
-      maxUsers: 10,
+      maxUsers: 2,
       hasFinancial: true,
       canCustomizeTheme: true,
       maxPdfTemplates: 3,

@@ -10,8 +10,8 @@ export const LEGACY_LIMITS: Record<string, number> = {
 
 export const LEGACY_USER_LIMITS: Record<string, number> = {
   free: 1,
-  starter: 2,
-  pro: 10,
+  starter: 1,
+  pro: 2,
   enterprise: -1,
 };
 
