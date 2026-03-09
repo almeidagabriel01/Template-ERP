@@ -20,6 +20,7 @@ import {
   readViewingTenantId,
   writeViewingTenantId,
 } from "@/lib/viewing-tenant-session";
+import type { TenantBillingInfo } from "@/services/admin-service";
 
 interface TenantContextType {
   tenant: Tenant | null;
@@ -90,7 +91,9 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   >({});
   const [tenant, setTenant] = React.useState<Tenant | null>(null);
   const [tenantOwner, setTenantOwner] = React.useState<User | null>(null);
-  const [tenantOwnerPlanName, setTenantOwnerPlanName] = React.useState<string | null>(null);
+  const [tenantOwnerPlanName, setTenantOwnerPlanName] = React.useState<
+    string | null
+  >(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [refreshTrigger, setRefreshTrigger] = React.useState(0);
   const { user, isLoading: isAuthLoading } = useAuth();
@@ -194,7 +197,6 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       tenantIdToLoad || "no-tenant",
       user?.id || "anonymous",
       user?.role || "no-role",
-      pathname || "no-path",
     ].join(":");
     const needsSuperAdminHydration =
       user?.role?.toLowerCase() === "superadmin" &&
@@ -217,6 +219,22 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     if (tenantIdToLoad) {
       try {
         let fetchedTenant: Tenant | null = null;
+        let superAdminTenantBillingMatch: TenantBillingInfo | null = null;
+
+        const resolveSuperAdminTenantBillingMatch = async () => {
+          if (superAdminTenantBillingMatch) {
+            return superAdminTenantBillingMatch;
+          }
+
+          const { AdminService } = await import("@/services/admin-service");
+          const allTenants = await AdminService.getAllTenantsBilling();
+          superAdminTenantBillingMatch =
+            allTenants.find((item) => item.tenant.id === tenantIdToLoad) ||
+            null;
+
+          return superAdminTenantBillingMatch;
+        };
+
         try {
           fetchedTenant = await TenantService.getTenantById(tenantIdToLoad);
         } catch (fetchTenantError) {
@@ -228,11 +246,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
 
         if (!fetchedTenant && user?.role?.toLowerCase() === "superadmin") {
           try {
-            const { AdminService } = await import("@/services/admin-service");
-            const allTenants = await AdminService.getAllTenantsBilling();
-            const match = allTenants.find(
-              (item) => item.tenant.id === tenantIdToLoad,
-            );
+            const match = await resolveSuperAdminTenantBillingMatch();
             if (match?.tenant) {
               fetchedTenant = {
                 id: match.tenant.id,
@@ -281,35 +295,46 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
               }
             } else if (isSuperAdmin) {
               try {
-                const { AdminService } =
-                  await import("@/services/admin-service");
-                const allTenants = await AdminService.getAllTenantsBilling();
-                const targetTenant = allTenants.find(
-                  (item) => item.tenant.id === fetchedTenant.id,
+                const usersQuery = query(
+                  collection(db, "users"),
+                  where("tenantId", "==", fetchedTenant.id),
+                  limit(20),
                 );
+                const usersSnap = await getDocs(usersQuery);
+                const ownerFromUsers = usersSnap.docs
+                  .map((d) => ({ id: d.id, ...d.data() }) as User)
+                  .find((u) => !u.masterId);
 
-                if (targetTenant?.admin?.id) {
-                  setTenantOwner({
-                    id: targetTenant.admin.id,
-                    name: targetTenant.admin.name || fetchedTenant.name,
-                    email: targetTenant.admin.email,
-                    role: "admin",
-                    tenantId: fetchedTenant.id,
-                    planId:
-                      normalizePlanId(
-                        (targetTenant as { planId?: string }).planId,
-                      ) ||
-                      normalizePlanId(targetTenant.planName) ||
-                      "free",
-                    billingInterval:
-                      targetTenant.billingInterval === "yearly"
-                        ? "yearly"
-                        : "monthly",
-                  } as User);
-                  setTenantOwnerPlanName(targetTenant.planName || null);
-                } else {
-                  setTenantOwner(null);
+                if (ownerFromUsers) {
+                  setTenantOwner(ownerFromUsers);
                   setTenantOwnerPlanName(null);
+                } else {
+                  const targetTenant =
+                    await resolveSuperAdminTenantBillingMatch();
+
+                  if (targetTenant?.admin?.id) {
+                    setTenantOwner({
+                      id: targetTenant.admin.id,
+                      name: targetTenant.admin.name || fetchedTenant.name,
+                      email: targetTenant.admin.email,
+                      role: "admin",
+                      tenantId: fetchedTenant.id,
+                      planId:
+                        normalizePlanId(
+                          (targetTenant as { planId?: string }).planId,
+                        ) ||
+                        normalizePlanId(targetTenant.planName) ||
+                        "free",
+                      billingInterval:
+                        targetTenant.billingInterval === "yearly"
+                          ? "yearly"
+                          : "monthly",
+                    } as User);
+                    setTenantOwnerPlanName(targetTenant.planName || null);
+                  } else {
+                    setTenantOwner(null);
+                    setTenantOwnerPlanName(null);
+                  }
                 }
               } catch (superAdminOwnerError) {
                 console.warn(
@@ -412,7 +437,8 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   }, [isAuthLoading, loadTenant]);
 
   React.useEffect(() => {
-    const tenantSwitchTarget = routeTransitionTargetsRef.current["tenant-switch"];
+    const tenantSwitchTarget =
+      routeTransitionTargetsRef.current["tenant-switch"];
     if (
       tenantSwitchTarget &&
       pathname === tenantSwitchTarget &&
