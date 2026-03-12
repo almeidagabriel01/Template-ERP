@@ -65,6 +65,7 @@ const SHARED_PROPOSAL_ALLOWED_FIELDS = [
   "sections",
   "discount",
   "totalValue",
+  "closedValue",
   "extraExpense",
   "customNotes",
   "notes",
