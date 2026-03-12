@@ -42,10 +42,12 @@ function buildForwardHeaders(req: NextRequest, requestId: string): Headers {
   const contentType = req.headers.get("content-type");
   const accept = req.headers.get("accept");
   const authorization = req.headers.get("authorization");
+  const pdfGenerator = req.headers.get("x-pdf-generator");
 
   if (contentType) headers.set("content-type", contentType);
   if (accept) headers.set("accept", accept);
   if (authorization) headers.set("authorization", authorization);
+  if (pdfGenerator) headers.set("x-pdf-generator", pdfGenerator);
   headers.set("x-request-id", requestId);
 
   return headers;
