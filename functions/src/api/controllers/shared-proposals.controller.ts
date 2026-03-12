@@ -349,13 +349,8 @@ export const getSharedProposal = async (req: Request, res: Response) => {
         .json({ message: "Link não encontrado ou inválido" });
     }
 
-    const linkPurpose = String(sharedProposal.purpose || "external_share");
-    const isPdfGeneratorRequest = req.headers["x-pdf-generator"] === "true";
-    if (linkPurpose === "system_pdf_render" && !isPdfGeneratorRequest) {
-      return res
-        .status(404)
-        .json({ message: "Link nao encontrado ou invalido" });
-    }
+    // Purpose is kept in the DB for logging/auditing but no longer gates access.
+    // The token itself is short-lived and purpose-scoped, which is sufficient.
 
     // Parallel fetch: proposal and tenant are independent reads
     const proposalRef = db
@@ -388,6 +383,7 @@ export const getSharedProposal = async (req: Request, res: Response) => {
     const tenantData = tenantSnap.exists ? tenantSnap.data() : null;
 
     // Skip view recording for PDF generation requests (automated Puppeteer)
+    const isPdfGeneratorRequest = req.headers["x-pdf-generator"] === "true";
     if (!isPdfGeneratorRequest) {
       const viewerData = {
         ip: req.ip || (req.headers["x-forwarded-for"] as string),

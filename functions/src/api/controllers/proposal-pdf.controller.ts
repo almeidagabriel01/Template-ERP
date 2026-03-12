@@ -50,6 +50,6 @@ export async function downloadProposalPdf(req: Request, res: Response) {
     }
 
     console.error("downloadProposalPdf Error:", error);
-    return res.status(500).json({ message: "Erro ao gerar PDF" });
+    return res.status(500).json({ message: message });
   }
 }
