@@ -240,7 +240,7 @@ export const deleteService = async (req: Request, res: Response) => {
     }
 
     const images = serviceData?.images as string[] | undefined;
-    await deleteProductImages(images);
+    await deleteProductImages(images, serviceData?.tenantId);
 
     let targetMasterRef = masterRef;
 

@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { db, auth } from "../../init";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
+import { randomUUID } from "node:crypto";
 import { generateRandomPassword } from "../../lib/admin-helpers";
 import { UserDoc } from "../../lib/auth-helpers";
 import { isSuperAdminClaim, isTenantAdminClaim } from "../../lib/request-auth";
@@ -1398,6 +1400,136 @@ export const testWhatsAppBilling = async (req: Request, res: Response) => {
   }
 };
 
+type CloneImageStats = {
+  copied: number;
+  reused: number;
+  failed: number;
+};
+
+function extractStoragePathFromUrl(urlOrPath: string): string | null {
+  if (urlOrPath.startsWith("tenants/")) return urlOrPath;
+
+  if (
+    urlOrPath.includes("firebasestorage.googleapis.com") ||
+    urlOrPath.includes("firebasestorage.app")
+  ) {
+    const decodedUrl = decodeURIComponent(urlOrPath);
+    const match = decodedUrl.match(/\/o\/(.+?)\?/);
+    return match?.[1] || null;
+  }
+
+  if (urlOrPath.includes("storage.googleapis.com")) {
+    const parts = urlOrPath.split("/");
+    const bucketIndex = parts.findIndex(
+      (part) =>
+        part.includes(".appspot.com") || part.includes("firebasestorage.app"),
+    );
+    if (bucketIndex >= 0) {
+      return parts.slice(bucketIndex + 1).join("/");
+    }
+  }
+
+  return null;
+}
+
+function buildFirebaseDownloadUrl(
+  bucketName: string,
+  filePath: string,
+  token: string,
+): string {
+  return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(filePath)}?alt=media&token=${token}`;
+}
+
+async function cloneImageUrlsForTenant(options: {
+  urls: string[];
+  sourceTenantId: string;
+  targetTenantId: string;
+  folder: "products" | "services";
+  targetEntityId: string;
+}): Promise<{ urls: string[]; stats: CloneImageStats }> {
+  const bucket = getStorage().bucket();
+  const mappedUrls: string[] = [];
+  const stats: CloneImageStats = { copied: 0, reused: 0, failed: 0 };
+  const memoBySourcePath = new Map<string, string>();
+
+  for (let index = 0; index < options.urls.length; index++) {
+    const rawUrl = options.urls[index];
+    const imageUrl = String(rawUrl || "").trim();
+
+    if (!imageUrl || imageUrl.startsWith("data:")) {
+      if (imageUrl) mappedUrls.push(imageUrl);
+      stats.reused += 1;
+      continue;
+    }
+
+    const sourcePath = extractStoragePathFromUrl(imageUrl);
+    if (!sourcePath) {
+      mappedUrls.push(imageUrl);
+      stats.reused += 1;
+      continue;
+    }
+
+    const expectedPrefix = `tenants/${options.sourceTenantId}/${options.folder}/`;
+    if (!sourcePath.startsWith(expectedPrefix)) {
+      mappedUrls.push(imageUrl);
+      stats.reused += 1;
+      continue;
+    }
+
+    const memoUrl = memoBySourcePath.get(sourcePath);
+    if (memoUrl) {
+      mappedUrls.push(memoUrl);
+      stats.reused += 1;
+      continue;
+    }
+
+    const sourceFile = bucket.file(sourcePath);
+    try {
+      const [exists] = await sourceFile.exists();
+      if (!exists) {
+        mappedUrls.push(imageUrl);
+        stats.failed += 1;
+        continue;
+      }
+
+      const fileName = sourcePath.split("/").pop() || `${Date.now()}-${index}.jpg`;
+      const destinationPath = `tenants/${options.targetTenantId}/${options.folder}/${options.targetEntityId}/${fileName}`;
+      const destinationFile = bucket.file(destinationPath);
+
+      await sourceFile.copy(destinationFile);
+
+      const token = randomUUID();
+      await destinationFile.setMetadata({
+        metadata: {
+          firebaseStorageDownloadTokens: token,
+        },
+      });
+
+      const destinationUrl = buildFirebaseDownloadUrl(
+        bucket.name,
+        destinationPath,
+        token,
+      );
+
+      memoBySourcePath.set(sourcePath, destinationUrl);
+      mappedUrls.push(destinationUrl);
+      stats.copied += 1;
+    } catch (error) {
+      console.error("[copyTenantData] image clone failed", {
+        sourcePath,
+        targetEntityId: options.targetEntityId,
+        folder: options.folder,
+        message: error instanceof Error ? error.message : String(error),
+      });
+
+      mappedUrls.push(imageUrl);
+      stats.failed += 1;
+    }
+  }
+
+  return { urls: mappedUrls, stats };
+}
+
 export const copyTenantData = async (req: Request, res: Response) => {
   try {
     if (!isSuperAdminClaim(req)) {
@@ -1412,13 +1544,24 @@ export const copyTenantData = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "sourceTenantId e targetTenantId são obrigatórios." });
     }
 
-    const collectionsToCopy = ["products", "services", "sistemas", "ambientes"];
+    const allCollections = ["products", "services", "ambientes", "sistemas"];
     const now = Timestamp.now();
     const nowTimestampStr = now.toDate().toISOString();
 
-    let totalCopied = 0;
+    // 0. Clean up any existing data in the target tenant first (idempotent)
+    for (const col of allCollections) {
+      const existingQuery = db.collection(col).where("tenantId", "==", targetTenantId);
+      await deleteQueryInBatches(existingQuery);
+    }
 
-    for (const collectionName of collectionsToCopy) {
+    const baseCollections = ["products", "services", "ambientes"];
+
+    let totalCopied = 0;
+    const dictionary: Record<string, string> = {}; // Mapping of oldId -> newId
+    const imageCloneStats: CloneImageStats = { copied: 0, reused: 0, failed: 0 };
+
+    // 1. Copy root collections first and map their new IDs
+    for (const collectionName of baseCollections) {
       const sourceQuery = db.collection(collectionName).where("tenantId", "==", sourceTenantId);
       const snapshot = await sourceQuery.get();
 
@@ -1428,7 +1571,7 @@ export const copyTenantData = async (req: Request, res: Response) => {
       let currentBatch = db.batch();
       let operationCount = 0;
 
-      snapshot.docs.forEach((docSnap) => {
+      for (const docSnap of snapshot.docs) {
         if (operationCount === 500) {
           batches.push(currentBatch);
           currentBatch = db.batch();
@@ -1437,40 +1580,151 @@ export const copyTenantData = async (req: Request, res: Response) => {
 
         const data = docSnap.data();
         const newRef = db.collection(collectionName).doc();
+        dictionary[docSnap.id] = newRef.id;
 
         const newData: any = {
           ...data,
           tenantId: targetTenantId,
           companyId: targetTenantId, // Legacy fallback
-          createdAt: data.createdAt || nowTimestampStr, // Keep original creation date or set new
+          createdAt: data.createdAt || nowTimestampStr,
           updatedAt: nowTimestampStr,
         };
 
-        // Ensure internal IDs match the new document ID if they exist
         if (typeof data.id === 'string') newData.id = newRef.id;
-        if (typeof data.productId === 'string') newData.productId = newRef.id;
-        if (typeof data.serviceId === 'string') newData.serviceId = newRef.id;
-        if (typeof data.sistemaId === 'string') newData.sistemaId = newRef.id;
-        if (typeof data.ambienteId === 'string') newData.ambienteId = newRef.id;
+
+        if (collectionName === "products" || collectionName === "services") {
+          const sourceImages = Array.isArray(data.images)
+            ? data.images.filter((value: unknown): value is string => typeof value === "string" && value.trim().length > 0)
+            : [];
+
+          const fallbackImage =
+            typeof data.image === "string" && data.image.trim().length > 0
+              ? data.image
+              : "";
+
+          const cloneInputImages = sourceImages.length > 0
+            ? sourceImages
+            : fallbackImage
+              ? [fallbackImage]
+              : [];
+
+          if (cloneInputImages.length > 0) {
+            const cloneResult = await cloneImageUrlsForTenant({
+              urls: cloneInputImages,
+              sourceTenantId,
+              targetTenantId,
+              folder: collectionName,
+              targetEntityId: newRef.id,
+            });
+
+            newData.images = cloneResult.urls;
+            if (typeof data.image === "string") {
+              newData.image = cloneResult.urls[0] || data.image;
+            }
+
+            imageCloneStats.copied += cloneResult.stats.copied;
+            imageCloneStats.reused += cloneResult.stats.reused;
+            imageCloneStats.failed += cloneResult.stats.failed;
+          }
+        }
+
+        currentBatch.set(newRef, newData);
+        operationCount++;
+        totalCopied++;
+      }
+
+      if (operationCount > 0) batches.push(currentBatch);
+      for (const batch of batches) await batch.commit();
+    }
+
+    // 2. Now clone Sistemas translating the inner references
+    const sistemasQuery = db.collection("sistemas").where("tenantId", "==", sourceTenantId);
+    const sistemasSnapshot = await sistemasQuery.get();
+
+    if (!sistemasSnapshot.empty) {
+      const batches: FirebaseFirestore.WriteBatch[] = [];
+      let currentBatch = db.batch();
+      let operationCount = 0;
+
+      sistemasSnapshot.docs.forEach((docSnap) => {
+        if (operationCount === 500) {
+          batches.push(currentBatch);
+          currentBatch = db.batch();
+          operationCount = 0;
+        }
+
+        const data = docSnap.data();
+        const newRef = db.collection("sistemas").doc();
+        // Option to save mapping for Sistema itself just in case future features need it
+        dictionary[docSnap.id] = newRef.id;
+
+        const newData: any = {
+          ...data,
+          tenantId: targetTenantId,
+          companyId: targetTenantId,
+          createdAt: data.createdAt || nowTimestampStr,
+          updatedAt: nowTimestampStr,
+        };
+
+        if (typeof data.id === 'string') newData.id = newRef.id;
+
+        // Map Ambientes inside this Sistema
+        if (Array.isArray(newData.ambientes)) {
+          newData.ambientes = newData.ambientes.map((amb: any) => {
+            const newAmbienteId = dictionary[amb.ambienteId] || amb.ambienteId;
+
+            // Map Products inside this Ambiente
+            const newProducts = Array.isArray(amb.products) ? amb.products.map((prod: any) => {
+              return {
+                ...prod,
+                productId: dictionary[prod.productId] || prod.productId,
+              };
+            }) : [];
+
+            return {
+              ...amb,
+              ambienteId: newAmbienteId,
+              products: newProducts
+            };
+          });
+        }
+
+        // Map availableAmbienteIds (used by frontend to filter ambiente dropdown)
+        if (Array.isArray(newData.availableAmbienteIds)) {
+          newData.availableAmbienteIds = newData.availableAmbienteIds.map(
+            (oldId: string) => dictionary[oldId] || oldId
+          );
+        }
+
+        // Map ambienteIds (legacy field, kept in sync)
+        if (Array.isArray(newData.ambienteIds)) {
+          newData.ambienteIds = newData.ambienteIds.map(
+            (oldId: string) => dictionary[oldId] || oldId
+          );
+        }
+
+        // Map defaultProducts (legacy system-level products)
+        if (Array.isArray(newData.defaultProducts)) {
+          newData.defaultProducts = newData.defaultProducts.map((prod: any) => ({
+            ...prod,
+            productId: dictionary[prod.productId] || prod.productId,
+          }));
+        }
 
         currentBatch.set(newRef, newData);
         operationCount++;
         totalCopied++;
       });
 
-      if (operationCount > 0) {
-        batches.push(currentBatch);
-      }
-
-      for (const batch of batches) {
-        await batch.commit();
-      }
+      if (operationCount > 0) batches.push(currentBatch);
+      for (const batch of batches) await batch.commit();
     }
 
     return res.json({
       success: true,
       message: `Cópia concluída. ${totalCopied} registros copiados com sucesso.`,
       totalCopied,
+      imageCloneStats,
     });
   } catch (error: unknown) {
     console.error("[copyTenantData] error:", error);
