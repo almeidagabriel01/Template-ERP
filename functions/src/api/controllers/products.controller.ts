@@ -239,7 +239,7 @@ export const deleteProduct = async (req: Request, res: Response) => {
 
     // Delete Images
     const images = productData?.images as string[] | undefined;
-    await deleteProductImages(images);
+    await deleteProductImages(images, productData?.tenantId);
 
     // Determine correct masterRef for usage decrement
     let targetMasterRef = masterRef;

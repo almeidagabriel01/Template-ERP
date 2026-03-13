@@ -1,35 +1,59 @@
 import { getStorage } from "firebase-admin/storage";
 
+function extractStoragePath(imageUrlOrPath: string): string | null {
+  if (imageUrlOrPath.startsWith("tenants/")) {
+    return imageUrlOrPath;
+  }
+
+  if (imageUrlOrPath.includes("firebasestorage.googleapis.com")) {
+    const decodedUrl = decodeURIComponent(imageUrlOrPath);
+    const match = decodedUrl.match(/\/o\/(.+?)\?/);
+    return match?.[1] || null;
+  }
+
+  if (imageUrlOrPath.includes("firebasestorage.app")) {
+    const decodedUrl = decodeURIComponent(imageUrlOrPath);
+    const match = decodedUrl.match(/\/o\/(.+?)\?/);
+    return match?.[1] || null;
+  }
+
+  if (imageUrlOrPath.includes("storage.googleapis.com")) {
+    const urlParts = imageUrlOrPath.split("/");
+    const bucketIndex = urlParts.findIndex(
+      (part) =>
+        part.includes(".appspot.com") || part.includes("firebasestorage.app"),
+    );
+    if (bucketIndex >= 0) {
+      return urlParts.slice(bucketIndex + 1).join("/");
+    }
+  }
+
+  return null;
+}
+
 export async function deleteProductImages(
-  images: string[] | undefined
+  images: string[] | undefined,
+  tenantId?: string,
 ): Promise<void> {
   if (!images || images.length === 0) return;
 
   const bucket = getStorage().bucket();
+  const tenantPrefix = tenantId ? `tenants/${tenantId}/` : "";
 
   for (const imageUrl of images) {
     try {
       if (imageUrl.startsWith("data:")) continue;
 
-      let filePath: string | null = null;
-
-      if (imageUrl.includes("firebasestorage.googleapis.com")) {
-        const decodedUrl = decodeURIComponent(imageUrl);
-        const match = decodedUrl.match(/\/o\/(.+?)\?/);
-        if (match) filePath = match[1];
-      } else if (imageUrl.includes("storage.googleapis.com")) {
-        const urlParts = imageUrl.split("/");
-        const bucketIndex = urlParts.findIndex(
-          (p) => p.includes(".appspot.com") || p.includes("firebasestorage.app")
-        );
-        if (bucketIndex >= 0) {
-          filePath = urlParts.slice(bucketIndex + 1).join("/");
-        }
-      } else if (imageUrl.startsWith("tenants/")) {
-        filePath = imageUrl;
-      }
+      const filePath = extractStoragePath(imageUrl);
 
       if (filePath) {
+        if (tenantPrefix && !filePath.startsWith(tenantPrefix)) {
+          console.warn(
+            `[Storage] Skip deleting cross-tenant path: ${filePath} (tenant: ${tenantId})`,
+          );
+          continue;
+        }
+
         await bucket.file(filePath).delete();
         console.log(`[Storage] Deleted: ${filePath}`);
       }
