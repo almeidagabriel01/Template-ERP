@@ -17,12 +17,16 @@ import {
   Settings2,
   AlertCircle,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { SistemaSelector } from "@/components/features/automation";
 import { AmbienteManagerDialog } from "@/components/features/automation/ambiente-manager-dialog";
 import { SistemaManagerDialog } from "@/components/features/automation/sistema-manager-dialog";
 import { toast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
 import { SistemaTemplateDialog } from "@/components/features/automation/sistema-template-dialog";
 import { Sistema, ProposalSistema } from "@/types/automation";
 import { ProposalProduct } from "@/types/proposal";
@@ -38,8 +42,10 @@ import {
   ProposalFormHeader,
   ProposalClientSection,
   ProposalSystemsSection,
+  ProposalSystemsMobileSection,
   ProposalProductsSection,
   ProposalSummarySection,
+  ProposalSummaryMobileSection,
   ProposalPaymentSection,
   ProposalReadOnlyView,
   PdfDisplayOptionsSection,
@@ -112,6 +118,24 @@ const stepsDefault = [
     icon: CheckCircle,
   },
 ];
+
+function useIsMobileViewport() {
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+
+    const mql = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobile(mql.matches);
+
+    update();
+    mql.addEventListener("change", update);
+
+    return () => mql.removeEventListener("change", update);
+  }, []);
+
+  return isMobile;
+}
 
 export function SimpleProposalForm({
   proposalId,
@@ -823,6 +847,7 @@ export function SimpleProposalForm({
 
   // Steps configuration based on niche
   const steps = isAutomacaoNiche ? stepsAutomation : stepsDefault;
+  const isMobileViewport = useIsMobileViewport();
 
   // Map step validators for StepWizard
   // MUST be before any conditional returns to maintain hook order
@@ -846,6 +871,60 @@ export function SimpleProposalForm({
 
     return validators;
   }, [isAutomacaoNiche, validateStep1, validateStep2, validateStep3]);
+
+  const [mobileStep, setMobileStep] = React.useState(initialStep);
+
+  React.useEffect(() => {
+    setMobileStep(initialStep);
+  }, [initialStep]);
+
+  const handleMobileStepChange = React.useCallback(
+    async (targetStep: number) => {
+      if (
+        targetStep < 0 ||
+        targetStep >= steps.length ||
+        targetStep === mobileStep
+      ) {
+        return;
+      }
+
+      if (targetStep > mobileStep) {
+        const validationStart = proposalId ? 0 : mobileStep;
+
+        for (let idx = validationStart; idx < targetStep; idx++) {
+          const validator = stepValidators[idx];
+          if (!validator) continue;
+
+          const isValid = await validator();
+          if (!isValid) {
+            return;
+          }
+        }
+      }
+
+      setMobileStep(targetStep);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    [mobileStep, proposalId, stepValidators, steps.length],
+  );
+
+  const handleMobileNext = React.useCallback(async () => {
+    const validator = stepValidators[mobileStep];
+    if (validator) {
+      const isValid = await validator();
+      if (!isValid) return;
+    }
+
+    const next = Math.min(mobileStep + 1, steps.length - 1);
+    setMobileStep(next);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [mobileStep, stepValidators, steps.length]);
+
+  const handleMobilePrevious = React.useCallback(() => {
+    const prev = Math.max(mobileStep - 1, 0);
+    setMobileStep(prev);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [mobileStep]);
 
   // Loading state
   if (isLoading) {
@@ -884,216 +963,513 @@ export function SimpleProposalForm({
   // Editable form with StepWizard
   return (
     <FormContainer>
-      <ProposalFormHeader proposalId={proposalId} onBack={handleBack} />
-
-      <StepWizard
-        steps={steps}
-        allowClickAhead={!!proposalId}
-        stepValidators={stepValidators}
-        initialStep={initialStep}
-      >
-        {/* Step 1: Client Info */}
-        <FormStepCard>
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-xl bg-linear-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center">
-                <User className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold">Dados do Contato</h3>
-                <p className="text-sm text-muted-foreground">
-                  Informações do contato e identificação
+      {isMobileViewport && (
+        <div className="space-y-4">
+          <div className="-mx-4 px-4 py-3 bg-background/95 border-b border-border/60">
+            <div className="flex items-center justify-between gap-3">
+              <button
+                onClick={handleBack}
+                className="h-10 w-10 rounded-xl bg-card border border-border/60 flex items-center justify-center hover:bg-muted transition-colors"
+                aria-label="Voltar para propostas"
+              >
+                <ChevronLeft className="h-5 w-5 text-muted-foreground" />
+              </button>
+              <div className="text-center min-w-0">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                  Etapa {mobileStep + 1} de {steps.length}
                 </p>
+                <h1 className="text-sm font-semibold text-foreground truncate">
+                  {proposalId ? "Editar Proposta" : "Nova Proposta"}
+                </h1>
+              </div>
+              <div className="min-w-10 text-right text-xs font-medium text-muted-foreground">
+                {Math.round(((mobileStep + 1) / steps.length) * 100)}%
               </div>
             </div>
+            <div className="mt-3 h-1.5 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-linear-to-r from-sky-500 via-cyan-500 to-emerald-500 transition-all duration-300"
+                style={{ width: `${((mobileStep + 1) / steps.length) * 100}%` }}
+              />
+            </div>
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+              {steps.map((step, idx) => {
+                const Icon = step.icon;
+                const isCurrent = idx === mobileStep;
+                const canClick = proposalId ? true : idx <= mobileStep;
 
-            <ProposalClientSection
-              formData={formData}
-              selectedClientId={selectedClientId}
-              onFormChange={handleChange}
-              onClientChange={handleClientChange}
-              errors={errors}
-              noContainer
-              isNewClient={isNewClient}
-              clientTypes={clientTypes}
-              onClientTypesChange={setClientTypes}
-            />
+                return (
+                  <button
+                    key={step.id}
+                    type="button"
+                    onClick={() => canClick && handleMobileStepChange(idx)}
+                    disabled={!canClick}
+                    className={cn(
+                      "shrink-0 rounded-xl border px-3 py-2 text-left transition-all min-w-[126px]",
+                      isCurrent
+                        ? "border-sky-500 bg-sky-500/10"
+                        : "border-border bg-card",
+                      canClick ? "opacity-100" : "opacity-50",
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      {Icon && <Icon className="h-4 w-4 text-sky-600" />}
+                      <span className="text-xs font-medium text-foreground">
+                        {step.title}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      {step.description}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <StepNavigation onBeforeNext={validateStep1} />
-        </FormStepCard>
 
-        {/* Step 2: Systems or Products */}
-        <FormStepCard>
-          <div className="space-y-6">
-            {isAutomacaoNiche ? (
+          <div className="rounded-3xl border border-border/60 bg-card p-4 shadow-sm space-y-4">
+            {mobileStep === 0 && (
               <>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 rounded-xl bg-linear-to-br from-purple-500/15 to-purple-500/5 flex items-center justify-center">
-                    <Cpu className="w-6 h-6 text-purple-600" />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-linear-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center">
+                    <User className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold">
-                      Soluções de Automação
+                    <h3 className="text-base font-semibold">
+                      Dados do Contato
                     </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Adicione as soluções da proposta
+                    <p className="text-xs text-muted-foreground">
+                      Identificação e validade da proposta
                     </p>
                   </div>
                 </div>
 
-                <ProposalSystemsSection
-                  selectedSistemas={selectedSistemas}
-                  selectedProducts={selectedProducts}
-                  products={products}
-                  primaryColor={primaryColor}
-                  selectorKey={selectorKey}
-                  onEditSystem={(idx) => {
-                    setEditingSelectionIndex(idx);
-                  }}
-                  onRemoveSystem={removeSistema}
-                  onUpdateProductQuantity={updateProductQuantity}
-                  onUpdateProductMarkup={updateProductMarkup}
-                  onUpdateProductPrice={updateProductPrice}
-                  onAddExtraProductToSystem={addProductToSystem}
-                  onAddNewSystem={handleAddNewSystem}
-                  onUpdateSystem={handleUpdateSystem}
-                  onRemoveProduct={removeProduct}
-                  SistemaSelectorComponent={SistemaSelector}
-                  onToggleStatus={handleToggleProductStatus}
-                  onDataUpdate={() => setSelectorKey((prev) => prev + 1)}
-                  // Transactional
-                  ambientes={mergedAmbientes}
-                  sistemas={mergedSistemas}
-                  onAmbienteAction={handleAmbienteAction}
-                  onSistemaAction={handleSistemaAction}
-                  onRemoveAmbiente={removeAmbienteFromSistema}
-                  proposalStorageKey={proposalId}
+                <ProposalClientSection
+                  formData={formData}
+                  selectedClientId={selectedClientId}
+                  onFormChange={handleChange}
+                  onClientChange={handleClientChange}
+                  errors={errors}
+                  noContainer
+                  isNewClient={isNewClient}
+                  clientTypes={clientTypes}
+                  onClientTypesChange={setClientTypes}
                 />
               </>
-            ) : (
+            )}
+
+            {mobileStep === 1 && (
               <>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 rounded-xl bg-linear-to-br from-green-500/15 to-green-500/5 flex items-center justify-center">
-                    <Package className="w-6 h-6 text-green-600" />
+                {isAutomacaoNiche ? (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-linear-to-br from-purple-500/15 to-purple-500/5 flex items-center justify-center">
+                        <Cpu className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-semibold">
+                          Soluções de Automação
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          Selecione sistemas e ambientes da proposta
+                        </p>
+                      </div>
+                    </div>
+
+                    <ProposalSystemsMobileSection
+                      selectedSistemas={selectedSistemas}
+                      selectedProducts={selectedProducts}
+                      products={products}
+                      primaryColor={primaryColor}
+                      selectorKey={selectorKey}
+                      onRemoveSystem={removeSistema}
+                      onUpdateProductQuantity={updateProductQuantity}
+                      onUpdateProductMarkup={updateProductMarkup}
+                      onUpdateProductPrice={updateProductPrice}
+                      onAddExtraProductToSystem={addProductToSystem}
+                      onAddNewSystem={handleAddNewSystem}
+                      onRemoveProduct={removeProduct}
+                      SistemaSelectorComponent={SistemaSelector}
+                      onToggleStatus={handleToggleProductStatus}
+                      onDataUpdate={() => setSelectorKey((prev) => prev + 1)}
+                      ambientes={mergedAmbientes}
+                      sistemas={mergedSistemas}
+                      onAmbienteAction={handleAmbienteAction}
+                      onSistemaAction={handleSistemaAction}
+                      onRemoveAmbiente={removeAmbienteFromSistema}
+                      proposalStorageKey={proposalId}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-linear-to-br from-green-500/15 to-green-500/5 flex items-center justify-center">
+                        <Package className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-semibold">Produtos</h3>
+                        <p className="text-xs text-muted-foreground">
+                          Itens extras para compor a proposta
+                        </p>
+                      </div>
+                    </div>
+
+                    <ProposalProductsSection
+                      products={products}
+                      selectedProducts={selectedProducts}
+                      extraProducts={extraProducts}
+                      systemProductIds={systemProductIds}
+                      onToggleProduct={toggleProduct}
+                      onUpdateQuantity={updateProductQuantity}
+                      onNavigateToProducts={() => router.push("/products/new")}
+                      onToggleStatus={handleToggleProductStatus}
+                    />
+                  </>
+                )}
+
+                {errors.sistemas && (
+                  <Alert variant="destructive" className="mt-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{errors.sistemas}</AlertDescription>
+                  </Alert>
+                )}
+                {errors.products && (
+                  <Alert variant="destructive" className="mt-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{errors.products}</AlertDescription>
+                  </Alert>
+                )}
+              </>
+            )}
+
+            {mobileStep === 2 && (
+              <>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-linear-to-br from-emerald-500/15 to-emerald-500/5 flex items-center justify-center">
+                    <CreditCard className="w-5 h-5 text-emerald-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold">Produtos</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Selecione os produtos da proposta
+                    <h3 className="text-base font-semibold">
+                      Condições de Pagamento
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Parcelamento, entrada e ajustes comerciais
                     </p>
                   </div>
                 </div>
 
-                <ProposalProductsSection
+                <ProposalPaymentSection
+                  formData={formData}
+                  selectedProducts={visibleProducts}
+                  calculateTotal={calculateTotal}
+                  onFormChange={handleChange}
+                  onPaymentToggle={(field, value) => {
+                    setFormData((prev) => ({ ...prev, [field]: value }));
+                  }}
+                  onExtraExpenseChange={(value) => {
+                    setFormData((prev) => ({ ...prev, extraExpense: value }));
+                  }}
+                  noContainer
+                  errors={errors}
+                />
+              </>
+            )}
+
+            {mobileStep === 3 && (
+              <PdfDisplayOptionsSection
+                formData={formData}
+                setFormData={setFormData}
+              />
+            )}
+
+            {mobileStep === 4 && (
+              <>
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="w-10 h-10 rounded-xl bg-linear-to-br from-amber-500/15 to-amber-500/5 flex items-center justify-center">
+                    <CheckCircle className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold">
+                      Resumo da Proposta
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Revise tudo antes de salvar
+                    </p>
+                  </div>
+                </div>
+
+                <ProposalSummaryMobileSection
+                  formData={formData}
+                  selectedProducts={visibleProducts}
+                  selectedSistemas={selectedSistemas}
+                  isAutomacaoNiche={isAutomacaoNiche}
                   products={products}
-                  selectedProducts={selectedProducts}
-                  extraProducts={extraProducts}
-                  systemProductIds={systemProductIds}
-                  onToggleProduct={toggleProduct}
-                  onUpdateQuantity={updateProductQuantity}
-                  onNavigateToProducts={() => router.push("/products/new")}
-                  onToggleStatus={handleToggleProductStatus}
+                  calculateSubtotal={calculateSubtotal}
+                  calculateDiscount={calculateDiscount}
+                  calculateTotal={calculateTotal}
+                  onFormChange={handleChange}
                 />
               </>
             )}
           </div>
-          {errors.sistemas && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{errors.sistemas}</AlertDescription>
-            </Alert>
-          )}
-          {errors.products && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{errors.products}</AlertDescription>
-            </Alert>
-          )}
-          <StepNavigation onBeforeNext={validateStep2} />
-        </FormStepCard>
 
-        {/* Step 3: Payment */}
-        <FormStepCard>
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-xl bg-linear-to-br from-emerald-500/15 to-emerald-500/5 flex items-center justify-center">
-                <CreditCard className="w-6 h-6 text-emerald-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold">
-                  Condições de Pagamento
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Configure parcelamento e entrada
-                </p>
-              </div>
+          <div className="mt-4 border border-border/60 rounded-2xl bg-card p-3">
+            <div className="w-full flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={handleMobilePrevious}
+                disabled={mobileStep === 0}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Anterior
+              </Button>
+
+              {mobileStep < steps.length - 1 ? (
+                <Button
+                  type="button"
+                  className="flex-1"
+                  onClick={handleMobileNext}
+                >
+                  Próximo
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  className="flex-1"
+                  onClick={() => handleFormSubmit({ finalize: true })}
+                  disabled={isSaving || (!!proposalId && !isDirty)}
+                >
+                  {isSaving
+                    ? "Salvando..."
+                    : proposalId
+                      ? "Salvar Proposta"
+                      : "Criar Proposta"}
+                </Button>
+              )}
             </div>
-
-            <ProposalPaymentSection
-              formData={formData}
-              selectedProducts={visibleProducts}
-              calculateTotal={calculateTotal}
-              onFormChange={handleChange}
-              onPaymentToggle={(field, value) => {
-                setFormData((prev) => ({ ...prev, [field]: value }));
-              }}
-              onExtraExpenseChange={(value) => {
-                setFormData((prev) => ({ ...prev, extraExpense: value }));
-              }}
-              noContainer
-              errors={errors}
-            />
           </div>
-          <StepNavigation onBeforeNext={validateStep3} />
-        </FormStepCard>
+        </div>
+      )}
 
-        {/* Step 4: PDF Settings */}
-        <FormStepCard>
-          <PdfDisplayOptionsSection
-            formData={formData}
-            setFormData={setFormData}
-          />
-          <StepNavigation />
-        </FormStepCard>
+      {!isMobileViewport && (
+        <>
+          <ProposalFormHeader proposalId={proposalId} onBack={handleBack} />
 
-        {/* Step 5: Summary */}
-        <FormStepCard>
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-xl bg-linear-to-br from-amber-500/15 to-amber-500/5 flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-amber-600" />
+          <StepWizard
+            steps={steps}
+            allowClickAhead={!!proposalId}
+            stepValidators={stepValidators}
+            initialStep={initialStep}
+          >
+            {/* Step 1: Client Info */}
+            <FormStepCard>
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 rounded-xl bg-linear-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center">
+                    <User className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">Dados do Contato</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Informações do contato e identificação
+                    </p>
+                  </div>
+                </div>
+
+                <ProposalClientSection
+                  formData={formData}
+                  selectedClientId={selectedClientId}
+                  onFormChange={handleChange}
+                  onClientChange={handleClientChange}
+                  errors={errors}
+                  noContainer
+                  isNewClient={isNewClient}
+                  clientTypes={clientTypes}
+                  onClientTypesChange={setClientTypes}
+                />
               </div>
-              <div>
-                <h3 className="text-lg font-semibold">Resumo da Proposta</h3>
-                <p className="text-sm text-muted-foreground">
-                  Revise os dados antes de finalizar
-                </p>
+              <StepNavigation onBeforeNext={validateStep1} />
+            </FormStepCard>
+
+            {/* Step 2: Systems or Products */}
+            <FormStepCard>
+              <div className="space-y-6">
+                {isAutomacaoNiche ? (
+                  <>
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-12 h-12 rounded-xl bg-linear-to-br from-purple-500/15 to-purple-500/5 flex items-center justify-center">
+                        <Cpu className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold">
+                          Soluções de Automação
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Adicione as soluções da proposta
+                        </p>
+                      </div>
+                    </div>
+
+                    <ProposalSystemsSection
+                      selectedSistemas={selectedSistemas}
+                      selectedProducts={selectedProducts}
+                      products={products}
+                      primaryColor={primaryColor}
+                      selectorKey={selectorKey}
+                      onEditSystem={(idx) => {
+                        setEditingSelectionIndex(idx);
+                      }}
+                      onRemoveSystem={removeSistema}
+                      onUpdateProductQuantity={updateProductQuantity}
+                      onUpdateProductMarkup={updateProductMarkup}
+                      onUpdateProductPrice={updateProductPrice}
+                      onAddExtraProductToSystem={addProductToSystem}
+                      onAddNewSystem={handleAddNewSystem}
+                      onUpdateSystem={handleUpdateSystem}
+                      onRemoveProduct={removeProduct}
+                      SistemaSelectorComponent={SistemaSelector}
+                      onToggleStatus={handleToggleProductStatus}
+                      onDataUpdate={() => setSelectorKey((prev) => prev + 1)}
+                      // Transactional
+                      ambientes={mergedAmbientes}
+                      sistemas={mergedSistemas}
+                      onAmbienteAction={handleAmbienteAction}
+                      onSistemaAction={handleSistemaAction}
+                      onRemoveAmbiente={removeAmbienteFromSistema}
+                      proposalStorageKey={proposalId}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-12 h-12 rounded-xl bg-linear-to-br from-green-500/15 to-green-500/5 flex items-center justify-center">
+                        <Package className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold">Produtos</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Selecione os produtos da proposta
+                        </p>
+                      </div>
+                    </div>
+
+                    <ProposalProductsSection
+                      products={products}
+                      selectedProducts={selectedProducts}
+                      extraProducts={extraProducts}
+                      systemProductIds={systemProductIds}
+                      onToggleProduct={toggleProduct}
+                      onUpdateQuantity={updateProductQuantity}
+                      onNavigateToProducts={() => router.push("/products/new")}
+                      onToggleStatus={handleToggleProductStatus}
+                    />
+                  </>
+                )}
               </div>
-            </div>
+              {errors.sistemas && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{errors.sistemas}</AlertDescription>
+                </Alert>
+              )}
+              {errors.products && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{errors.products}</AlertDescription>
+                </Alert>
+              )}
+              <StepNavigation onBeforeNext={validateStep2} />
+            </FormStepCard>
 
-            <ProposalSummarySection
-              formData={formData}
-              selectedProducts={visibleProducts}
-              selectedSistemas={selectedSistemas}
-              extraProducts={extraProducts}
-              isAutomacaoNiche={isAutomacaoNiche}
-              primaryColor={primaryColor}
-              products={products}
-              calculateSubtotal={calculateSubtotal}
-              calculateDiscount={calculateDiscount}
-              calculateTotal={calculateTotal}
-              onFormChange={handleChange}
-            />
-          </div>
+            {/* Step 3: Payment */}
+            <FormStepCard>
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 rounded-xl bg-linear-to-br from-emerald-500/15 to-emerald-500/5 flex items-center justify-center">
+                    <CreditCard className="w-6 h-6 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">
+                      Condições de Pagamento
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Configure parcelamento e entrada
+                    </p>
+                  </div>
+                </div>
 
-          <StepNavigation
-            onSubmit={() => handleFormSubmit({ finalize: true })}
-            isSubmitting={isSaving}
-            submitDisabled={!!proposalId && !isDirty}
-            submitLabel={proposalId ? "Salvar Proposta" : "Criar Proposta"}
-          />
-        </FormStepCard>
-      </StepWizard>
+                <ProposalPaymentSection
+                  formData={formData}
+                  selectedProducts={visibleProducts}
+                  calculateTotal={calculateTotal}
+                  onFormChange={handleChange}
+                  onPaymentToggle={(field, value) => {
+                    setFormData((prev) => ({ ...prev, [field]: value }));
+                  }}
+                  onExtraExpenseChange={(value) => {
+                    setFormData((prev) => ({ ...prev, extraExpense: value }));
+                  }}
+                  noContainer
+                  errors={errors}
+                />
+              </div>
+              <StepNavigation onBeforeNext={validateStep3} />
+            </FormStepCard>
+
+            {/* Step 4: PDF Settings */}
+            <FormStepCard>
+              <PdfDisplayOptionsSection
+                formData={formData}
+                setFormData={setFormData}
+              />
+              <StepNavigation />
+            </FormStepCard>
+
+            {/* Step 5: Summary */}
+            <FormStepCard>
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 rounded-xl bg-linear-to-br from-amber-500/15 to-amber-500/5 flex items-center justify-center">
+                    <CheckCircle className="w-6 h-6 text-amber-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">
+                      Resumo da Proposta
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Revise os dados antes de finalizar
+                    </p>
+                  </div>
+                </div>
+
+                <ProposalSummarySection
+                  formData={formData}
+                  selectedProducts={visibleProducts}
+                  selectedSistemas={selectedSistemas}
+                  extraProducts={extraProducts}
+                  isAutomacaoNiche={isAutomacaoNiche}
+                  primaryColor={primaryColor}
+                  products={products}
+                  calculateSubtotal={calculateSubtotal}
+                  calculateDiscount={calculateDiscount}
+                  calculateTotal={calculateTotal}
+                  onFormChange={handleChange}
+                />
+              </div>
+
+              <StepNavigation
+                onSubmit={() => handleFormSubmit({ finalize: true })}
+                isSubmitting={isSaving}
+                submitDisabled={!!proposalId && !isDirty}
+                submitLabel={proposalId ? "Salvar Proposta" : "Criar Proposta"}
+              />
+            </FormStepCard>
+          </StepWizard>
+        </>
+      )}
 
       {/* Dialog de Edição de Seleção */}
       <Dialog
