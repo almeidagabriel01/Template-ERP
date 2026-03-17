@@ -23,6 +23,7 @@ import { useAuth } from "@/providers/auth-provider";
 
 const HOTZONE_HEIGHT_PX = 6;
 const HIDE_DELAY_MS = 700;
+const MOBILE_HIDE_DELAY_MS = 1600;
 const TOP_VISIBLE_THRESHOLD_PX = 0;
 const SCROLL_CONTAINER_ID = "main-content";
 const TOP_IDLE_AUTOHIDE_MS = 5_000;
@@ -124,6 +125,7 @@ export function BottomDock() {
   const [canScrollRight, setCanScrollRight] = React.useState(false);
   const [showSwipeHint, setShowSwipeHint] = React.useState(true);
   const mobileScrollRef = React.useRef<HTMLDivElement | null>(null);
+  const mobilePageLastScrollTopRef = React.useRef(0);
   const hideTimeoutRef = React.useRef<number | null>(null);
   const topIdleTimeoutRef = React.useRef<number | null>(null);
 
@@ -141,15 +143,19 @@ export function BottomDock() {
     }
   }, []);
 
-  const scheduleHide = React.useCallback(() => {
-    if (!hasHover) return; // touch devices: keep it visible
-    if (isAtTop) return;
+  const scheduleHideAfterDelay = React.useCallback(() => {
     clearHideTimeout();
     hideTimeoutRef.current = window.setTimeout(() => {
       setIsVisible(false);
       hideTimeoutRef.current = null;
-    }, HIDE_DELAY_MS);
-  }, [clearHideTimeout, hasHover, isAtTop]);
+    }, isMobile ? MOBILE_HIDE_DELAY_MS : HIDE_DELAY_MS);
+  }, [clearHideTimeout, isMobile]);
+
+  const scheduleHide = React.useCallback(() => {
+    if (!hasHover) return; // touch devices: keep it visible
+    if (isAtTop) return;
+    scheduleHideAfterDelay();
+  }, [hasHover, isAtTop, scheduleHideAfterDelay]);
 
   const showDock = React.useCallback(() => {
     clearHideTimeout();
@@ -205,6 +211,58 @@ export function BottomDock() {
     });
     return () => (target as HTMLElement).removeEventListener("scroll", update);
   }, [hasHover, clearHideTimeout, clearTopIdleTimeout]);
+
+  React.useEffect(() => {
+    if (!isMobile) return;
+
+    const scrollEl = document.getElementById(SCROLL_CONTAINER_ID);
+    const target: HTMLElement | Window = scrollEl ?? window;
+
+    const getScrollTop = () => {
+      if (target === window) return window.scrollY || 0;
+      return (target as HTMLElement).scrollTop || 0;
+    };
+
+    const update = () => {
+      const currentTop = getScrollTop();
+      const previousTop = mobilePageLastScrollTopRef.current;
+      const delta = currentTop - previousTop;
+      const atTop = currentTop <= TOP_VISIBLE_THRESHOLD_PX;
+
+      mobilePageLastScrollTopRef.current = currentTop;
+      setIsAtTop(atTop);
+
+      if (atTop) {
+        showDock();
+        scheduleHideAfterDelay();
+        return;
+      }
+
+      if (delta < -6) {
+        showDock();
+        scheduleHideAfterDelay();
+        return;
+      }
+
+      if (delta > 4) {
+        scheduleHideAfterDelay();
+      }
+    };
+
+    mobilePageLastScrollTopRef.current = getScrollTop();
+    update();
+
+    if (target === window) {
+      window.addEventListener("scroll", update, { passive: true });
+      return () => window.removeEventListener("scroll", update);
+    }
+
+    (target as HTMLElement).addEventListener("scroll", update, {
+      passive: true,
+    });
+    return () =>
+      (target as HTMLElement).removeEventListener("scroll", update);
+  }, [isMobile, scheduleHideAfterDelay, showDock]);
 
   // Mesmo no topo, se ficar "parado" por muito tempo, recolhe a dock.
   React.useEffect(() => {
@@ -294,10 +352,6 @@ export function BottomDock() {
   }, [dockEntries, pathname]);
 
   // Não mostrar dock no admin
-  if (isAdminPage) {
-    return null;
-  }
-
   const renderMenuItem = (entry: DockEntry) => {
     const isFinancialRestricted = !!entry.requiresFinancial && !hasFinancial;
     const isEnterpriseRestricted = !!entry.requiresEnterprise && !hasKanban;
@@ -455,10 +509,19 @@ export function BottomDock() {
 
   const shouldAutoHide = hasHover;
 
+  if (isAdminPage) {
+    return null;
+  }
+
   if (isMobile) {
     return (
       <>
-        <div className="fixed inset-x-0 bottom-0 z-40 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div
+          className={cn(
+            "fixed inset-x-0 bottom-0 z-40 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]",
+            isVisible ? "translate-y-0" : "translate-y-[calc(100%+22px)]",
+          )}
+        >
           <div className="mx-auto w-full max-w-md rounded-2xl border border-white/20 bg-background/95 px-2 py-1.5 shadow-lg backdrop-blur-sm">
             <div className="relative">
               {canScrollLeft && (

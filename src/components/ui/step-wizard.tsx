@@ -184,7 +184,7 @@ function StepIndicator({
 }: StepIndicatorProps) {
   return (
     <div className={cn("relative mx-auto", containerClassName)}>
-      <div className="overflow-x-auto pb-2">
+      <div className="overflow-x-auto px-1 pt-7 pb-4">
         {/* Steps */}
         <div className="relative flex min-w-[680px] justify-between pr-2 md:min-w-0 md:pr-0">
           {/* Progress bar background - positioned between step centers */}

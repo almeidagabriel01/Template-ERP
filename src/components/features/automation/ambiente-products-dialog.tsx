@@ -214,7 +214,7 @@ export function AmbienteProductsDialog({
             </div>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="dialog-scroll-fix flex-1 overflow-y-auto p-6 space-y-6">
             {/* Add Product Search - More prominent */}
             <div className="relative w-full" ref={productListRef}>
               <div className="relative">

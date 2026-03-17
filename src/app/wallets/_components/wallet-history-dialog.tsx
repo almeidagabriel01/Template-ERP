@@ -327,7 +327,7 @@ export function WalletHistoryDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto mt-4 -mx-6 px-6">
+        <div className="dialog-scroll-fix flex-1 overflow-y-auto mt-4 -mx-6 px-6">
           {isLoading ? (
             <div className="space-y-3">
               {[1, 2, 3, 4, 5].map((i) => (

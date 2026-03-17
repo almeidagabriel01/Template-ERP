@@ -87,7 +87,7 @@ export function SystemEnvironmentManagerDialog({
               />
 
               {/* Content */}
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="dialog-scroll-fix flex-1 overflow-y-auto p-6">
                 {state.selectedSistema ? (
                   <div className="space-y-6">
                     <EnvironmentList

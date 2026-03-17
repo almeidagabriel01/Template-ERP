@@ -126,7 +126,7 @@ export function CustomFieldManager() {
 
                 <div className="flex gap-4 flex-1 min-h-0 overflow-hidden">
                     {/* Left: Field Types List */}
-                    <div className="w-1/3 border-r pr-4 overflow-auto">
+                    <div className="dialog-scroll-fix w-1/3 border-r pr-4 overflow-auto">
                         <div className="space-y-2 mb-4">
                             <Label>Tipos de Campo</Label>
                             <div className="flex gap-2 items-center">
@@ -180,7 +180,7 @@ export function CustomFieldManager() {
                     </div>
 
                     {/* Right: Items for Selected Type */}
-                    <div className="flex-1 overflow-auto">
+                    <div className="dialog-scroll-fix flex-1 overflow-auto">
                         {selectedType ? (
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
