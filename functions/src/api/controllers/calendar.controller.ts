@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { google } from "googleapis";
 import { db } from "../../init";
 import { resolveFrontendAppOrigin } from "../../lib/frontend-app-url";
+import { isGoogleCalendarSyncEnabled } from "../../lib/google-calendar-feature";
 import { isTenantAdminRole } from "../../lib/auth-context";
 
 const CALENDAR_EVENTS_COLLECTION = "calendar_events";
@@ -238,6 +239,10 @@ function buildFrontendCalendarUrl(
     url.searchParams.set("reason", reason);
   }
   return url.toString();
+}
+
+function isGoogleCalendarDisabled(): boolean {
+  return !isGoogleCalendarSyncEnabled();
 }
 
 function resolveGoogleCalendarRedirectUri(req?: Request): string {
@@ -626,6 +631,10 @@ async function syncGoogleEventsToLocalCalendar(params: {
   startMs: number;
   endMs: number;
 }) {
+  if (isGoogleCalendarDisabled()) {
+    return;
+  }
+
   const integrationRecord = await getGoogleIntegration(params.tenantId);
   if (!integrationRecord) {
     return;
@@ -735,6 +744,10 @@ async function syncEventToGoogle(
   eventId: string,
   eventData: CalendarEventDocument,
 ): Promise<GoogleSyncMetadata> {
+  if (isGoogleCalendarDisabled()) {
+    return buildBaseGoogleSyncMetadata();
+  }
+
   const attemptedAt = nowIso();
   const integrationRecord = await getGoogleIntegration(eventData.tenantId);
 
@@ -871,6 +884,10 @@ async function syncEventToGoogle(
 }
 
 async function deleteEventFromGoogleIfNeeded(eventData: CalendarEventDocument) {
+  if (isGoogleCalendarDisabled()) {
+    return;
+  }
+
   const externalEventId = eventData.googleSync?.externalEventId;
   if (!externalEventId) {
     return;
@@ -922,9 +939,14 @@ function serializeCalendarEvent(
   docId: string,
   data: CalendarEventDocument,
 ): CalendarEventDocument & { id: string } {
+  const serializedGoogleSync = isGoogleCalendarDisabled()
+    ? buildBaseGoogleSyncMetadata()
+    : data.googleSync;
+
   return {
     id: docId,
     ...data,
+    googleSync: serializedGoogleSync,
   };
 }
 
@@ -1284,6 +1306,12 @@ function getValidationMessage(error: unknown): string {
 
 export async function getGoogleCalendarAuthUrl(req: Request, res: Response) {
   try {
+    if (isGoogleCalendarDisabled()) {
+      return res.status(503).json({
+        message: "A integracao com Google Agenda esta temporariamente desabilitada.",
+      });
+    }
+
     if (!req.user?.uid || !req.user.tenantId) {
       return res.status(403).json({ message: "Tenant nao identificado." });
     }
@@ -1326,6 +1354,10 @@ export async function getGoogleCalendarAuthUrl(req: Request, res: Response) {
 }
 
 export async function handleGoogleCalendarCallback(req: Request, res: Response) {
+  if (isGoogleCalendarDisabled()) {
+    return res.redirect(buildFrontendCalendarUrl(req, "error", "integration_disabled"));
+  }
+
   const state = String(req.query.state || "").trim();
   const code = String(req.query.code || "").trim();
 
@@ -1418,6 +1450,14 @@ export async function handleGoogleCalendarCallback(req: Request, res: Response) 
 
 export async function getGoogleCalendarStatus(req: Request, res: Response) {
   try {
+    if (isGoogleCalendarDisabled()) {
+      return res.json({
+        success: true,
+        enabled: false,
+        connected: false,
+      });
+    }
+
     if (!req.user?.uid || !req.user.tenantId) {
       return res.status(403).json({ message: "Tenant nao identificado." });
     }
@@ -1427,12 +1467,14 @@ export async function getGoogleCalendarStatus(req: Request, res: Response) {
     if (!integration) {
       return res.json({
         success: true,
+        enabled: true,
         connected: false,
       });
     }
 
     return res.json({
       success: true,
+      enabled: true,
       connected: true,
       email: integration.data.connectedEmail,
       calendarId: integration.data.calendarId,
@@ -1450,6 +1492,10 @@ export async function getGoogleCalendarStatus(req: Request, res: Response) {
 
 export async function disconnectGoogleCalendar(req: Request, res: Response) {
   try {
+    if (isGoogleCalendarDisabled()) {
+      return res.status(204).send();
+    }
+
     if (!req.user?.uid || !req.user.tenantId) {
       return res.status(403).json({ message: "Tenant nao identificado." });
     }

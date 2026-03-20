@@ -68,6 +68,7 @@ export interface CalendarEventPayload {
 }
 
 export interface GoogleCalendarConnectionStatus {
+  enabled?: boolean;
   connected: boolean;
   email?: string | null;
   calendarId?: string | null;
