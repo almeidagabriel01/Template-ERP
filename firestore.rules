@@ -315,6 +315,16 @@ service cloud.firestore {
       allow write: if false; // Managed by Cloud Functions
     }
 
+    // CALENDAR EVENTS (tenant-scoped, member sees own events, admin sees tenant events)
+    match /calendar_events/{eventId} {
+      allow read: if isSuperAdmin()
+                  || (isAuthenticated()
+                      && belongsToTenant(resource.data.tenantId)
+                      && (resource.data.get('ownerUserId', '') == request.auth.uid
+                          || hasTenantAdminRole()));
+      allow write: if false; // Managed by Cloud Functions
+    }
+
     // ============================================
     // SYSTEM COLLECTIONS
     // ============================================
@@ -442,6 +452,14 @@ service cloud.firestore {
     }
 
     match /stripe_events/{eventId} {
+      allow read, write: if false;
+    }
+
+    match /calendar_integrations/{integrationId} {
+      allow read, write: if false;
+    }
+
+    match /calendar_oauth_states/{stateId} {
       allow read, write: if false;
     }
 

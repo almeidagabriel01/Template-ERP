@@ -438,3 +438,141 @@ html.theme-transitioning * {
   mask-image: linear-gradient(to top, transparent 5%, black 50%);
   -webkit-mask-image: linear-gradient(to top, transparent 5%, black 50%);
 }
+
+.calendar-surface .fc {
+  --fc-border-color: color-mix(in oklab, var(--border) 82%, transparent);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: transparent;
+  --fc-list-event-hover-bg-color: color-mix(
+    in oklab,
+    var(--primary) 8%,
+    transparent
+  );
+  --fc-now-indicator-color: #f97316;
+  font-size: 0.94rem;
+}
+
+.calendar-surface .fc .fc-toolbar {
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.calendar-surface .fc .fc-toolbar-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.calendar-surface .fc .fc-button {
+  border: 1px solid color-mix(in oklab, var(--border) 82%, transparent);
+  background: color-mix(in oklab, var(--card) 92%, transparent);
+  color: var(--foreground);
+  border-radius: 0.9rem;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+  padding-inline: 0.85rem;
+  padding-block: 0.55rem;
+  text-transform: capitalize;
+}
+
+.calendar-surface .fc .fc-button:hover,
+.calendar-surface .fc .fc-button:focus {
+  background: color-mix(in oklab, var(--primary) 12%, var(--card));
+  color: var(--foreground);
+}
+
+.calendar-surface .fc .fc-button-primary:not(:disabled).fc-button-active,
+.calendar-surface .fc .fc-button-primary:not(:disabled):active {
+  background: color-mix(in oklab, var(--primary) 16%, var(--card));
+  color: var(--primary);
+  border-color: color-mix(in oklab, var(--primary) 25%, var(--border));
+}
+
+.calendar-surface .fc .fc-daygrid-day-frame,
+.calendar-surface .fc .fc-timegrid-slot,
+.calendar-surface .fc .fc-col-header-cell-cushion {
+  padding: 0.45rem;
+}
+
+.calendar-surface .fc .fc-daygrid-day.fc-day-today,
+.calendar-surface .fc .fc-timegrid-col.fc-day-today {
+  background: color-mix(in oklab, var(--primary) 8%, transparent);
+}
+
+.calendar-surface .fc .fc-scrollgrid,
+.calendar-surface .fc .fc-list {
+  border-radius: 1.4rem;
+  overflow: hidden;
+  border-color: color-mix(in oklab, var(--border) 82%, transparent);
+}
+
+.calendar-event-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  border-radius: 0.85rem;
+  padding: 0.35rem 0.45rem;
+  min-width: 0;
+}
+
+.calendar-event-chip__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.calendar-event-chip__title {
+  font-size: 0.79rem;
+  font-weight: 700;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendar-event-chip__sync {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--primary) 14%, transparent);
+  color: var(--primary);
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.calendar-event-chip__time,
+.calendar-event-chip__meta {
+  font-size: 0.68rem;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendar-event-chip__status {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.12rem 0.4rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.calendar-event-chip__status--scheduled {
+  background: color-mix(in oklab, var(--primary) 14%, transparent);
+  color: var(--primary);
+}
+
+.calendar-event-chip__status--completed {
+  background: rgba(16, 185, 129, 0.14);
+  color: #047857;
+}
+
+.calendar-event-chip__status--canceled {
+  background: rgba(225, 29, 72, 0.12);
+  color: #be123c;
+}

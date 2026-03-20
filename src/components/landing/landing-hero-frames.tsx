@@ -89,15 +89,20 @@ export function LandingHeroFrames() {
           </div>
 
           <h1 className="text-5xl md:text-7xl lg:text-[6.5rem] font-bold tracking-tight mb-6 leading-[0.92] text-black dark:text-white">
-            <span className="block">Controle operacional</span>
+            <span className="block">ProOps para gestão</span>
             <span className="block text-black/55 dark:text-white/55">
-              em tempo real.
+              operacional e comercial.
             </span>
           </h1>
 
           <p className="text-base md:text-xl text-black/70 dark:text-white/70 max-w-3xl mx-auto mb-10 leading-relaxed">
             ProOps conecta dashboard, propostas, CRM, financeiro, carteiras,
             catálogo e editor de PDF em uma experiência única de gestão.
+          </p>
+          <p className="max-w-3xl text-sm leading-7 text-black/60 dark:text-white/60 md:text-base">
+            O ProOps é uma plataforma de gestão empresarial para equipes que
+            precisam organizar agenda, CRM, propostas, financeiro e operação
+            comercial em um único sistema.
           </p>
         </motion.div>
 

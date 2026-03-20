@@ -108,6 +108,14 @@ export const PAGE_CONFIG: Record<string, PageConfig> = {
     requiresAuth: true,
     requiredPermission: "view",
   },
+  "/calendar": {
+    pageId: "calendar",
+    slug: "/calendar",
+    name: "Calendario",
+    module: "calendar",
+    requiresAuth: true,
+    requiredPermission: "view",
+  },
   "/transactions": {
     pageId: "transactions",
     slug: "/transactions",

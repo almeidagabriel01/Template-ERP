@@ -190,6 +190,7 @@ export function PermissionsProvider({
         // Add common pages with full permissions
         const defaultMasterPages = [
           "dashboard",
+          "calendar",
           "proposals",
           "clients",
           "products",

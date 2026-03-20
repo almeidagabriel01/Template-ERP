@@ -79,6 +79,8 @@ export default function RootLayout({
     pathname === "/login" ||
     pathname === "/register" ||
     pathname === "/forgot-password" ||
+    pathname === "/privacy" ||
+    pathname === "/terms" ||
     pathname.startsWith("/email-verification-pending") ||
     pathname.startsWith("/subscribe") ||
     pathname.startsWith("/checkout-success") ||

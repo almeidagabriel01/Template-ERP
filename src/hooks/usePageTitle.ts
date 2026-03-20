@@ -11,6 +11,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/403": "Acesso Negado",
 
   "/dashboard": "Dashboard | ProOps",
+  "/calendar": "Calendario | ProOps",
   "/products": "Produtos | ProOps",
   "/proposals": "Propostas | ProOps",
   "/crm": "CRM | ProOps",
