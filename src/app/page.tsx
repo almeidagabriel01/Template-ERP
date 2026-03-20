@@ -15,6 +15,7 @@ import {
 import { FullPageLoading } from "@/components/ui/full-page-loading";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
+
 export default function LandingPage() {
   const {
     isCheckingAuth,
@@ -30,7 +31,6 @@ export default function LandingPage() {
   React.useEffect(() => {
     if (typeof window !== "undefined") {
       gsap.registerPlugin(ScrollTrigger);
-      // Ensure all GSAP calculations refresh after pinned containers or images fully render
       const tId = setTimeout(() => {
         ScrollTrigger.refresh();
       }, 500);
@@ -38,7 +38,6 @@ export default function LandingPage() {
     }
   }, [isCheckingAuth, isRedirecting]);
 
-  // Show loading when checking for existing session or redirecting to dashboard
   if (isRedirecting || isCheckingAuth) {
     return (
       <FullPageLoading
@@ -53,7 +52,7 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen overflow-x-clip bg-white text-black dark:bg-neutral-950 dark:text-neutral-100 selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black">
+    <div className="min-h-screen overflow-x-clip bg-white text-black selection:bg-black selection:text-white dark:bg-neutral-950 dark:text-neutral-100 dark:selection:bg-white dark:selection:text-black">
       <LandingNavbar currentUser={currentUser} onSignOut={handleSignOut} />
 
       <main>
@@ -62,7 +61,7 @@ export default function LandingPage() {
         <LandingModules />
         <LandingFeatures />
 
-        <div className="w-full h-px bg-gradient-to-r from-transparent via-black/15 to-transparent dark:via-white/15 max-w-7xl mx-auto" />
+        <div className="mx-auto h-px w-full max-w-7xl bg-gradient-to-r from-transparent via-black/15 to-transparent dark:via-white/15" />
 
         <LandingPricing
           plans={plans}
@@ -72,7 +71,7 @@ export default function LandingPage() {
           isLoading={isLoadingPlans}
         />
 
-        <div className="w-full h-px bg-gradient-to-r from-transparent via-black/15 to-transparent dark:via-white/15 max-w-7xl mx-auto" />
+        <div className="mx-auto h-px w-full max-w-7xl bg-gradient-to-r from-transparent via-black/15 to-transparent dark:via-white/15" />
 
         <LandingCTA />
       </main>
