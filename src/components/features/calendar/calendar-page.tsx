@@ -39,6 +39,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { isGoogleCalendarSyncEnabled } from "@/lib/google-calendar-feature";
 import { toast } from "@/lib/toast";
 import { useAuth } from "@/providers/auth-provider";
 import { useTenant } from "@/providers/tenant-provider";
@@ -71,6 +72,8 @@ const STATUS_BADGES: Record<
   completed: "success",
   canceled: "destructive",
 };
+
+const GOOGLE_CALENDAR_SYNC_ENABLED = isGoogleCalendarSyncEnabled();
 
 function formatDateTime(dateValue: string | Date): string {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -401,9 +404,12 @@ export function CalendarPage() {
   const [isLoadingEvents, setIsLoadingEvents] = React.useState(true);
   const [googleStatus, setGoogleStatus] =
     React.useState<GoogleCalendarConnectionStatus>({
+      enabled: GOOGLE_CALENDAR_SYNC_ENABLED,
       connected: false,
     });
-  const [isLoadingGoogle, setIsLoadingGoogle] = React.useState(true);
+  const [isLoadingGoogle, setIsLoadingGoogle] = React.useState(
+    GOOGLE_CALENDAR_SYNC_ENABLED,
+  );
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [dialogMode, setDialogMode] = React.useState<"create" | "edit">(
     "create",
@@ -476,12 +482,18 @@ export function CalendarPage() {
   }, [tenant?.id, user?.id, range.startMs, range.endMs]);
 
   React.useEffect(() => {
+    if (!GOOGLE_CALENDAR_SYNC_ENABLED) {
+      setGoogleStatus({ enabled: false, connected: false });
+      setIsLoadingGoogle(false);
+      return;
+    }
+
     let active = true;
 
     async function loadGoogleStatus() {
       if (!tenant?.id || !user?.id) {
         if (active) {
-          setGoogleStatus({ connected: false });
+          setGoogleStatus({ enabled: true, connected: false });
           setIsLoadingGoogle(false);
         }
         return;
@@ -496,7 +508,7 @@ export function CalendarPage() {
         }
       } catch (error) {
         if (active) {
-          setGoogleStatus({ connected: false });
+          setGoogleStatus({ enabled: true, connected: false });
         }
         console.error("[CalendarPage] Error loading Google status:", error);
       } finally {
@@ -514,6 +526,10 @@ export function CalendarPage() {
   }, [tenant?.id, user?.id]);
 
   React.useEffect(() => {
+    if (!GOOGLE_CALENDAR_SYNC_ENABLED) {
+      return;
+    }
+
     const googleCalendarStatus = searchParams.get("googleCalendar");
     if (!googleCalendarStatus) {
       return;
@@ -671,6 +687,11 @@ export function CalendarPage() {
   }
 
   async function handleGoogleConnect() {
+    if (!GOOGLE_CALENDAR_SYNC_ENABLED) {
+      toast.info("A integracao com Google Agenda esta temporariamente desabilitada.");
+      return;
+    }
+
     setIsConnectingGoogle(true);
 
     try {
@@ -687,12 +708,16 @@ export function CalendarPage() {
   }
 
   async function handleGoogleDisconnect() {
+    if (!GOOGLE_CALENDAR_SYNC_ENABLED) {
+      return;
+    }
+
     setIsLoadingGoogle(true);
 
     try {
       await CalendarService.disconnectGoogleCalendar();
       await refreshEvents();
-      setGoogleStatus({ connected: false });
+      setGoogleStatus({ enabled: true, connected: false });
       toast.success("Google Agenda desconectado.");
     } catch (error) {
       toast.error(
@@ -773,7 +798,7 @@ export function CalendarPage() {
       <div className="calendar-event-chip">
         <div className="calendar-event-chip__header">
           <span className="calendar-event-chip__title">{content.event.title}</span>
-          {syncStatus === "synced" ? (
+          {GOOGLE_CALENDAR_SYNC_ENABLED && syncStatus === "synced" ? (
             <span
               className="calendar-event-chip__sync"
               title="Sincronizado com Google Agenda"
@@ -816,7 +841,7 @@ export function CalendarPage() {
                       </h1>
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Visualize, reagende e sincronize compromissos sem perder contexto.
+                      Visualize, organize e reagende compromissos sem perder contexto.
                     </p>
                   </div>
 
@@ -1026,16 +1051,18 @@ export function CalendarPage() {
           </section>
 
           <aside className="flex min-h-0 w-full shrink-0 flex-col border-t border-border/60 bg-muted/[0.16] xl:w-[360px] xl:border-l xl:border-t-0">
-            <div className="shrink-0 border-b border-border/60 px-5 py-4">
-              <GoogleCalendarCompanyCard
-                status={googleStatus}
-                isLoading={isLoadingGoogle}
-                isConnecting={isConnectingGoogle}
-                canManage={canManageCompanyCalendar}
-                onConnect={handleGoogleConnect}
-                onDisconnect={handleGoogleDisconnect}
-              />
-            </div>
+            {GOOGLE_CALENDAR_SYNC_ENABLED ? (
+              <div className="shrink-0 border-b border-border/60 px-5 py-4">
+                <GoogleCalendarCompanyCard
+                  status={googleStatus}
+                  isLoading={isLoadingGoogle}
+                  isConnecting={isConnectingGoogle}
+                  canManage={canManageCompanyCalendar}
+                  onConnect={handleGoogleConnect}
+                  onDisconnect={handleGoogleDisconnect}
+                />
+              </div>
+            ) : null}
             <div className="min-h-0 flex-1 px-5 py-4">
               <UpcomingEventsCard
                 events={upcomingEvents}
