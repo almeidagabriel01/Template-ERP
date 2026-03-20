@@ -17,6 +17,7 @@ import notificationsRoutes from "./routes/notifications.routes";
 import { whatsappRoutes } from "./routes/whatsapp.routes";
 import { kanbanRoutes } from "./routes/kanban.routes";
 import { validationRoutes } from "./routes/validation.routes";
+import { calendarPublicRoutes, calendarRoutes } from "./routes/calendar.routes";
 import {
   allowCorsFallbackInCurrentEnvironment,
   evaluateCorsDecision,
@@ -359,6 +360,7 @@ app.use("/v1/stripe", publicGeneralLimiter, publicStripeRoutes);
 
 // Public validation routes (register pre-check)
 app.use("/v1/validation", publicGeneralLimiter, validationRoutes);
+app.use("/v1", publicGeneralLimiter, calendarPublicRoutes);
 
 // Public shared links
 app.use("/v1", publicShareLimiter, sharedProposalsRoutes);
@@ -395,6 +397,7 @@ app.use("/v1/admin", privilegedLimiter, adminRoutes);
 app.use("/v1/stripe", privilegedLimiter, stripeRoutes);
 app.use("/v1/aux", auxiliaryRoutes);
 app.use("/v1", kanbanRoutes);
+app.use("/v1", calendarRoutes);
 app.use("/internal", internalRoutes);
 app.use("/v1/notifications", notificationsRoutes);
 

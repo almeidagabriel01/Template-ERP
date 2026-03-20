@@ -45,6 +45,11 @@ export const AVAILABLE_PAGES = [
     description: "Planilhas integradas",
   },
   {
+    id: "calendar",
+    name: "Calendario",
+    description: "Agenda, compromissos e acompanhamento",
+  },
+  {
     id: "transactions",
     name: "Lançamentos (Financeiro)",
     description: "Registros e movimentações financeiras",

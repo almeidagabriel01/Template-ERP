@@ -12,6 +12,7 @@ import {
   UsersRound,
   Kanban,
   Home,
+  CalendarDays,
 } from "lucide-react";
 
 export type MenuItem = {
@@ -81,6 +82,12 @@ export const menuItems: MenuItem[] = [
     label: "Contatos",
     href: "/contacts",
     pageId: "clients",
+  },
+  {
+    icon: CalendarDays,
+    label: "Calendario",
+    href: "/calendar",
+    pageId: "calendar",
   },
   { icon: Package2, label: "Produtos", href: "/products", pageId: "products" },
   { icon: Wrench, label: "Serviços", href: "/services", pageId: "services" },
