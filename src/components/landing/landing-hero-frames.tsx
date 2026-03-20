@@ -77,7 +77,7 @@ export function LandingHeroFrames() {
           }}
           className="relative z-10 flex max-w-5xl flex-col items-center px-6 text-center"
         >
-          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-black/15 bg-white px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-black/70 dark:border-white/15 dark:bg-neutral-900 dark:text-white/70">
+          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-black/15 bg-white px-4 py-2 text-[11px] font-semibold tracking-[0.18em] text-black/70 dark:border-white/15 dark:bg-neutral-900 dark:text-white/70">
             <ProOpsLogo
               variant="symbol"
               width={16}
