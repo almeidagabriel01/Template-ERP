@@ -14,6 +14,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { DecimalInput } from "@/components/ui/decimal-input";
 import {
   ArrowLeft,
@@ -37,6 +38,16 @@ import {
   normalizeItemQuantity,
   parseItemQuantityInput,
 } from "@/lib/quantity-utils";
+import {
+  ProposalProductPricingDetails,
+  calculateSellingPrice,
+  createDefaultProposalPricingDetails,
+  formatMeters,
+  isDimensionPricedProduct,
+  normalizeProductPricingModel,
+  normalizeProposalPricingDetails,
+} from "@/lib/product-pricing";
+import { createLineItemId, ensureAmbienteProductLineItemId } from "@/lib/proposal-product";
 
 interface AmbienteEditorProps {
   ambiente: Ambiente | null;
@@ -54,18 +65,42 @@ function buildAmbienteSnapshot(
     description: description.trim(),
     products: [...products]
       .map((product) => ({
+        lineItemId: product.lineItemId || "",
         productId: product.productId,
         itemType: product.itemType || "product",
         productName: product.productName || "",
         quantity: product.quantity,
+        pricingDetails: normalizeProposalPricingDetails(product.pricingDetails),
         status: product.status || "active",
       }))
       .sort((a, b) => {
         const typeCompare = a.itemType.localeCompare(b.itemType);
         if (typeCompare !== 0) return typeCompare;
-        return a.productId.localeCompare(b.productId);
+        const productCompare = a.productId.localeCompare(b.productId);
+        if (productCompare !== 0) return productCompare;
+        return a.lineItemId.localeCompare(b.lineItemId);
       }),
   });
+}
+
+function matchesAmbienteProductTarget(
+  item: AmbienteProduct,
+  productId: string,
+  itemType: "product" | "service",
+  lineItemId?: string,
+): boolean {
+  if (
+    item.productId !== productId ||
+    (item.itemType || "product") !== itemType
+  ) {
+    return false;
+  }
+
+  if (lineItemId) {
+    return item.lineItemId === lineItemId;
+  }
+
+  return true;
 }
 
 export function AmbienteEditor({
@@ -83,7 +118,7 @@ export function AmbienteEditor({
   );
   const [selectedProducts, setSelectedProducts] = React.useState<
     AmbienteProduct[]
-  >(ambiente?.defaultProducts || []);
+  >(() => (ambiente?.defaultProducts || []).map(ensureAmbienteProductLineItemId));
   const [currentAmbienteId, setCurrentAmbienteId] = React.useState<
     string | null
   >(null);
@@ -96,7 +131,9 @@ export function AmbienteEditor({
 
     if (incomingId !== currentAmbienteId) {
       if (ambiente) {
-        const loadedProducts = ambiente.defaultProducts || [];
+        const loadedProducts = (ambiente.defaultProducts || []).map(
+          ensureAmbienteProductLineItemId,
+        );
         setName(ambiente.name);
         setDescription(ambiente.description || "");
         setSelectedProducts(loadedProducts);
@@ -207,7 +244,7 @@ export function AmbienteEditor({
         await AmbienteService.updateAmbiente(ambiente.id, {
           name: name.trim(),
           description: description.trim(),
-          defaultProducts: selectedProducts,
+          defaultProducts: normalizedSelectedProducts,
         });
         toast.success("Ambiente atualizado!");
         onSave(ambiente.id);
@@ -219,7 +256,7 @@ export function AmbienteEditor({
           description: description.trim(),
           icon: "Home",
           order: nextOrder,
-          defaultProducts: selectedProducts,
+          defaultProducts: normalizedSelectedProducts,
           createdAt: new Date().toISOString(),
         });
 
@@ -237,20 +274,46 @@ export function AmbienteEditor({
   const filteredItems = React.useMemo(() => {
     return catalogItems
       .filter(
-        (item) =>
-          !selectedProducts.some(
+        (item) => {
+          const alreadySelected = selectedProducts.some(
             (selected) =>
               selected.productId === item.id &&
               (selected.itemType || "product") === (item.itemType || "product"),
-          ) &&
-          (catalogTypeFilter === "all" ||
+          );
+          const allowDuplicate =
+            (item.itemType || "product") === "product" &&
+            isDimensionPricedProduct(item);
+
+          return (
+            (!alreadySelected || allowDuplicate) &&
+            (catalogTypeFilter === "all" ||
             (item.itemType || "product") === catalogTypeFilter) &&
-          (productSearch === "" ||
+            (productSearch === "" ||
             item.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-            item.category?.toLowerCase().includes(productSearch.toLowerCase())),
+              item.category?.toLowerCase().includes(productSearch.toLowerCase()))
+          );
+        },
       )
       .sort((a, b) => compareDisplayText(a.name, b.name));
   }, [catalogItems, catalogTypeFilter, productSearch, selectedProducts]);
+
+  const catalogItemMap = React.useMemo(() => {
+    return new Map(
+      catalogItems.map((item) => [
+        `${item.itemType || "product"}:${item.id}`,
+        item,
+      ]),
+    );
+  }, [catalogItems]);
+
+  const normalizedSelectedProducts = React.useMemo(
+    () =>
+      selectedProducts.map((item) => ({
+        ...ensureAmbienteProductLineItemId(item),
+        pricingDetails: normalizeProposalPricingDetails(item.pricingDetails),
+      })),
+    [selectedProducts],
+  );
 
   React.useEffect(() => {
     if (document.activeElement === productSearchInputRef.current) {
@@ -262,10 +325,15 @@ export function AmbienteEditor({
     setSelectedProducts((current) => [
       ...current,
       {
+        lineItemId: createLineItemId("amb"),
         productId: item.id,
         itemType: item.itemType || "product",
         productName: item.name,
         quantity: 0,
+        pricingDetails:
+          (item.itemType || "product") === "service"
+            ? { mode: "standard" }
+            : createDefaultProposalPricingDetails(item),
         status: "active",
       },
     ]);
@@ -274,14 +342,12 @@ export function AmbienteEditor({
   const handleRemoveProduct = (
     productId: string,
     itemType: "product" | "service" = "product",
+    lineItemId?: string,
   ) => {
     setSelectedProducts((current) =>
       current.filter(
         (item) =>
-          !(
-            item.productId === productId &&
-            (item.itemType || "product") === itemType
-          ),
+          !matchesAmbienteProductTarget(item, productId, itemType, lineItemId),
       ),
     );
   };
@@ -290,13 +356,11 @@ export function AmbienteEditor({
     productId: string,
     delta: number,
     itemType: "product" | "service" = "product",
+    lineItemId?: string,
   ) => {
     setSelectedProducts((current) =>
       current.map((item) => {
-        if (
-          item.productId === productId &&
-          (item.itemType || "product") === itemType
-        ) {
+        if (matchesAmbienteProductTarget(item, productId, itemType, lineItemId)) {
           const allowDecimal =
             itemType !== "service" && allowDecimalProductQuantity;
 
@@ -315,13 +379,11 @@ export function AmbienteEditor({
     productId: string,
     nextQuantity: number,
     itemType: "product" | "service" = "product",
+    lineItemId?: string,
   ) => {
     setSelectedProducts((current) =>
       current.map((item) => {
-        if (
-          item.productId === productId &&
-          (item.itemType || "product") === itemType
-        ) {
+        if (matchesAmbienteProductTarget(item, productId, itemType, lineItemId)) {
           const allowDecimal =
             itemType !== "service" && allowDecimalProductQuantity;
 
@@ -340,14 +402,38 @@ export function AmbienteEditor({
     productId: string,
     newStatus: "active" | "inactive",
     itemType: "product" | "service" = "product",
+    lineItemId?: string,
   ) => {
     setSelectedProducts((current) =>
       current.map((item) => {
-        if (
-          item.productId === productId &&
-          (item.itemType || "product") === itemType
-        ) {
+        if (matchesAmbienteProductTarget(item, productId, itemType, lineItemId)) {
           return { ...item, status: newStatus };
+        }
+
+        return item;
+      }),
+    );
+  };
+
+  const handleUpdatePricingDetails = (
+    productId: string,
+    pricingDetails: ProposalProductPricingDetails,
+    itemType: "product" | "service" = "product",
+    lineItemId?: string,
+  ) => {
+    setSelectedProducts((current) =>
+      current.map((item) => {
+        if (matchesAmbienteProductTarget(item, productId, itemType, lineItemId)) {
+          return {
+            ...item,
+            quantity:
+              pricingDetails.mode === "curtain_meter"
+                ? pricingDetails.area
+                : pricingDetails.mode === "curtain_height"
+                  ? pricingDetails.width
+                  : item.quantity,
+            pricingDetails,
+          };
         }
 
         return item;
@@ -572,9 +658,40 @@ export function AmbienteEditor({
                       .map((item) => {
                         const itemType = item.itemType || "product";
                         const isService = itemType === "service";
+                        const catalogItem =
+                          catalogItemMap.get(`${itemType}:${item.productId}`);
+                        const pricingModel = normalizeProductPricingModel(
+                          catalogItem && "pricingModel" in catalogItem
+                            ? catalogItem.pricingModel
+                            : undefined,
+                        );
+                        const pricingDetails = normalizeProposalPricingDetails(
+                          item.pricingDetails,
+                        );
+                        const isCurtainMeter =
+                          !isService &&
+                          (pricingDetails.mode === "curtain_meter" ||
+                            pricingModel.mode === "curtain_meter");
+                        const isCurtainHeight =
+                          !isService &&
+                          (pricingDetails.mode === "curtain_height" ||
+                            pricingModel.mode === "curtain_height");
+                        const activeHeightTiers =
+                          pricingModel.mode === "curtain_height"
+                            ? pricingModel.tiers
+                            : [];
+                        const selectedHeightTier =
+                          activeHeightTiers.find(
+                            (tier) =>
+                              tier.id ===
+                              (pricingDetails.mode === "curtain_height"
+                                ? pricingDetails.tierId
+                                : ""),
+                          ) || activeHeightTiers[0] || null;
                         const allowDecimalQuantity =
                           !isService && allowDecimalProductQuantity;
                         const quantityStep = allowDecimalQuantity ? 0.01 : 1;
+                        const itemLineId = item.lineItemId;
 
                         return (
                           <motion.div
@@ -582,105 +699,351 @@ export function AmbienteEditor({
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.95 }}
-                          key={`${item.itemType || "product"}-${item.productId}`}
-                          className="group flex items-center justify-between p-4 rounded-xl bg-card border shadow-sm hover:shadow-md transition-all hover:border-primary/20"
+                          key={
+                            itemLineId ||
+                            `${item.itemType || "product"}-${item.productId}`
+                          }
+                          className="group flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-sm transition-all hover:border-primary/20 hover:shadow-md"
                         >
-                          <div className="flex items-center gap-4 flex-1 min-w-0">
-                            <div className="h-12 w-12 rounded-lg bg-primary/5 flex items-center justify-center text-primary shrink-0">
-                              <Package className="h-6 w-6" />
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2 min-w-0 pr-4">
-                                <h4 className="font-semibold text-foreground truncate">
-                                  {item.productName}
-                                </h4>
-                                <Badge
-                                  variant="outline"
-                                  className={cn(
-                                    "text-[10px] px-2 py-0.5 h-auto shrink-0",
-                                    isService
-                                      ? "bg-rose-600/15 text-rose-800 border-rose-300 dark:bg-rose-600/20 dark:text-rose-300 dark:border-rose-500/40"
-                                      : "bg-emerald-500/15 text-emerald-700 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40",
-                                  )}
-                                >
-                                  {isService ? "Serviço" : "Produto"}
-                                </Badge>
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex flex-1 items-start gap-4 min-w-0">
+                              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/5 text-primary">
+                                <Package className="h-6 w-6" />
                               </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-6">
-                            <Select
-                              value={item.status || "active"}
-                              onChange={(event) =>
-                                handleUpdateStatus(
-                                  item.productId,
-                                  event.target.value as "active" | "inactive",
-                                  item.itemType || "product",
-                                )
-                              }
-                              inputSize="sm"
-                              className="w-[100px] border-none shadow-none focus:ring-0"
-                            >
-                              <option value="active">Ativo</option>
-                              <option value="inactive">Inativo</option>
-                            </Select>
-
-                            <div className="flex items-center bg-muted/50 rounded-lg border p-1 shadow-sm">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-md hover:bg-background hover:text-destructive transition-colors"
-                                onClick={() =>
-                                  handleUpdateQuantity(
-                                    item.productId,
-                                    -quantityStep,
-                                    itemType,
-                                  )
-                                }
-                              >
-                                <Minus className="w-3.5 h-3.5" />
-                              </Button>
-                              <EditableQuantityInput
-                                value={item.quantity}
-                                allowDecimal={allowDecimalQuantity}
-                                onChange={(nextValue) =>
-                                  handleSetQuantity(
-                                    item.productId,
-                                    nextValue,
-                                    itemType,
-                                  )
-                                }
-                              />
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-md hover:bg-background hover:text-primary transition-colors"
-                                onClick={() =>
-                                  handleUpdateQuantity(
-                                    item.productId,
-                                    quantityStep,
-                                    itemType,
-                                  )
-                                }
-                              >
-                                <Plus className="w-3.5 h-3.5" />
-                              </Button>
+                              <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2 min-w-0 pr-4">
+                                  <h4 className="break-words font-semibold text-foreground">
+                                    {item.productName}
+                                  </h4>
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "h-auto shrink-0 px-2 py-0.5 text-[10px]",
+                                      isService
+                                        ? "border-rose-300 bg-rose-600/15 text-rose-800 dark:border-rose-500/40 dark:bg-rose-600/20 dark:text-rose-300"
+                                        : "border-emerald-300 bg-emerald-500/15 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-300",
+                                    )}
+                                  >
+                                    {isService ? "Serviço" : "Produto"}
+                                  </Badge>
+                                  {isCurtainMeter && (
+                                    <Badge
+                                      variant="outline"
+                                      className="h-auto shrink-0 px-2 py-0.5 text-[10px]"
+                                    >
+                                      Por metragem
+                                    </Badge>
+                                  )}
+                                  {isCurtainHeight && (
+                                    <Badge
+                                      variant="outline"
+                                      className="h-auto shrink-0 px-2 py-0.5 text-[10px]"
+                                    >
+                                      Por altura
+                                    </Badge>
+                                  )}
+                                </div>
+                                {!isService && isCurtainMeter && (
+                                  <p className="mt-1 text-xs text-muted-foreground">
+                                    {formatMeters(
+                                      pricingDetails.mode === "curtain_meter"
+                                        ? pricingDetails.width
+                                        : 0,
+                                    )}{" "}
+                                    x{" "}
+                                    {formatMeters(
+                                      pricingDetails.mode === "curtain_meter"
+                                        ? pricingDetails.height
+                                        : 0,
+                                    )}
+                                  </p>
+                                )}
+                                {!isService && isCurtainHeight && (
+                                  <p className="mt-1 text-xs text-muted-foreground">
+                                    Larg.{" "}
+                                    {formatMeters(
+                                      pricingDetails.mode === "curtain_height"
+                                        ? pricingDetails.width
+                                        : 0,
+                                    )}{" "}
+                                    | Alt. ate{" "}
+                                    {formatMeters(
+                                      pricingDetails.mode === "curtain_height"
+                                        ? pricingDetails.maxHeight
+                                        : 0,
+                                    )}
+                                  </p>
+                                )}
+                              </div>
                             </div>
 
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-colors"
+                              className="h-9 w-9 shrink-0 rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                               onClick={() =>
                                 handleRemoveProduct(
                                   item.productId,
                                   itemType,
+                                  itemLineId,
                                 )
                               }
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
+                          </div>
+
+                          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border/50 pt-4">
+                            <div className="space-y-1 my-auto">
+                              <span className="text-[10px] text-muted-foreground mr-2">Status do Item</span>
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={item.status !== "inactive"}
+                                  onCheckedChange={(checked) =>
+                                    handleUpdateStatus(
+                                      item.productId,
+                                      checked ? "active" : "inactive",
+                                      item.itemType || "product",
+                                      itemLineId,
+                                    )
+                                  }
+                                  aria-label="Toggle status"
+                                />
+                                <span className="text-sm font-medium text-foreground">
+                                  {item.status !== "inactive" ? "Ativo" : "Inativo"}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-end flex-wrap gap-3 flex-1">
+                              {isCurtainMeter ? (
+                                <div className="grid w-full gap-2 rounded-lg border bg-muted/50 p-3 shadow-sm md:grid-cols-2 lg:w-[320px]">
+                                <div className="space-y-1">
+                                  <span className="text-[10px] text-muted-foreground">
+                                    Largura
+                                  </span>
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={
+                                      pricingDetails.mode === "curtain_meter"
+                                        ? pricingDetails.width
+                                        : 0
+                                    }
+                                    onChange={(event) => {
+                                      const width = Math.max(
+                                        0,
+                                        Number.parseFloat(event.target.value) || 0,
+                                      );
+                                      const height =
+                                        pricingDetails.mode === "curtain_meter"
+                                          ? pricingDetails.height
+                                          : 0;
+                                      handleUpdatePricingDetails(
+                                        item.productId,
+                                        {
+                                          mode: "curtain_meter",
+                                          width,
+                                          height,
+                                          area: width * height,
+                                        },
+                                        itemType,
+                                        itemLineId,
+                                      );
+                                    }}
+                                    className="h-9"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <span className="text-[10px] text-muted-foreground">
+                                    Altura
+                                  </span>
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={
+                                      pricingDetails.mode === "curtain_meter"
+                                        ? pricingDetails.height
+                                        : 0
+                                    }
+                                    onChange={(event) => {
+                                      const height = Math.max(
+                                        0,
+                                        Number.parseFloat(event.target.value) || 0,
+                                      );
+                                      const width =
+                                        pricingDetails.mode === "curtain_meter"
+                                          ? pricingDetails.width
+                                          : 0;
+                                      handleUpdatePricingDetails(
+                                        item.productId,
+                                        {
+                                          mode: "curtain_meter",
+                                          width,
+                                          height,
+                                          area: width * height,
+                                        },
+                                        itemType,
+                                        itemLineId,
+                                      );
+                                    }}
+                                    className="h-9"
+                                  />
+                                </div>
+                              </div>
+                            ) : isCurtainHeight ? (
+                              <div className="grid w-full gap-3 rounded-lg border bg-muted/40 p-3 shadow-sm md:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)]">
+                                <div className="space-y-1">
+                                  <span className="text-[10px] text-muted-foreground">
+                                    Faixa
+                                  </span>
+                                  <Select
+                                    value={
+                                      pricingDetails.mode === "curtain_height"
+                                        ? pricingDetails.tierId
+                                        : selectedHeightTier?.id || ""
+                                    }
+                                    onChange={(event) => {
+                                      const nextTier =
+                                        activeHeightTiers.find(
+                                          (tier) =>
+                                            tier.id === event.target.value,
+                                        ) || activeHeightTiers[0];
+                                      const width =
+                                        pricingDetails.mode === "curtain_height"
+                                          ? pricingDetails.width
+                                          : 0;
+                                      handleUpdatePricingDetails(
+                                        item.productId,
+                                        {
+                                          mode: "curtain_height",
+                                          width,
+                                          tierId: nextTier?.id || "",
+                                          maxHeight: nextTier?.maxHeight || 0,
+                                        },
+                                        itemType,
+                                        itemLineId,
+                                      );
+                                    }}
+                                    inputSize="sm"
+                                    className="h-9"
+                                  >
+                                    {activeHeightTiers.map((tier) => (
+                                      <option key={tier.id} value={tier.id}>
+                                        Ate {formatMeters(tier.maxHeight)}
+                                      </option>
+                                    ))}
+                                  </Select>
+                                </div>
+                                <div className="space-y-1">
+                                  <span className="text-[10px] text-muted-foreground">
+                                    Largura
+                                  </span>
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={
+                                      pricingDetails.mode === "curtain_height"
+                                        ? pricingDetails.width
+                                        : 0
+                                    }
+                                    onChange={(event) => {
+                                      const width = Math.max(
+                                        0,
+                                        Number.parseFloat(event.target.value) || 0,
+                                      );
+                                      const nextTier =
+                                        activeHeightTiers.find(
+                                          (tier) =>
+                                            tier.id ===
+                                            (pricingDetails.mode ===
+                                            "curtain_height"
+                                              ? pricingDetails.tierId
+                                              : selectedHeightTier?.id || ""),
+                                        ) || activeHeightTiers[0];
+                                      handleUpdatePricingDetails(
+                                        item.productId,
+                                        {
+                                          mode: "curtain_height",
+                                          width,
+                                          tierId: nextTier?.id || "",
+                                          maxHeight: nextTier?.maxHeight || 0,
+                                        },
+                                        itemType,
+                                        itemLineId,
+                                      );
+                                    }}
+                                    className="h-9"
+                                  />
+                                </div>
+                                {selectedHeightTier && (
+                                  <div className="col-span-2 mt-1 flex items-center justify-between rounded-md bg-background px-3 py-2 border border-border/50">
+                                    <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                                      Preço da faixa
+                                    </span>
+                                    <span className="text-xs font-semibold text-foreground">
+                                      R${" "}
+                                      {calculateSellingPrice(
+                                        selectedHeightTier.basePrice,
+                                        selectedHeightTier.markup,
+                                      ).toFixed(2)}{" "}
+                                      <span className="text-[10px] font-normal text-muted-foreground">
+                                        / m larg.
+                                      </span>
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex items-center bg-muted/50 rounded-lg border p-1 shadow-sm">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-md hover:bg-background hover:text-destructive transition-colors"
+                                  onClick={() =>
+                                    handleUpdateQuantity(
+                                      item.productId,
+                                      -quantityStep,
+                                      itemType,
+                                      itemLineId,
+                                    )
+                                  }
+                                >
+                                  <Minus className="w-3.5 h-3.5" />
+                                </Button>
+                                <EditableQuantityInput
+                                  value={item.quantity}
+                                  allowDecimal={allowDecimalQuantity}
+                                  onChange={(nextValue) =>
+                                    handleSetQuantity(
+                                      item.productId,
+                                      nextValue,
+                                      itemType,
+                                      itemLineId,
+                                    )
+                                  }
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-md hover:bg-background hover:text-primary transition-colors"
+                                  onClick={() =>
+                                    handleUpdateQuantity(
+                                      item.productId,
+                                      quantityStep,
+                                      itemType,
+                                      itemLineId,
+                                    )
+                                  }
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
+                            )}
+                            </div>
                           </div>
                           </motion.div>
                         );

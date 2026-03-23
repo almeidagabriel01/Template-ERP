@@ -2,6 +2,11 @@ import React from "react";
 import { formatCurrency } from "@/utils/format-utils";
 import { PdfItemTypeBadge } from "./pdf-item-type-badge";
 import { Package, Wrench } from "lucide-react";
+import {
+  ProposalProductPricingDetails,
+  getProposalProductMeasurementLabel,
+  getProposalProductUnitLabel,
+} from "@/lib/product-pricing";
 
 interface ProductData {
   productName: string;
@@ -16,6 +21,7 @@ interface ProductData {
   unitPrice: number;
   markup?: number;
   total: number;
+  pricingDetails?: ProposalProductPricingDetails;
 }
 
 import {
@@ -50,6 +56,8 @@ export function PdfProductRow({
 
   // Calculate selling price (unitPrice with markup applied)
   const sellingPrice = product.unitPrice * (1 + (product.markup || 0) / 100);
+  const measurementLabel = getProposalProductMeasurementLabel(product);
+  const unitLabel = getProposalProductUnitLabel(product);
 
   return (
     <div
@@ -144,11 +152,11 @@ export function PdfProductRow({
           <div className="text-right">
             {settings.showProductPrices ? (
               <div className="text-xs text-gray-500 mb-1">
-                {product.quantity} un. x {formatCurrency(sellingPrice)}
+                {measurementLabel} x {formatCurrency(sellingPrice)} / {unitLabel}
               </div>
             ) : (
               <div className="text-xs text-gray-500 mb-1">
-                Qtd: {product.quantity}
+                {measurementLabel}
               </div>
             )}
             <div

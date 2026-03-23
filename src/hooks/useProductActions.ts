@@ -10,6 +10,7 @@ import { toast } from '@/lib/toast';
 import { callApi } from "@/lib/api-client";
 import { useTenant } from "@/providers/tenant-provider";
 import { ProductService } from "@/services/product-service";
+import { ProductPricingModel } from "@/lib/product-pricing";
 
 // ============================================
 // TYPES
@@ -20,6 +21,7 @@ export interface CreateProductData {
   description?: string;
   price: string;
   markup?: string;
+  pricingModel?: ProductPricingModel;
   manufacturer?: string;
   category?: string;
   inventoryValue?: number;
@@ -74,6 +76,7 @@ export function useProductActions() {
         description: data.description || "",
         price: data.price,
         markup: data.markup || "",
+        pricingModel: data.pricingModel,
         manufacturer: data.manufacturer || "",
         category: data.category || "",
         inventoryValue: data.inventoryValue ?? data.stock ?? 0,
