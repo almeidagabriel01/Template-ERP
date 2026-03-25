@@ -17,7 +17,7 @@ import { ADDON_DEFINITIONS } from "@/services/addon-service";
 import { DEFAULT_PLANS } from "@/services/plan-service";
 import Link from "next/link";
 import { formatPrice } from "@/utils/format";
-import { formatDateBR } from "@/utils/date-format";
+import { formatDateBR, type DateValue } from "@/utils/date-format";
 import {
   CreditCard,
   Calendar,
@@ -276,11 +276,11 @@ export function MySubscriptionTab({
     return null;
   };
 
-  const formatDate = (dateInput?: unknown) => {
+  const formatDate = (dateInput?: DateValue) => {
     return formatDateBR(dateInput);
   };
 
-  const getFormattedDateOrNull = (dateInput?: unknown) => {
+  const getFormattedDateOrNull = (dateInput?: DateValue) => {
     const formatted = formatDateBR(dateInput, "");
     return formatted || null;
   };

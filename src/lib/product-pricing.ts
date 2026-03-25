@@ -280,29 +280,6 @@ export function createDefaultProposalPricingDetails(
     };
   }
 
-  if (pricingModel.mode === "curtain_width") {
-    const details = normalizeProposalPricingDetails(
-      source.pricingDetails || createDefaultProposalPricingDetails(source),
-    );
-    const width = details.mode === "curtain_width" ? details.width : 0;
-    const unitPrice = getProductBasePrice(source);
-    const markup = getProductMarkup(source);
-    const sellingPrice = calculateSellingPrice(unitPrice, markup);
-    const total = roundPricingValue(width * sellingPrice);
-
-    return {
-      pricingDetails: {
-        mode: "curtain_width",
-        width,
-      },
-      quantity: width,
-      unitPrice,
-      markup,
-      total,
-      sellingPrice,
-    };
-  }
-
   return { mode: "standard" };
 }
 
