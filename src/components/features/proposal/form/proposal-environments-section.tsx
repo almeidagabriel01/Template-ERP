@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import {
   Card,
   CardContent,
@@ -722,6 +723,17 @@ function EnvironmentProductRow({
       ? pricingDetails.tierId
       : activeHeightTiers[0]?.id || "",
   );
+  const curtainMeterWidth =
+    pricingDetails.mode === "curtain_meter" ? pricingDetails.width : 0;
+  const curtainMeterHeight =
+    pricingDetails.mode === "curtain_meter" ? pricingDetails.height : 0;
+  const curtainHeightWidth =
+    pricingDetails.mode === "curtain_height" ? pricingDetails.width : 0;
+  const curtainHeightTierId =
+    pricingDetails.mode === "curtain_height" ? pricingDetails.tierId : "";
+  const curtainWidthValue =
+    pricingDetails.mode === "curtain_width" ? pricingDetails.width : 0;
+  const previewImageSrc = product.productImages?.[0] || product.productImage || "";
 
   React.useEffect(() => {
     setMarkup(product.markup || 0);
@@ -741,40 +753,28 @@ function EnvironmentProductRow({
 
   React.useEffect(() => {
     if (pricingDetails.mode === "curtain_meter") {
-      setMeterWidthInput(String(pricingDetails.width || 0));
-      setMeterHeightInput(String(pricingDetails.height || 0));
+      setMeterWidthInput(String(curtainMeterWidth || 0));
+      setMeterHeightInput(String(curtainMeterHeight || 0));
     }
-  }, [
-    pricingDetails.mode,
-    "width" in pricingDetails ? pricingDetails.width : undefined,
-    "height" in pricingDetails ? pricingDetails.height : undefined,
-  ]);
+  }, [pricingDetails.mode, curtainMeterHeight, curtainMeterWidth]);
 
   React.useEffect(() => {
     if (pricingDetails.mode === "curtain_height") {
-      setHeightWidthInput(String(pricingDetails.width || 0));
-      setSelectedHeightTierId(pricingDetails.tierId || activeHeightTiers[0]?.id || "");
+      setHeightWidthInput(String(curtainHeightWidth || 0));
+      setSelectedHeightTierId(curtainHeightTierId || activeHeightTiers[0]?.id || "");
       return;
     }
 
     if (activeHeightTiers.length > 0) {
       setSelectedHeightTierId(activeHeightTiers[0].id);
     }
-  }, [
-    pricingDetails.mode,
-    "width" in pricingDetails ? pricingDetails.width : undefined,
-    "tierId" in pricingDetails ? pricingDetails.tierId : undefined,
-    activeHeightTiers,
-  ]);
+  }, [pricingDetails.mode, curtainHeightTierId, curtainHeightWidth, activeHeightTiers]);
 
   React.useEffect(() => {
     if (pricingDetails.mode === "curtain_width") {
-      setLinearWidthInput(String(pricingDetails.width || 0));
+      setLinearWidthInput(String(curtainWidthValue || 0));
     }
-  }, [
-    pricingDetails.mode,
-    "width" in pricingDetails ? pricingDetails.width : undefined,
-  ]);
+  }, [pricingDetails.mode, curtainWidthValue]);
 
   const handlePriceBlur = () => {
     setIsEditingPrice(false);
@@ -931,23 +931,28 @@ function EnvironmentProductRow({
     ],
   );
 
-  const handleStatusToggle = async (event: React.MouseEvent) => {
-    event.stopPropagation();
-    if (!onToggleStatus || isUpdating) return;
+  const handleStatusChange = React.useCallback(
+    (checked: boolean) => {
+      if (!onToggleStatus || isUpdating) return;
 
-    setIsUpdating(true);
-    try {
-      await onToggleStatus(
+      setIsUpdating(true);
+      onToggleStatus(
         product.productId,
-        isActive ? "inactive" : "active",
+        checked ? "active" : "inactive",
         systemInstanceId,
         itemType,
         lineItemId,
-      );
-    } finally {
-      setIsUpdating(false);
-    }
-  };
+      ).finally(() => setIsUpdating(false));
+    },
+    [
+      isUpdating,
+      itemType,
+      lineItemId,
+      onToggleStatus,
+      product.productId,
+      systemInstanceId,
+    ],
+  );
 
   const handleMarkupBlur = () => {
     setIsEditingMarkup(false);
@@ -1023,13 +1028,16 @@ function EnvironmentProductRow({
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 items-start gap-4">
-          {product.productImage || product.productImages?.[0] ? (
+          {previewImageSrc ? (
             <div
               className={`h-12 w-12 shrink-0 overflow-hidden rounded-lg border bg-background ${!isActive ? "opacity-40" : ""}`}
             >
-              <img
-                src={product.productImages?.[0] || product.productImage}
+              <Image
+                src={previewImageSrc}
                 alt=""
+                width={48}
+                height={48}
+                unoptimized
                 className="h-full w-full object-contain"
               />
             </div>
@@ -1183,18 +1191,7 @@ function EnvironmentProductRow({
               <Switch
                 checked={isActive}
                 disabled={isUpdating}
-                onCheckedChange={(checked) => {
-                  if (onToggleStatus && !isUpdating) {
-                    setIsUpdating(true);
-                    onToggleStatus(
-                      product.productId,
-                      checked ? "active" : "inactive",
-                      systemInstanceId,
-                      itemType,
-                      lineItemId,
-                    ).finally(() => setIsUpdating(false));
-                  }
-                }}
+                onCheckedChange={handleStatusChange}
                 aria-label="Toggle status"
               />
               <span className="text-sm font-medium text-foreground">

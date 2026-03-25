@@ -37,6 +37,7 @@ export function createInitialProposalFormData(): Partial<Proposal> {
     pdfSettings: {
       showProductImages: true,
       showProductDescriptions: true,
+      showProductQuantities: true,
       showProductPrices: false,
       showProductMeasurements: true,
       showSubtotals: true,

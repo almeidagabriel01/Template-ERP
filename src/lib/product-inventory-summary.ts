@@ -70,7 +70,7 @@ export function summarizeCurtainInventoryBalance(
       return;
     }
 
-    if (pricingMode === "curtain_height" && pricingModel.tiers.length > 0) {
+    if (pricingModel.mode === "curtain_height" && pricingModel.tiers.length > 0) {
       const representativeTier = getHeightTierById(product);
       const totalTierBasePrice = pricingModel.tiers.reduce(
         (sum, tier) => sum + tier.basePrice,
