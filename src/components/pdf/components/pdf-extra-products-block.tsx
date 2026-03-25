@@ -17,6 +17,7 @@ import {
   PdfCortinasAwareProductFooter,
   hasCortinasAwareProductFooterContent,
 } from "./pdf-sistema-primitives";
+import { compareConfiguredDisplayItemWithExtras } from "@/lib/sort-text";
 
 interface PdfProduct {
   productId: string;
@@ -64,9 +65,9 @@ export function PdfExtraProductsBlock({
   tenantNiche,
 }: PdfExtraProductsBlockProps) {
   const settings = { ...defaultPdfDisplaySettings, ...pdfDisplaySettings };
-  const visibleProducts = products.filter((product) =>
-    isProductVisibleInPdf(product),
-  );
+  const visibleProducts = [...products]
+    .filter((product) => isProductVisibleInPdf(product))
+    .sort(compareConfiguredDisplayItemWithExtras);
   const productsForTotals = products.filter((product) =>
     shouldCountInPdfTotals(product),
   );

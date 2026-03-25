@@ -14,6 +14,7 @@ import {
   shouldCountInPdfTotals,
 } from "./product-visibility";
 import { generateProposalPaymentTerms } from "@/lib/proposal-payment";
+import { compareConfiguredDisplayItemWithExtras } from "@/lib/sort-text";
 export type { ContentItem } from "@/components/pdf/pdf-helpers";
 import {
   PdfDisplaySettings,
@@ -372,13 +373,9 @@ export function buildContentItems(
         !sistemaProductIds.has(p.productId) &&
         shouldCountProduct(p),
     );
-    const onlyProductsExtra = extraProductsTemp.filter(
-      (p) => p.itemType !== "service",
+    const extraProducts = [...extraProductsTemp].sort(
+      compareConfiguredDisplayItemWithExtras,
     );
-    const onlyServicesExtra = extraProductsTemp.filter(
-      (p) => p.itemType === "service",
-    );
-    const extraProducts = [...onlyProductsExtra, ...onlyServicesExtra];
 
     if (extraProducts.length > 0) {
       items.push({
@@ -442,11 +439,7 @@ export function buildContentItems(
         }
 
         const sortedProducts = [...envProducts].sort(
-          (a: Product, b: Product) => {
-            if (a.isExtra && !b.isExtra) return 1;
-            if (!a.isExtra && b.isExtra) return -1;
-            return 0;
-          },
+          compareConfiguredDisplayItemWithExtras,
         );
 
         // Filter out hidden products for height calculation and rendering
@@ -454,13 +447,9 @@ export function buildContentItems(
           shouldRenderProduct(p),
         );
 
-        const onlyProducts = visibleSortedProductsTemp.filter(
-          (p) => p.itemType !== "service",
+        const visibleSortedProducts = [...visibleSortedProductsTemp].sort(
+          compareConfiguredDisplayItemWithExtras,
         );
-        const onlyServices = visibleSortedProductsTemp.filter(
-          (p) => p.itemType === "service",
-        );
-        const visibleSortedProducts = [...onlyProducts, ...onlyServices];
 
         // Calculate height for this environment
         let envHeight = 0;
@@ -589,13 +578,9 @@ export function buildContentItems(
       shouldRenderProduct(p),
     );
 
-    const onlyProducts = visibleProductsTemp.filter(
-      (p) => p.itemType !== "service",
+    const visibleProducts = [...visibleProductsTemp].sort(
+      compareConfiguredDisplayItemWithExtras,
     );
-    const onlyServices = visibleProductsTemp.filter(
-      (p) => p.itemType === "service",
-    );
-    const visibleProducts = [...onlyProducts, ...onlyServices];
 
     if (visibleProducts.length > 0) {
       items.push({

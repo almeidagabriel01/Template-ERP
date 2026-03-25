@@ -31,7 +31,11 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { compareDisplayText } from "@/lib/sort-text";
+import {
+  compareCatalogDisplayItem,
+  compareConfiguredDisplayItem,
+  compareDisplayText,
+} from "@/lib/sort-text";
 import { getPrimaryAmbiente } from "@/lib/sistema-migration-utils";
 import { getEnvironmentSelectionInstanceId } from "@/lib/proposal-environment-utils";
 import { getNicheConfig } from "@/lib/niches/config";
@@ -49,6 +53,7 @@ import {
   ProposalProductPricingDetails,
   calculateSellingPrice,
   formatMeters,
+  getProposalProductUnitLabel,
   getProductPricingSummary,
 } from "@/lib/product-pricing";
 import {
@@ -142,7 +147,6 @@ export function ProposalEnvironmentsSection({
   const isMeterMode = inventoryConfig.mode === "meter";
   const quantityStep = inventoryConfig.step;
   const zeroQuantityLabel = isMeterMode ? "Ocultar metr. 0" : "Ocultar qtd. 0";
-  const priceUnitLabel = inventoryConfig.priceSuffix.trim() || "un";
   const [hideZeroQtyByEnvironment, setHideZeroQtyByEnvironment] =
     React.useState<Record<string, boolean>>({});
 
@@ -262,7 +266,6 @@ export function ProposalEnvironmentsSection({
                   hideZeroQty={!!hideZeroQtyByEnvironment[instanceId]}
                   zeroQuantityLabel={zeroQuantityLabel}
                   quantityStep={quantityStep}
-                  priceUnitLabel={priceUnitLabel}
                   onRemove={() =>
                     onRemoveAmbiente(index, primaryAmbiente.ambienteId)
                   }
@@ -346,7 +349,6 @@ interface EnvironmentCardProps {
   hideZeroQty: boolean;
   zeroQuantityLabel: string;
   quantityStep: number;
-  priceUnitLabel: string;
   onRemove: () => void;
   onToggleHideZeroQty: (hide: boolean) => void;
   onUpdateQuantity: (
@@ -410,7 +412,6 @@ function EnvironmentCard({
   hideZeroQty,
   zeroQuantityLabel,
   quantityStep,
-  priceUnitLabel,
   onRemove,
   onToggleHideZeroQty,
   onUpdateQuantity,
@@ -545,8 +546,8 @@ function EnvironmentCard({
 
           <div className="p-3 space-y-2">
             {visibleProducts.length > 0 ? (
-              visibleProducts
-                .sort((a, b) => compareDisplayText(a.productName, b.productName))
+              [...visibleProducts]
+                .sort(compareConfiguredDisplayItem)
                 .map((product, idx) => (
                   <EnvironmentProductRow
                     key={
@@ -562,7 +563,6 @@ function EnvironmentCard({
                     )}
                     systemInstanceId={systemInstanceId}
                     quantityStep={quantityStep}
-                    priceUnitLabel={priceUnitLabel}
                     onUpdateQuantity={onUpdateQuantity}
                     onUpdateMarkup={onUpdateMarkup}
                     onUpdatePricingDetails={onUpdatePricingDetails}
@@ -599,7 +599,6 @@ interface EnvironmentProductRowProps {
   catalogProduct?: Product | Service;
   systemInstanceId: string;
   quantityStep: number;
-  priceUnitLabel: string;
   onUpdateQuantity: (
     productId: string,
     delta: number,
@@ -648,7 +647,6 @@ function EnvironmentProductRow({
   catalogProduct,
   systemInstanceId,
   quantityStep,
-  priceUnitLabel,
   onUpdateQuantity,
   onUpdateMarkup,
   onUpdatePricingDetails,
@@ -992,6 +990,7 @@ function EnvironmentProductRow({
             pricingDetails.mode === "curtain_width" ? pricingDetails.width : 0,
           )}`
       : "";
+  const priceUnitLabel = getProposalProductUnitLabel(product);
   const priceSuffix = isCurtainMeter
     ? " /mÂ²"
     : isCurtainHeight
@@ -1550,7 +1549,7 @@ function ExtraProductsGrid({
             return !alreadySelected || allowDuplicate;
           },
         )
-        .sort((a, b) => compareDisplayText(a.name, b.name)),
+        .sort(compareCatalogDisplayItem),
     [ambienteProducts, products],
   );
 
