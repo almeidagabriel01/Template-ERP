@@ -29,7 +29,10 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
-import { compareDisplayText } from "@/lib/sort-text";
+import {
+  compareCatalogDisplayItem,
+  compareConfiguredDisplayItem,
+} from "@/lib/sort-text";
 import { toast } from "@/lib/toast";
 import { useWindowFocus } from "@/hooks/use-window-focus";
 import { getNicheConfig } from "@/lib/niches/config";
@@ -294,7 +297,7 @@ export function AmbienteEditor({
           );
         },
       )
-      .sort((a, b) => compareDisplayText(a.name, b.name));
+      .sort(compareCatalogDisplayItem);
   }, [catalogItems, catalogTypeFilter, productSearch, selectedProducts]);
 
   const catalogItemMap = React.useMemo(() => {
@@ -652,9 +655,7 @@ export function AmbienteEditor({
                 <div className="grid grid-cols-1 gap-3">
                   <AnimatePresence initial={false}>
                     {[...selectedProducts]
-                      .sort((a, b) =>
-                        compareDisplayText(a.productName, b.productName),
-                      )
+                      .sort(compareConfiguredDisplayItem)
                       .map((item) => {
                         const itemType = item.itemType || "product";
                         const isService = itemType === "service";
