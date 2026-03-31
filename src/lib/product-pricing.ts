@@ -15,6 +15,8 @@ export interface CurtainHeightTier {
   markup: number;
 }
 
+const DEFAULT_CURTAIN_PANELS = 1;
+
 export type ProductPricingModel =
   | {
       mode: "standard";
@@ -39,16 +41,19 @@ export type ProposalProductPricingDetails =
       width: number;
       height: number;
       area: number;
+      panels: number;
     }
   | {
       mode: "curtain_width";
       width: number;
+      panels: number;
     }
   | {
       mode: "curtain_height";
       width: number;
       tierId: string;
       maxHeight: number;
+      panels: number;
     };
 
 type ProductPricingSource = {
@@ -89,6 +94,11 @@ export function parsePricingNumber(value: unknown): number {
 export function roundPricingValue(value: number, decimals: number = 2): number {
   const factor = 10 ** decimals;
   return Math.round((Number.isFinite(value) ? value : 0) * factor) / factor;
+}
+
+export function normalizeCurtainPanels(value: unknown): number {
+  const parsed = Math.trunc(parsePricingNumber(value));
+  return parsed >= 1 ? parsed : DEFAULT_CURTAIN_PANELS;
 }
 
 export function sanitizeHeightTier(
@@ -166,6 +176,7 @@ export function normalizeProposalPricingDetails(
       width,
       height,
       area: roundPricingValue(width * height, 4),
+      panels: normalizeCurtainPanels(source.panels),
     };
   }
 
@@ -173,6 +184,7 @@ export function normalizeProposalPricingDetails(
     return {
       mode: "curtain_width",
       width: roundPricingValue(Math.max(0, parsePricingNumber(source.width))),
+      panels: normalizeCurtainPanels(source.panels),
     };
   }
 
@@ -184,6 +196,7 @@ export function normalizeProposalPricingDetails(
       maxHeight: roundPricingValue(
         Math.max(0, parsePricingNumber(source.maxHeight)),
       ),
+      panels: normalizeCurtainPanels(source.panels),
     };
   }
 
@@ -260,6 +273,7 @@ export function createDefaultProposalPricingDetails(
       width: 0,
       height: 0,
       area: 0,
+      panels: DEFAULT_CURTAIN_PANELS,
     };
   }
 
@@ -267,6 +281,7 @@ export function createDefaultProposalPricingDetails(
     return {
       mode: "curtain_width",
       width: 0,
+      panels: DEFAULT_CURTAIN_PANELS,
     };
   }
 
@@ -277,6 +292,7 @@ export function createDefaultProposalPricingDetails(
       width: 0,
       tierId: firstTier?.id || "",
       maxHeight: firstTier?.maxHeight || 0,
+      panels: DEFAULT_CURTAIN_PANELS,
     };
   }
 
@@ -307,11 +323,13 @@ export function calculateProposalProductPricing(
     );
     const width = details.mode === "curtain_meter" ? details.width : 0;
     const height = details.mode === "curtain_meter" ? details.height : 0;
+    const panels = details.mode === "curtain_meter" ? details.panels : 1;
     const area = roundPricingValue(width * height, 4);
+    const totalArea = roundPricingValue(area * panels, 4);
     const unitPrice = getProductBasePrice(source);
     const markup = getProductMarkup(source);
     const sellingPrice = calculateSellingPrice(unitPrice, markup);
-    const total = roundPricingValue(area * sellingPrice);
+    const total = roundPricingValue(totalArea * sellingPrice);
 
     return {
       pricingDetails: {
@@ -319,8 +337,9 @@ export function calculateProposalProductPricing(
         width,
         height,
         area,
+        panels,
       },
-      quantity: area,
+      quantity: totalArea,
       unitPrice,
       markup,
       total,
@@ -340,10 +359,15 @@ export function calculateProposalProductPricing(
     );
     const width =
       normalizedDetails.mode === "curtain_height" ? normalizedDetails.width : 0;
+    const panels =
+      normalizedDetails.mode === "curtain_height"
+        ? normalizedDetails.panels
+        : DEFAULT_CURTAIN_PANELS;
+    const totalWidth = roundPricingValue(width * panels, 4);
     const unitPrice = selectedTier?.basePrice || 0;
     const markup = selectedTier?.markup || 0;
     const sellingPrice = calculateSellingPrice(unitPrice, markup);
-    const total = roundPricingValue(width * sellingPrice);
+    const total = roundPricingValue(totalWidth * sellingPrice);
 
     return {
       pricingDetails: {
@@ -351,8 +375,9 @@ export function calculateProposalProductPricing(
         width,
         tierId: selectedTier?.id || "",
         maxHeight: selectedTier?.maxHeight || 0,
+        panels,
       },
-      quantity: width,
+      quantity: totalWidth,
       unitPrice,
       markup,
       total,
@@ -365,17 +390,21 @@ export function calculateProposalProductPricing(
       source.pricingDetails || createDefaultProposalPricingDetails(source),
     );
     const width = details.mode === "curtain_width" ? details.width : 0;
+    const panels =
+      details.mode === "curtain_width" ? details.panels : DEFAULT_CURTAIN_PANELS;
+    const totalWidth = roundPricingValue(width * panels, 4);
     const unitPrice = getProductBasePrice(source);
     const markup = getProductMarkup(source);
     const sellingPrice = calculateSellingPrice(unitPrice, markup);
-    const total = roundPricingValue(width * sellingPrice);
+    const total = roundPricingValue(totalWidth * sellingPrice);
 
     return {
       pricingDetails: {
         mode: "curtain_width",
         width,
+        panels,
       },
-      quantity: width,
+      quantity: totalWidth,
       unitPrice,
       markup,
       total,
@@ -398,6 +427,90 @@ export function calculateProposalProductPricing(
   };
 }
 
+export function getChargeableQuantityFromPricingDetails(
+  pricingDetails: ProposalProductPricingDetails | null | undefined,
+  fallbackQuantity: number = 0,
+): number {
+  const details = normalizeProposalPricingDetails(pricingDetails);
+
+  if (details.mode === "curtain_meter") {
+    return roundPricingValue(details.area * details.panels, 4);
+  }
+
+  if (details.mode === "curtain_height") {
+    return roundPricingValue(details.width * details.panels, 4);
+  }
+
+  if (details.mode === "curtain_width") {
+    return roundPricingValue(details.width * details.panels, 4);
+  }
+
+  return roundPricingValue(Math.max(0, Number(fallbackQuantity || 0)), 4);
+}
+
+function getBaseDimensionQuantity(
+  details: ProposalProductPricingDetails,
+): number {
+  if (details.mode === "curtain_meter") {
+    return roundPricingValue(Math.max(0, details.area), 4);
+  }
+
+  if (details.mode === "curtain_height" || details.mode === "curtain_width") {
+    return roundPricingValue(Math.max(0, details.width), 4);
+  }
+
+  return 0;
+}
+
+export function hydrateProposalPricingDetails(
+  product: Pick<ProposalPricingSource, "pricingDetails" | "quantity">,
+): ProposalProductPricingDetails {
+  const rawPricingDetails =
+    product.pricingDetails && typeof product.pricingDetails === "object"
+      ? (product.pricingDetails as Record<string, unknown>)
+      : null;
+  const details = normalizeProposalPricingDetails(product.pricingDetails);
+
+  if (details.mode === "standard") {
+    return details;
+  }
+
+  const hasExplicitPanels =
+    rawPricingDetails !== null &&
+    typeof rawPricingDetails.panels === "number" &&
+    Number.isFinite(rawPricingDetails.panels) &&
+    rawPricingDetails.panels >= 1;
+
+  if (hasExplicitPanels) {
+    return details;
+  }
+
+  const savedQuantity = roundPricingValue(
+    Math.max(0, Number(product.quantity || 0)),
+    4,
+  );
+  const baseQuantity = getBaseDimensionQuantity(details);
+
+  if (savedQuantity <= 0 || baseQuantity <= 0) {
+    return details;
+  }
+
+  const inferredPanels = Math.round(savedQuantity / baseQuantity);
+  const inferredQuantity = roundPricingValue(baseQuantity * inferredPanels, 4);
+  const canInferPanels =
+    inferredPanels >= 1 &&
+    Math.abs(inferredQuantity - savedQuantity) <= 0.01;
+
+  if (!canInferPanels || inferredPanels === details.panels) {
+    return details;
+  }
+
+  return {
+    ...details,
+    panels: inferredPanels,
+  };
+}
+
 export function formatMeters(value: number): string {
   return `${roundPricingValue(value).toLocaleString("pt-BR", {
     minimumFractionDigits: 0,
@@ -413,7 +526,7 @@ export function getProductPricingSummary(product: ProductPricingSource): string 
       getProductBasePrice(product),
       getProductMarkup(product),
     );
-    return `R$ ${sellingPrice.toFixed(2)} / m²`;
+    return `R$ ${sellingPrice.toFixed(2)} / m2`;
   }
 
   if (pricingModel.mode === "curtain_height") {
@@ -455,20 +568,17 @@ export function getProductPricingDescription(product: ProductPricingSource): str
   const pricingModel = normalizeProductPricingModel(product.pricingModel);
 
   if (pricingModel.mode === "curtain_meter") {
-    return "Calculado por largura x altura x preço com markup.";
+    return "Calculado por largura x altura x preco com markup.";
   }
 
   if (pricingModel.mode === "curtain_height") {
     if (pricingModel.tiers.length === 0) {
-      return "Faixas de altura sem configuração.";
+      return "Faixas de altura sem configuracao.";
     }
 
     return pricingModel.tiers
-      .map((tier, index) => {
-        const startLabel =
-          index === 0
-            ? `até ${formatMeters(tier.maxHeight)}`
-            : `até ${formatMeters(tier.maxHeight)}`;
+      .map((tier) => {
+        const startLabel = `ate ${formatMeters(tier.maxHeight)}`;
         return `${startLabel}: R$ ${calculateSellingPrice(
           tier.basePrice,
           tier.markup,
@@ -477,20 +587,20 @@ export function getProductPricingDescription(product: ProductPricingSource): str
       .join(" | ");
   }
 
-  return "Preço simples por quantidade.";
+  return "Preco simples por quantidade.";
 }
 
 export function getProposalProductMeasurementLabel(
   product: Pick<ProposalPricingSource, "pricingDetails" | "quantity">,
 ): string {
-  const details = normalizeProposalPricingDetails(product.pricingDetails);
+  const details = hydrateProposalPricingDetails(product);
 
   if (details.mode === "curtain_meter") {
     return `${formatMeters(details.width)} x ${formatMeters(details.height)}`;
   }
 
   if (details.mode === "curtain_height") {
-    return `Largura ${formatMeters(details.width)} | Altura até ${formatMeters(
+    return `Largura ${formatMeters(details.width)} | Altura ate ${formatMeters(
       details.maxHeight,
     )}`;
   }
@@ -512,7 +622,7 @@ export function getProposalProductUnitLabel(
   const details = normalizeProposalPricingDetails(product.pricingDetails);
 
   if (details.mode === "curtain_meter") {
-    return "m²";
+    return "m2";
   }
 
   if (details.mode === "curtain_height") {
@@ -526,6 +636,48 @@ export function getProposalProductUnitLabel(
   return "un";
 }
 
+export function getProposalProductPanelCount(
+  product: Pick<ProposalPricingSource, "pricingDetails" | "quantity">,
+): number | null {
+  const details = hydrateProposalPricingDetails(product);
+
+  if (details.mode === "curtain_meter") {
+    return details.panels;
+  }
+
+  if (details.mode === "curtain_height") {
+    return details.panels;
+  }
+
+  if (details.mode === "curtain_width") {
+    return details.panels;
+  }
+
+  return null;
+}
+
+export function getProposalProductDisplayQuantity(
+  product: Pick<ProposalPricingSource, "pricingDetails" | "quantity">,
+): number {
+  const dimensionQuantity = getProposalProductPanelCount(product);
+  if (dimensionQuantity !== null) {
+    return dimensionQuantity;
+  }
+
+  return roundPricingValue(Math.max(0, Number(product.quantity || 0)), 4);
+}
+
+export function formatProposalProductDisplayQuantity(
+  product: Pick<ProposalPricingSource, "pricingDetails" | "quantity">,
+): string {
+  const quantity = getProposalProductDisplayQuantity(product);
+
+  return quantity.toLocaleString("pt-BR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: Number.isInteger(quantity) ? 0 : 2,
+  });
+}
+
 export function isCortinasNiche(
   tenantNiche: TenantNiche | null | undefined,
 ): boolean {
@@ -533,7 +685,7 @@ export function isCortinasNiche(
 }
 
 /**
- * Cortinas PDF/UI: produto com preço por dimensão (medida em vez de "Nx").
+ * Cortinas PDF/UI: produto com preco por dimensao (medida em vez de "Nx").
  */
 export function isCortinasDimensionProductLine(
   tenantNiche: TenantNiche | null | undefined,
@@ -549,7 +701,7 @@ export function isCortinasDimensionProductLine(
 }
 
 /**
- * Cortinas: serviço — linha sem prefixo "Nx", só valor unitário neutro.
+ * Cortinas: servico - linha sem prefixo "Nx", so valor unitario neutro.
  */
 export function isCortinasNeutralServiceLine(
   tenantNiche: TenantNiche | null | undefined,
@@ -558,7 +710,7 @@ export function isCortinasNeutralServiceLine(
   return isCortinasNiche(tenantNiche) && product.itemType === "service";
 }
 
-/** Preço de venda por unidade (produto com markup; serviço = unitPrice). */
+/** Preco de venda por unidade (produto com markup; servico = unitPrice). */
 export function getProposalLineUnitSellingPrice(product: {
   itemType?: "product" | "service";
   unitPrice?: number | null;

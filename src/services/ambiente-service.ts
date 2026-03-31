@@ -12,6 +12,10 @@ import {
 } from "firebase/firestore";
 import { AmbienteProduct } from "@/types/automation";
 import { normalizeItemQuantity } from "@/lib/quantity-utils";
+import {
+  getChargeableQuantityFromPricingDetails,
+  normalizeProposalPricingDetails,
+} from "@/lib/product-pricing";
 
 /**
  * Produto associado a um Ambiente
@@ -35,6 +39,30 @@ export interface Ambiente {
 
 const COLLECTION_NAME = "ambientes";
 
+function normalizeAmbienteProduct(product: AmbienteProduct): AmbienteProduct {
+  const normalizedPricingDetails = normalizeProposalPricingDetails(
+    product.pricingDetails,
+  );
+
+  return {
+    ...product,
+    pricingDetails: normalizedPricingDetails,
+    quantity: normalizeItemQuantity(
+      getChargeableQuantityFromPricingDetails(
+        normalizedPricingDetails,
+        typeof product.quantity === "number" ? product.quantity : 0,
+      ),
+      (product.itemType || "product") !== "service",
+    ),
+  };
+}
+
+function normalizeAmbienteProducts(
+  products: AmbienteProduct[] | undefined,
+): AmbienteProduct[] {
+  return (products || []).map(normalizeAmbienteProduct);
+}
+
 export const AmbienteService = {
   getAmbientes: async (tenantId: string): Promise<Ambiente[]> => {
     try {
@@ -49,7 +77,7 @@ export const AmbienteService = {
             id: doc.id,
             ...doc.data(),
             // Ensure defaultProducts is always an array
-            defaultProducts: doc.data().defaultProducts || [],
+            defaultProducts: normalizeAmbienteProducts(doc.data().defaultProducts),
             createdAt:
               doc.data().createdAt?.toDate?.()?.toISOString() ||
               doc.data().createdAt,
@@ -71,7 +99,7 @@ export const AmbienteService = {
         return {
           id: docSnap.id,
           ...data,
-          defaultProducts: data.defaultProducts || [],
+          defaultProducts: normalizeAmbienteProducts(data.defaultProducts),
         } as Ambiente;
       }
       return null;
@@ -96,13 +124,7 @@ export const AmbienteService = {
 
   createAmbiente: async (data: Partial<Ambiente>): Promise<Ambiente> => {
     // Sanitize products before sending
-    const sanitizedProducts = (data.defaultProducts || []).map((p) => ({
-      ...p,
-      quantity: normalizeItemQuantity(
-        typeof p.quantity === "number" ? p.quantity : 0,
-        (p.itemType || "product") !== "service",
-      ),
-    }));
+    const sanitizedProducts = normalizeAmbienteProducts(data.defaultProducts);
 
     const payload = {
       ...data,
@@ -130,13 +152,7 @@ export const AmbienteService = {
     // Sanitize products if included
     const payload = { ...data };
     if (data.defaultProducts) {
-      payload.defaultProducts = data.defaultProducts.map((p) => ({
-        ...p,
-        quantity: normalizeItemQuantity(
-          typeof p.quantity === "number" ? p.quantity : 0,
-          (p.itemType || "product") !== "service",
-        ),
-      }));
+      payload.defaultProducts = normalizeAmbienteProducts(data.defaultProducts);
     }
     await callApi(`/v1/aux/ambientes/${id}`, "PUT", payload);
   },

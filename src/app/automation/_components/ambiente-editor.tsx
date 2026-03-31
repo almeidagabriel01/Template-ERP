@@ -46,6 +46,8 @@ import {
   calculateSellingPrice,
   createDefaultProposalPricingDetails,
   formatMeters,
+  getChargeableQuantityFromPricingDetails,
+  getProposalProductPanelCount,
   isDimensionPricedProduct,
   normalizeProductPricingModel,
   normalizeProposalPricingDetails,
@@ -429,12 +431,10 @@ export function AmbienteEditor({
         if (matchesAmbienteProductTarget(item, productId, itemType, lineItemId)) {
           return {
             ...item,
-            quantity:
-              pricingDetails.mode === "curtain_meter"
-                ? pricingDetails.area
-                : pricingDetails.mode === "curtain_height"
-                  ? pricingDetails.width
-                  : item.quantity,
+            quantity: getChargeableQuantityFromPricingDetails(
+              pricingDetails,
+              item.quantity,
+            ),
             pricingDetails,
           };
         }
@@ -681,8 +681,10 @@ export function AmbienteEditor({
                           !isService &&
                           (pricingDetails.mode === "curtain_width" ||
                             pricingModel.mode === "curtain_width");
+                        const isDimensionCurtain =
+                          isCurtainMeter || isCurtainHeight || isCurtainWidth;
                         const isQuantityPricedProduct =
-                          !isService && !isCurtainMeter && !isCurtainHeight && !isCurtainWidth;
+                          !isService && !isDimensionCurtain;
                         const activeHeightTiers =
                           pricingModel.mode === "curtain_height"
                             ? [...pricingModel.tiers].sort((a, b) => a.maxHeight - b.maxHeight)
@@ -701,24 +703,20 @@ export function AmbienteEditor({
                           !isQuantityPricedProduct;
                         const quantityStep = allowDecimalQuantity ? 0.01 : 1;
                         const itemLineId = item.lineItemId;
+                        const panelCount = getProposalProductPanelCount({
+                          pricingDetails: item.pricingDetails,
+                        }) || 1;
                         const catalogPrice = Number.parseFloat(
                           String(catalogItem?.price || "0").replace(",", "."),
                         );
                         const hasCatalogPrice =
                           Number.isFinite(catalogPrice) && catalogPrice > 0;
-                        const effectiveQuantity = isCurtainMeter
-                          ? pricingDetails.mode === "curtain_meter"
-                            ? pricingDetails.area
-                            : item.quantity
-                          : isCurtainHeight
-                            ? pricingDetails.mode === "curtain_height"
-                              ? pricingDetails.width
-                              : item.quantity
-                            : isCurtainWidth
-                              ? pricingDetails.mode === "curtain_width"
-                                ? pricingDetails.width
-                                : item.quantity
-                            : item.quantity;
+                        const effectiveQuantity = isDimensionCurtain
+                          ? getChargeableQuantityFromPricingDetails(
+                              item.pricingDetails,
+                              item.quantity,
+                            )
+                          : item.quantity;
                         const estimatedSubtotal = hasCatalogPrice
                           ? catalogPrice * Math.max(0, effectiveQuantity)
                           : null;
@@ -794,6 +792,14 @@ export function AmbienteEditor({
                                       className="h-auto shrink-0 px-2 py-0.5 text-[10px]"
                                     >
                                       Por quantidade
+                                    </Badge>
+                                  )}
+                                  {isDimensionCurtain && panelCount > 1 && (
+                                    <Badge
+                                      variant="outline"
+                                      className="h-auto shrink-0 px-2 py-0.5 text-[10px]"
+                                    >
+                                      Qtd. {panelCount}
                                     </Badge>
                                   )}
                                 </div>
@@ -891,7 +897,7 @@ export function AmbienteEditor({
 
                             <div className="ml-auto flex w-full items-center justify-end md:w-auto md:min-w-[300px]">
                               {isCurtainMeter ? (
-                                <div className="grid w-full gap-3 sm:grid-cols-2 md:w-[380px] lg:w-[440px]">
+                                <div className="grid w-full gap-3 sm:grid-cols-3 sm:items-end md:w-[520px] lg:w-[560px]">
                                   <div className="space-y-1">
                                     <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                                       Largura (m)
@@ -915,6 +921,10 @@ export function AmbienteEditor({
                                             width,
                                             height,
                                             area: width * height,
+                                            panels:
+                                              pricingDetails.mode === "curtain_meter"
+                                                ? pricingDetails.panels
+                                                : panelCount,
                                           },
                                           itemType,
                                           itemLineId,
@@ -945,6 +955,10 @@ export function AmbienteEditor({
                                             width,
                                             height,
                                             area: width * height,
+                                            panels:
+                                              pricingDetails.mode === "curtain_meter"
+                                                ? pricingDetails.panels
+                                                : panelCount,
                                           },
                                           itemType,
                                           itemLineId,
@@ -952,9 +966,34 @@ export function AmbienteEditor({
                                       }}
                                     />
                                   </div>
+                                  <DimensionPanelsControl
+                                    value={panelCount}
+                                    onChange={(nextPanels) => {
+                                      const width =
+                                        pricingDetails.mode === "curtain_meter"
+                                          ? pricingDetails.width
+                                          : 0;
+                                      const height =
+                                        pricingDetails.mode === "curtain_meter"
+                                          ? pricingDetails.height
+                                          : 0;
+                                      handleUpdatePricingDetails(
+                                        item.productId,
+                                        {
+                                          mode: "curtain_meter",
+                                          width,
+                                          height,
+                                          area: width * height,
+                                          panels: nextPanels,
+                                        },
+                                        itemType,
+                                        itemLineId,
+                                      );
+                                    }}
+                                  />
                                 </div>
                               ) : isCurtainHeight ? (
-                                <div className="grid w-full gap-3 md:w-[520px] lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,1fr)] lg:items-end">
+                                <div className="grid w-full gap-3 md:w-[640px] lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_minmax(0,1fr)] lg:items-end">
                                   <div className="space-y-1">
                                     <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                                       Faixa de altura
@@ -976,14 +1015,18 @@ export function AmbienteEditor({
                                             : 0;
                                         handleUpdatePricingDetails(
                                           item.productId,
-                                          {
-                                            mode: "curtain_height",
-                                            width,
-                                            tierId: nextTier?.id || "",
-                                            maxHeight: nextTier?.maxHeight || 0,
-                                          },
-                                          itemType,
-                                          itemLineId,
+                                            {
+                                              mode: "curtain_height",
+                                              width,
+                                              tierId: nextTier?.id || "",
+                                              maxHeight: nextTier?.maxHeight || 0,
+                                              panels:
+                                                pricingDetails.mode === "curtain_height"
+                                                  ? pricingDetails.panels
+                                                  : panelCount,
+                                            },
+                                            itemType,
+                                            itemLineId,
                                         );
                                       }}
                                       inputSize="sm"
@@ -1019,18 +1062,51 @@ export function AmbienteEditor({
                                           ) || activeHeightTiers[0];
                                         handleUpdatePricingDetails(
                                           item.productId,
-                                          {
-                                            mode: "curtain_height",
-                                            width,
-                                            tierId: nextTier?.id || "",
-                                            maxHeight: nextTier?.maxHeight || 0,
-                                          },
-                                          itemType,
-                                          itemLineId,
+                                            {
+                                              mode: "curtain_height",
+                                              width,
+                                              tierId: nextTier?.id || "",
+                                              maxHeight: nextTier?.maxHeight || 0,
+                                              panels:
+                                                pricingDetails.mode === "curtain_height"
+                                                  ? pricingDetails.panels
+                                                  : panelCount,
+                                            },
+                                            itemType,
+                                            itemLineId,
                                         );
                                       }}
                                     />
                                   </div>
+                                  <DimensionPanelsControl
+                                    value={panelCount}
+                                    onChange={(nextPanels) => {
+                                      const width =
+                                        pricingDetails.mode === "curtain_height"
+                                          ? pricingDetails.width
+                                          : 0;
+                                      const nextTier =
+                                        activeHeightTiers.find(
+                                          (tier) =>
+                                            tier.id ===
+                                            (pricingDetails.mode === "curtain_height"
+                                              ? pricingDetails.tierId
+                                              : selectedHeightTier?.id || ""),
+                                        ) || activeHeightTiers[0];
+                                      handleUpdatePricingDetails(
+                                        item.productId,
+                                        {
+                                          mode: "curtain_height",
+                                          width,
+                                          tierId: nextTier?.id || "",
+                                          maxHeight: nextTier?.maxHeight || 0,
+                                          panels: nextPanels,
+                                        },
+                                        itemType,
+                                        itemLineId,
+                                      );
+                                    }}
+                                  />
                                   {selectedHeightTier && (
                                     <div className="flex h-10 items-center justify-between rounded-md bg-muted/30 px-3">
                                       <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/90">
@@ -1050,7 +1126,7 @@ export function AmbienteEditor({
                                   )}
                                 </div>
                               ) : isCurtainWidth ? (
-                                <div className="grid w-full gap-3 md:w-[260px]">
+                                <div className="grid w-full gap-3 md:w-[392px] md:grid-cols-[minmax(0,1fr)_max-content] md:items-end">
                                   <div className="space-y-1">
                                     <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                                       Largura (m)
@@ -1068,6 +1144,10 @@ export function AmbienteEditor({
                                           {
                                             mode: "curtain_width",
                                             width,
+                                            panels:
+                                              pricingDetails.mode === "curtain_width"
+                                                ? pricingDetails.panels
+                                                : panelCount,
                                           },
                                           itemType,
                                           itemLineId,
@@ -1075,6 +1155,25 @@ export function AmbienteEditor({
                                       }}
                                     />
                                   </div>
+                                  <DimensionPanelsControl
+                                    value={panelCount}
+                                    onChange={(nextPanels) => {
+                                      const width =
+                                        pricingDetails.mode === "curtain_width"
+                                          ? pricingDetails.width
+                                          : 0;
+                                      handleUpdatePricingDetails(
+                                        item.productId,
+                                        {
+                                          mode: "curtain_width",
+                                          width,
+                                          panels: nextPanels,
+                                        },
+                                        itemType,
+                                        itemLineId,
+                                      );
+                                    }}
+                                  />
                                 </div>
                               ) : (
                                 <div className="ml-auto flex items-center rounded-lg bg-muted/30 p-1">
@@ -1197,9 +1296,15 @@ interface EditableQuantityInputProps {
   value: number;
   allowDecimal: boolean;
   onChange: (value: number) => void;
+  className?: string;
 }
 
 interface EditableMeasureInputProps {
+  value: number;
+  onChange: (value: number) => void;
+}
+
+interface DimensionPanelsControlProps {
   value: number;
   onChange: (value: number) => void;
 }
@@ -1260,10 +1365,52 @@ function EditableMeasureInput({ value, onChange }: EditableMeasureInputProps) {
   );
 }
 
+function DimensionPanelsControl({
+  value,
+  onChange,
+}: DimensionPanelsControlProps) {
+  const normalizedValue = Math.max(1, Math.trunc(value || 1));
+
+  return (
+    <div className="flex min-w-[112px] flex-col items-start justify-end gap-1 self-end">
+      <Label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        Quantidade
+      </Label>
+      <div className="inline-flex h-9 items-center gap-0.5 rounded-md border bg-muted/30 p-0.5 shadow-sm">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 rounded-md hover:bg-background hover:text-destructive"
+          onClick={() => onChange(Math.max(1, normalizedValue - 1))}
+        >
+          <Minus className="h-3.5 w-3.5" />
+        </Button>
+        <EditableQuantityInput
+          value={normalizedValue}
+          allowDecimal={false}
+          onChange={(nextValue) => onChange(Math.max(1, Math.trunc(nextValue || 1)))}
+          className="h-8 w-11 border-border/60 px-1"
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 rounded-md hover:bg-background hover:text-primary"
+          onClick={() => onChange(normalizedValue + 1)}
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function EditableQuantityInput({
   value,
   allowDecimal,
   onChange,
+  className,
 }: EditableQuantityInputProps) {
   const [inputValue, setInputValue] = React.useState(
     formatItemQuantity(value, false), // Only used for integers now
@@ -1295,7 +1442,7 @@ function EditableQuantityInput({
       <DecimalInput
         value={value}
         onChange={onChange}
-        className="w-16 font-mono font-medium"
+        className={cn("w-16 font-mono font-medium", className)}
         aria-label="Metragem do item"
       />
     );
@@ -1322,6 +1469,7 @@ function EditableQuantityInput({
       }}
       className={cn(
         "h-8 rounded-md border bg-background px-2 text-center font-mono text-sm font-medium tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/20 w-12",
+        className,
       )}
       aria-label="Quantidade do item"
     />

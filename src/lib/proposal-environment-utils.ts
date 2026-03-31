@@ -1,6 +1,10 @@
 import { Ambiente, AmbienteProduct, ProposalSistema } from "@/types/automation";
 import { ProposalSystemInstance } from "@/types/proposal";
 import { normalizeItemQuantity } from "@/lib/quantity-utils";
+import {
+  getChargeableQuantityFromPricingDetails,
+  normalizeProposalPricingDetails,
+} from "@/lib/product-pricing";
 import { ensureAmbienteProductLineItemId } from "@/lib/proposal-product";
 
 export function createEnvironmentProposalSelection(
@@ -9,8 +13,12 @@ export function createEnvironmentProposalSelection(
   const products: AmbienteProduct[] = (ambiente.defaultProducts || []).map(
     (product) => ({
       ...ensureAmbienteProductLineItemId(product),
+      pricingDetails: normalizeProposalPricingDetails(product.pricingDetails),
       quantity: normalizeItemQuantity(
-        Number(product.quantity ?? 0),
+        getChargeableQuantityFromPricingDetails(
+          product.pricingDetails,
+          Number(product.quantity ?? 0),
+        ),
         (product.itemType || "product") !== "service",
       ),
       status: product.status || "active",

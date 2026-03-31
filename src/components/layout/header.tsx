@@ -94,7 +94,14 @@ export function Header({}: HeaderProps) {
     isLoading: isTenantLoading,
     isGlobalLoading,
   } = useTenant();
-  const { companyName, planLabel, logoUrl, avatarSeed, isViewingAsTenant } =
+  const {
+    companyName,
+    planLabel,
+    logoUrl,
+    avatarSeed,
+    isViewingAsTenant,
+    isPlanLabelLoading,
+  } =
     useHeaderPresentation();
   const router = useRouter();
 
@@ -160,9 +167,13 @@ export function Header({}: HeaderProps) {
               >
                 <div className="hidden md:flex flex-col items-end">
                   <span className="text-sm font-medium">{companyName}</span>
-                  <span className="text-xs text-muted-foreground capitalize">
-                    {planLabel}
-                  </span>
+                  {isPlanLabelLoading ? (
+                    <Skeleton className="mt-1 h-3 w-20 rounded-full" />
+                  ) : (
+                    <span className="text-xs text-muted-foreground capitalize">
+                      {planLabel}
+                    </span>
+                  )}
                 </div>
                 <Avatar className="h-9 w-9 border border-border" key={tenant?.id || user?.id}>
                   {logoUrl ? (
