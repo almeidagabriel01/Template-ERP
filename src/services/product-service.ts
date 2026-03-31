@@ -1,4 +1,5 @@
 import { db } from "@/lib/firebase";
+import { isFirestorePermissionError } from "@/lib/firestore-error";
 import { callApi } from "@/lib/api-client";
 import {
   collection,
@@ -210,6 +211,10 @@ export const ProductService = {
         updatedCache.allLoaded = true;
         return products;
       } catch (error) {
+        if (isFirestorePermissionError(error)) {
+          console.warn("[ProductService] Permission denied reading products.");
+          return [];
+        }
         console.error("Error fetching products:", error);
         throw error;
       }

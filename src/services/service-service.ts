@@ -1,5 +1,6 @@
 import { db } from "@/lib/firebase";
 import { callApi } from "@/lib/api-client";
+import { isFirestorePermissionError } from "@/lib/firestore-error";
 import {
   collection,
   doc,
@@ -65,6 +66,10 @@ export const ServiceService = {
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(mapServiceDoc);
     } catch (error) {
+      if (isFirestorePermissionError(error)) {
+        console.warn("[ServiceService] Permission denied reading services.");
+        return [];
+      }
       console.error("Error fetching services:", error);
       throw error;
     }

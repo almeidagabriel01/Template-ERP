@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/firebase";
 import { callApi } from "@/lib/api-client";
+import { isFirestorePermissionError } from "@/lib/firestore-error";
 import {
   collection,
   doc,
@@ -84,6 +85,10 @@ export const AmbienteService = {
           }) as Ambiente,
       );
     } catch (error) {
+      if (isFirestorePermissionError(error)) {
+        console.warn("[AmbienteService] Permission denied reading ambientes.");
+        return [];
+      }
       console.error("Error fetching ambientes:", error);
       throw error; // Let the caller handle
     }

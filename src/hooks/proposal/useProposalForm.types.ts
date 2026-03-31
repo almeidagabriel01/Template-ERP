@@ -112,6 +112,12 @@ export interface UseProposalFormReturn {
     itemType?: "product" | "service",
     lineItemId?: string,
   ) => void;
+  resetProductPrice: (
+    productId: string,
+    systemInstanceId?: string,
+    itemType?: "product" | "service",
+    lineItemId?: string,
+  ) => void;
   updateProductPricingDetails: (
     productId: string,
     pricingDetails: ProposalProductPricingDetails,

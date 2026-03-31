@@ -196,12 +196,26 @@ export function recalculateProposalProduct(
 
   if (product.priceManuallyEdited) {
     const pricingDetails = hydrateProposalPricingDetails(product);
-    const unitPrice = roundPricingValue(Math.max(0, Number(product.unitPrice || 0)));
+    const storedUnitPrice = Math.max(0, Number(product.unitPrice || 0));
     const markup = roundPricingValue(Math.max(0, Number(product.markup || 0)));
+    const previousQuantity = roundPricingValue(
+      Math.max(0, Number(product.quantity || 0)),
+      4,
+    );
     const quantity = getChargeableQuantityFromPricingDetails(
       pricingDetails,
       Number(product.quantity || 0),
     );
+    const manualTotal = roundPricingValue(Math.max(0, Number(product.total || 0)));
+    const markupFactor = 1 + markup / 100;
+    const sellingPrice =
+      previousQuantity > 0
+        ? manualTotal / previousQuantity
+        : calculateSellingPrice(storedUnitPrice, markup);
+    const unitPrice =
+      markupFactor > 0
+        ? roundPricingValue(sellingPrice / markupFactor, 8)
+        : 0;
 
     return {
       ...product,
@@ -209,7 +223,7 @@ export function recalculateProposalProduct(
       unitPrice,
       markup,
       pricingDetails,
-      total: roundPricingValue(quantity * calculateSellingPrice(unitPrice, markup)),
+      total: roundPricingValue(quantity * sellingPrice),
     };
   }
 
@@ -259,7 +273,10 @@ export function syncProposalProductWithCatalogSnapshot(
   const unitPrice =
     typeof normalizedProduct.unitPrice === "number" &&
     Number.isFinite(normalizedProduct.unitPrice)
-      ? roundPricingValue(Math.max(0, normalizedProduct.unitPrice), 4)
+      ? roundPricingValue(
+          Math.max(0, normalizedProduct.unitPrice),
+          normalizedProduct.priceManuallyEdited ? 8 : 4,
+        )
       : roundPricingValue(Math.max(0, fallbackUnitPrice), 4);
   const markup = isService
     ? 0
@@ -305,4 +322,69 @@ export function syncProposalProductWithCatalogSnapshot(
       recalculated.manufacturer,
     category: catalogItem.category || recalculated.category,
   };
+}
+
+export function applyManualProposalProductUnitPrice(
+  product: ProposalProduct,
+  nextUnitPrice: number,
+): ProposalProduct {
+  const itemType = product.itemType || "product";
+  const pricingDetails = hydrateProposalPricingDetails(product);
+  const quantity = getChargeableQuantityFromPricingDetails(
+    pricingDetails,
+    Number(product.quantity || 0),
+  );
+  const unitPrice = roundPricingValue(Math.max(0, nextUnitPrice), 8);
+  const markup = roundPricingValue(Math.max(0, Number(product.markup || 0)), 4);
+  const sellingPrice =
+    itemType === "service"
+      ? unitPrice
+      : calculateSellingPrice(unitPrice, markup);
+
+  return {
+    ...product,
+    quantity,
+    unitPrice,
+    pricingDetails,
+    priceManuallyEdited: true,
+    total: roundPricingValue(quantity * sellingPrice),
+  };
+}
+
+export function resetProposalProductPriceToDefault(
+  product: ProposalProduct,
+  catalogItem?: CatalogItem,
+): ProposalProduct {
+  const itemType = product.itemType || "product";
+
+  if (itemType === "service") {
+    const defaultUnitPrice = catalogItem
+      ? Number.parseFloat(String(catalogItem.price || "0")) || 0
+      : Math.max(0, Number(product.unitPrice || 0));
+    const quantity = roundPricingValue(Math.max(0, Number(product.quantity || 0)), 4);
+
+    return {
+      ...product,
+      pricingDetails: { mode: "standard" },
+      markup: 0,
+      unitPrice: roundPricingValue(defaultUnitPrice, 8),
+      priceManuallyEdited: false,
+      total: roundPricingValue(quantity * defaultUnitPrice),
+    };
+  }
+
+  if (!catalogItem) {
+    return {
+      ...product,
+      priceManuallyEdited: false,
+    };
+  }
+
+  return recalculateProposalProduct(
+    {
+      ...product,
+      priceManuallyEdited: false,
+    },
+    catalogItem,
+  );
 }

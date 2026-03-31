@@ -28,6 +28,7 @@ import {
   Minus,
   Package,
   Plus,
+  RotateCcw,
   Search,
   Settings,
   Trash2,
@@ -60,6 +61,7 @@ import {
   getProposalProductUnitLabel,
   getProductPricingSummary,
 } from "@/lib/product-pricing";
+import { resetProposalProductPriceToDefault } from "@/lib/proposal-product";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -109,6 +111,12 @@ interface ProposalEnvironmentsSectionProps {
     itemType?: "product" | "service",
     lineItemId?: string,
   ) => void;
+  onResetProductPrice: (
+    productId: string,
+    systemInstanceId: string,
+    itemType?: "product" | "service",
+    lineItemId?: string,
+  ) => void;
   onAddExtraProductToAmbiente: (
     product: Product | Service,
     ambienteIndex: number,
@@ -142,6 +150,7 @@ export function ProposalEnvironmentsSection({
   onUpdateProductMarkup,
   onUpdateProductPricingDetails,
   onUpdateProductPrice,
+  onResetProductPrice,
   onAddExtraProductToAmbiente,
   onRemoveProduct,
   onToggleStatus,
@@ -281,6 +290,7 @@ export function ProposalEnvironmentsSection({
                   onUpdateMarkup={onUpdateProductMarkup}
                   onUpdatePricingDetails={onUpdateProductPricingDetails}
                   onUpdatePrice={onUpdateProductPrice}
+                  onResetPrice={onResetProductPrice}
                   allowProductPriceEditing={allowCurtainProductPriceEditing}
                   onAddExtraProduct={onAddExtraProductToAmbiente}
                   onRemoveProduct={onRemoveProduct}
@@ -385,6 +395,12 @@ interface EnvironmentCardProps {
     itemType?: "product" | "service",
     lineItemId?: string,
   ) => void;
+  onResetPrice: (
+    productId: string,
+    systemInstanceId: string,
+    itemType?: "product" | "service",
+    lineItemId?: string,
+  ) => void;
   allowProductPriceEditing: boolean;
   onAddExtraProduct: (
     product: Product | Service,
@@ -425,6 +441,7 @@ function EnvironmentCard({
   onUpdateMarkup,
   onUpdatePricingDetails,
   onUpdatePrice,
+  onResetPrice,
   allowProductPriceEditing,
   onAddExtraProduct,
   onRemoveProduct,
@@ -575,6 +592,7 @@ function EnvironmentCard({
                     onUpdateMarkup={onUpdateMarkup}
                     onUpdatePricingDetails={onUpdatePricingDetails}
                     onUpdatePrice={onUpdatePrice}
+                    onResetPrice={onResetPrice}
                     allowProductPriceEditing={allowProductPriceEditing}
                     onRemoveProduct={onRemoveProduct}
                     onToggleStatus={onToggleStatus}
@@ -636,6 +654,12 @@ interface EnvironmentProductRowProps {
     itemType?: "product" | "service",
     lineItemId?: string,
   ) => void;
+  onResetPrice: (
+    productId: string,
+    systemInstanceId: string,
+    itemType?: "product" | "service",
+    lineItemId?: string,
+  ) => void;
   allowProductPriceEditing: boolean;
   onRemoveProduct: (
     productId: string,
@@ -661,6 +685,7 @@ function EnvironmentProductRow({
   onUpdateMarkup,
   onUpdatePricingDetails,
   onUpdatePrice,
+  onResetPrice,
   allowProductPriceEditing,
   onRemoveProduct,
   onToggleStatus,
@@ -679,6 +704,17 @@ function EnvironmentProductRow({
   const displayedPrice = isService
     ? product.unitPrice || 0
     : product.total || 0;
+  const defaultPricedProduct = React.useMemo(
+    () => resetProposalProductPriceToDefault(product, catalogProduct),
+    [catalogProduct, product],
+  );
+  const defaultDisplayedPrice = isService
+    ? defaultPricedProduct.unitPrice || 0
+    : defaultPricedProduct.total || 0;
+  const canResetDisplayedPrice =
+    canEditDisplayedPrice &&
+    product.priceManuallyEdited === true &&
+    Math.abs(displayedPrice - defaultDisplayedPrice) > 0.005;
   const [priceInput, setPriceInput] = React.useState(
     displayedPrice.toString(),
   );
@@ -1552,6 +1588,23 @@ function EnvironmentProductRow({
                 >
                   R$ {displayedPrice.toFixed(2)}
                 </span>
+                {canResetDisplayedPrice && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onResetPrice(
+                        product.productId,
+                        systemInstanceId,
+                        itemType,
+                        lineItemId,
+                      )
+                    }
+                    className="flex cursor-pointer items-center justify-center rounded-full p-1 transition-colors hover:bg-muted"
+                    title={`Restaurar valor padrao (${defaultDisplayedPrice.toFixed(2)})`}
+                  >
+                    <RotateCcw className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                  </button>
+                )}
                 {canEditDisplayedPrice && !isDisplayedPriceEditingDisabled && (
                   <button
                     type="button"
