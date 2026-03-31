@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/firebase";
 import { callApi } from "@/lib/api-client";
+import { isFirestorePermissionError } from "@/lib/firestore-error";
 import {
   collection,
   doc,
@@ -84,6 +85,10 @@ export const SistemaService = {
         normalizeSistema(doc.id, doc.data()),
       );
     } catch (error) {
+      if (isFirestorePermissionError(error)) {
+        console.warn("[SistemaService] Permission denied reading sistemas.");
+        return [];
+      }
       console.error("Error fetching sistemas:", error);
       throw error;
     }

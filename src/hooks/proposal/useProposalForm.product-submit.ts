@@ -19,6 +19,7 @@ import {
   buildProposalProductFromCatalog,
   ensureProposalProductLineItemId,
   recalculateProposalProduct,
+  resetProposalProductPriceToDefault,
 } from "@/lib/proposal-product";
 import { ProposalProductPricingDetails } from "@/lib/product-pricing";
 
@@ -178,10 +179,20 @@ export function useProposalFormProductSubmit(
 
         if (!matchesTarget) return p;
         const newQty = Number(Math.max(0, p.quantity + delta).toFixed(2));
-        const effectiveMarkup =
-          (p.itemType || "product") === "service" ? 0 : p.markup || 0;
-        const sellingPrice = p.unitPrice * (1 + effectiveMarkup / 100);
-        return { ...p, quantity: newQty, total: newQty * sellingPrice };
+        const catalogItem = products.find(
+          (catalogProduct) =>
+            catalogProduct.id === p.productId &&
+            (catalogProduct.itemType || "product") ===
+              (p.itemType || "product"),
+        );
+
+        return recalculateProposalProduct(
+          {
+            ...p,
+            quantity: newQty,
+          },
+          catalogItem,
+        );
       }),
     }));
   };
@@ -250,6 +261,38 @@ export function useProposalFormProductSubmit(
           },
           catalogItem,
         );
+      }),
+    }));
+  };
+
+  const resetProductPrice = (
+    productId: string,
+    systemInstanceId?: string,
+    itemType?: "product" | "service",
+    lineItemId?: string,
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      products: (prev.products || []).map((currentProduct) => {
+        const p = ensureProposalProductLineItemId(currentProduct);
+        const isTarget = matchesTargetProduct(
+          p,
+          productId,
+          systemInstanceId,
+          itemType,
+          lineItemId,
+        );
+
+        if (!isTarget) return p;
+
+        const catalogItem = products.find(
+          (catalogProduct) =>
+            catalogProduct.id === p.productId &&
+            (catalogProduct.itemType || "product") ===
+              (p.itemType || "product"),
+        );
+
+        return resetProposalProductPriceToDefault(p, catalogItem);
       }),
     }));
   };
@@ -639,6 +682,7 @@ export function useProposalFormProductSubmit(
         }),
       }));
     },
+    resetProductPrice,
   };
 }
 

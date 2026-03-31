@@ -199,6 +199,7 @@ export function SimpleProposalForm({
     updateProductMarkup,
     updateProductPricingDetails,
     updateProductPrice,
+    resetProductPrice,
     removeProduct,
     handleToggleProductStatus,
     calculateSubtotal,
@@ -1144,6 +1145,7 @@ export function SimpleProposalForm({
                   onUpdateProductMarkup={updateProductMarkup}
                   onUpdateProductPricingDetails={updateProductPricingDetails}
                   onUpdateProductPrice={updateProductPrice}
+                  onResetProductPrice={resetProductPrice}
                   onAddExtraProductToAmbiente={addProductToSystem}
                   onRemoveProduct={removeProduct}
                   onToggleStatus={handleToggleProductStatus}

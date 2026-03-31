@@ -14,6 +14,7 @@ import { SistemaService } from "@/services/sistema-service";
 import { Sistema, ProposalSistema } from "@/types/automation";
 import { mergePdfDisplaySettings } from "@/types/pdf-display-settings";
 import { toast } from "@/lib/toast";
+import { isFirestorePermissionError } from "@/lib/firestore-error";
 import { buildFullFormSnapshot } from "./useProposalForm.helpers";
 import { isEnvironmentProposalSelection } from "@/lib/proposal-environment-utils";
 import { DEFAULT_PROPOSAL_PAYMENT_METHOD } from "@/lib/proposal-payment";
@@ -203,6 +204,10 @@ export function useProposalFormLoadingEffects(
         // Apply updates to any systems already loaded (e.g. from fast proposal fetch)
         syncSystemsWithMasterData(ambs, siss);
       } catch (e) {
+        if (isFirestorePermissionError(e)) {
+          console.warn("Initial master data refresh denied by Firestore rules.");
+          return;
+        }
         console.error("Error loading initial master data", e);
         // Do not block UI with error toast here, fail silently or log
       }
@@ -237,6 +242,10 @@ export function useProposalFormLoadingEffects(
           templates.find((t) => t.isDefault) || templates[0];
         setTemplate(defaultTemplate || null);
       } catch (error) {
+        if (isFirestorePermissionError(error)) {
+          console.warn("Initial proposal catalog refresh denied by Firestore rules.");
+          return;
+        }
         console.error("Error loading products", error);
         toast.error("Erro ao carregar produtos e templates");
       }
@@ -292,6 +301,10 @@ export function useProposalFormLoadingEffects(
 
       syncSystemsWithMasterData(freshAmbientes, freshSistemas);
     } catch (err) {
+      if (isFirestorePermissionError(err)) {
+        console.warn("Silent refresh skipped due to Firestore permission denial.");
+        return;
+      }
       console.error("Silent refresh failed", err);
     } finally {
       isFetchingRef.current = false;
