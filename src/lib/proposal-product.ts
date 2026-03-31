@@ -9,7 +9,8 @@ import {
   calculateSellingPrice,
   calculateProposalProductPricing,
   createDefaultProposalPricingDetails,
-  normalizeProposalPricingDetails,
+  getChargeableQuantityFromPricingDetails,
+  hydrateProposalPricingDetails,
   roundPricingValue,
 } from "@/lib/product-pricing";
 
@@ -194,17 +195,13 @@ export function recalculateProposalProduct(
   }
 
   if (product.priceManuallyEdited) {
-    const pricingDetails = normalizeProposalPricingDetails(product.pricingDetails);
+    const pricingDetails = hydrateProposalPricingDetails(product);
     const unitPrice = roundPricingValue(Math.max(0, Number(product.unitPrice || 0)));
     const markup = roundPricingValue(Math.max(0, Number(product.markup || 0)));
-    const quantity =
-      pricingDetails.mode === "curtain_meter"
-        ? roundPricingValue(pricingDetails.width * pricingDetails.height, 4)
-        : pricingDetails.mode === "curtain_height"
-          ? roundPricingValue(pricingDetails.width, 4)
-          : pricingDetails.mode === "curtain_width"
-            ? roundPricingValue(pricingDetails.width, 4)
-            : roundPricingValue(Math.max(0, Number(product.quantity || 0)), 4);
+    const quantity = getChargeableQuantityFromPricingDetails(
+      pricingDetails,
+      Number(product.quantity || 0),
+    );
 
     return {
       ...product,
@@ -217,10 +214,11 @@ export function recalculateProposalProduct(
   }
 
   if (!catalogItem) {
+    const pricingDetails = hydrateProposalPricingDetails(product);
     const effectiveMarkup = product.markup || 0;
     return {
       ...product,
-      pricingDetails: product.pricingDetails || { mode: "standard" },
+      pricingDetails,
       total: product.quantity * product.unitPrice * (1 + effectiveMarkup / 100),
     };
   }
@@ -231,7 +229,7 @@ export function recalculateProposalProduct(
     pricingModel: "pricingModel" in catalogItem ? catalogItem.pricingModel : undefined,
     quantity: product.quantity,
     unitPrice: product.unitPrice,
-    pricingDetails: product.pricingDetails,
+    pricingDetails: hydrateProposalPricingDetails(product),
   });
 
   return {

@@ -1,7 +1,9 @@
 import { Badge } from "@/components/ui/badge";
 import { ProposalProduct } from "@/services/proposal-service";
 import {
+  formatProposalProductDisplayQuantity,
   getProposalProductMeasurementLabel,
+  getProposalProductPanelCount,
   getProposalProductUnitLabel,
 } from "@/lib/product-pricing";
 
@@ -16,6 +18,8 @@ export function ProductRow({ product, isInactive }: ProductRowProps) {
     ? product.unitPrice || 0
     : (product.unitPrice || 0) * (1 + (product.markup || 0) / 100);
   const measurementLabel = getProposalProductMeasurementLabel(product);
+  const quantityLabel = `Qtd. ${formatProposalProductDisplayQuantity(product)}`;
+  const isDimensionProduct = getProposalProductPanelCount(product) !== null;
   const unitLabel = getProposalProductUnitLabel(product);
 
   return (
@@ -48,8 +52,9 @@ export function ProductRow({ product, isInactive }: ProductRowProps) {
             </Badge>
           )}
         </div>
-        <div className="text-xs text-muted-foreground mt-1">
-          {measurementLabel}
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <span>{quantityLabel}</span>
+          {isDimensionProduct && measurementLabel ? <span>{measurementLabel}</span> : null}
         </div>
       </td>
       <td className="p-3 text-right whitespace-nowrap">

@@ -7,7 +7,11 @@ import { ProposalSistema } from "@/types/automation";
 import { ProposalStatus, ProposalSystemInstance } from "@/types/proposal";
 import { toast } from '@/lib/toast';
 import { getPrimaryAmbiente } from "@/lib/sistema-migration-utils";
-import { normalizeProposalPricingDetails } from "@/lib/product-pricing";
+import {
+  getChargeableQuantityFromPricingDetails,
+  hydrateProposalPricingDetails,
+  normalizeProposalPricingDetails,
+} from "@/lib/product-pricing";
 import { ensureProposalProductLineItemId } from "@/lib/proposal-product";
 
 interface CreateProposalPayload {
@@ -50,6 +54,27 @@ export function sanitizeProducts(products: ProposalProduct[]) {
   return products.map((p) => {
     const normalizedProduct = ensureProposalProductLineItemId(p);
     const normalizedProductImages = normalizeImages(p.productImages);
+    const normalizedPricingDetails = normalizeProposalPricingDetails(
+      hydrateProposalPricingDetails(normalizedProduct),
+    );
+    const normalizedQuantity = getChargeableQuantityFromPricingDetails(
+      normalizedPricingDetails,
+      typeof normalizedProduct.quantity === "number" &&
+        !isNaN(normalizedProduct.quantity)
+        ? Math.max(0, normalizedProduct.quantity)
+        : 0,
+    );
+    const normalizedUnitPrice =
+      typeof normalizedProduct.unitPrice === "number" &&
+      !isNaN(normalizedProduct.unitPrice)
+        ? normalizedProduct.unitPrice
+        : 0;
+    const normalizedMarkup =
+      typeof normalizedProduct.markup === "number" &&
+      !isNaN(normalizedProduct.markup)
+        ? normalizedProduct.markup
+        : 0;
+    const normalizedItemType = normalizedProduct.itemType || "product";
     const normalizedProductImage =
       (typeof normalizedProduct.productImage === "string"
         ? normalizedProduct.productImage.trim()
@@ -60,32 +85,17 @@ export function sanitizeProducts(products: ProposalProduct[]) {
     return {
       lineItemId: normalizedProduct.lineItemId,
       productId: normalizedProduct.productId,
-      itemType: normalizedProduct.itemType || "product",
+      itemType: normalizedItemType,
       productName: normalizedProduct.productName,
-      quantity:
-        typeof normalizedProduct.quantity === "number" &&
-        !isNaN(normalizedProduct.quantity)
-          ? Math.max(0, normalizedProduct.quantity)
-          : 0,
-      unitPrice:
-        typeof normalizedProduct.unitPrice === "number" &&
-        !isNaN(normalizedProduct.unitPrice)
-          ? normalizedProduct.unitPrice
-          : 0,
-      markup:
-        typeof normalizedProduct.markup === "number" &&
-        !isNaN(normalizedProduct.markup)
-          ? normalizedProduct.markup
-          : 0,
+      quantity: normalizedQuantity,
+      unitPrice: normalizedUnitPrice,
+      markup: normalizedMarkup,
       priceManuallyEdited: normalizedProduct.priceManuallyEdited === true,
-      pricingDetails: normalizeProposalPricingDetails(
-        normalizedProduct.pricingDetails,
-      ),
+      pricingDetails: normalizedPricingDetails,
       total:
-        typeof normalizedProduct.total === "number" &&
-        !isNaN(normalizedProduct.total)
-          ? normalizedProduct.total
-          : 0,
+        normalizedItemType === "service"
+          ? normalizedQuantity * normalizedUnitPrice
+          : normalizedQuantity * normalizedUnitPrice * (1 + normalizedMarkup / 100),
       productImage: normalizedProductImage,
       productImages:
         normalizedProductImages.length > 0

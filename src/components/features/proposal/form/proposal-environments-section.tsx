@@ -50,6 +50,8 @@ import {
 import { ProposalFinancialSummarySmall } from "./proposal-financial-summary-small";
 import {
   isDimensionPricedProduct,
+  getProposalProductMeasurementLabel,
+  getProposalProductPanelCount,
   normalizeProductPricingModel,
   normalizeProposalPricingDetails,
   ProposalProductPricingDetails,
@@ -696,8 +698,10 @@ function EnvironmentProductRow({
     !isService &&
     (pricingDetails.mode === "curtain_width" ||
       pricingModel.mode === "curtain_width");
+  const isDimensionProduct =
+    isCurtainMeter || isCurtainHeight || isCurtainWidth;
   const isQuantityPricedProduct =
-    !isService && !isCurtainMeter && !isCurtainHeight && !isCurtainWidth;
+    !isService && !isDimensionProduct;
   const activeHeightTiers = React.useMemo(
     () => {
       if (pricingModel.mode !== "curtain_height") return [];
@@ -747,6 +751,7 @@ function EnvironmentProductRow({
     pricingDetails.mode === "curtain_height" ? pricingDetails.tierId : "";
   const curtainWidthValue =
     pricingDetails.mode === "curtain_width" ? pricingDetails.width : 0;
+  const panelCount = getProposalProductPanelCount(product) || 1;
   const previewImageSrc = product.productImages?.[0] || product.productImage || "";
 
   React.useEffect(() => {
@@ -885,7 +890,7 @@ function EnvironmentProductRow({
   ]);
 
   const commitMeterPricing = React.useCallback(
-    (widthValue: string, heightValue: string) => {
+    (widthValue: string, heightValue: string, panelsValue: number = panelCount) => {
       const width = Math.max(
         0,
         Number.parseFloat(widthValue.replace(",", ".")) || 0,
@@ -902,6 +907,7 @@ function EnvironmentProductRow({
           width,
           height,
           area: width * height,
+          panels: Math.max(1, Math.trunc(panelsValue || 1)),
         },
         systemInstanceId,
         itemType,
@@ -912,13 +918,14 @@ function EnvironmentProductRow({
       itemType,
       lineItemId,
       onUpdatePricingDetails,
+      panelCount,
       product.productId,
       systemInstanceId,
     ],
   );
 
   const commitHeightPricing = React.useCallback(
-    (widthValue: string, tierId: string) => {
+    (widthValue: string, tierId: string, panelsValue: number = panelCount) => {
       const width = Math.max(
         0,
         Number.parseFloat(widthValue.replace(",", ".")) || 0,
@@ -933,6 +940,7 @@ function EnvironmentProductRow({
           width,
           tierId: selectedTier?.id || "",
           maxHeight: selectedTier?.maxHeight || 0,
+          panels: Math.max(1, Math.trunc(panelsValue || 1)),
         },
         systemInstanceId,
         itemType,
@@ -944,13 +952,14 @@ function EnvironmentProductRow({
       itemType,
       lineItemId,
       onUpdatePricingDetails,
+      panelCount,
       product.productId,
       systemInstanceId,
     ],
   );
 
   const commitWidthPricing = React.useCallback(
-    (widthValue: string) => {
+    (widthValue: string, panelsValue: number = panelCount) => {
       const width = Math.max(
         0,
         Number.parseFloat(widthValue.replace(",", ".")) || 0,
@@ -961,6 +970,7 @@ function EnvironmentProductRow({
         {
           mode: "curtain_width",
           width,
+          panels: Math.max(1, Math.trunc(panelsValue || 1)),
         },
         systemInstanceId,
         itemType,
@@ -971,6 +981,7 @@ function EnvironmentProductRow({
       itemType,
       lineItemId,
       onUpdatePricingDetails,
+      panelCount,
       product.productId,
       systemInstanceId,
     ],
@@ -1025,21 +1036,9 @@ function EnvironmentProductRow({
       ? activeHeightTiers.find((tier) => tier.id === selectedHeightTierId) ||
         activeHeightTiers[0]
       : null;
-  const measurementLabel = isCurtainMeter
-    ? `${formatMeters(pricingDetails.mode === "curtain_meter" ? pricingDetails.width : 0)} x ${formatMeters(
-        pricingDetails.mode === "curtain_meter" ? pricingDetails.height : 0,
-      )}`
-    : isCurtainHeight
-      ? `Larg. ${formatMeters(
-          pricingDetails.mode === "curtain_height" ? pricingDetails.width : 0,
-        )} | Alt. ate ${formatMeters(
-          pricingDetails.mode === "curtain_height" ? pricingDetails.maxHeight : 0,
-        )}`
-      : isCurtainWidth
-        ? `Larg. ${formatMeters(
-            pricingDetails.mode === "curtain_width" ? pricingDetails.width : 0,
-          )}`
-      : "";
+  const measurementLabel = isDimensionProduct
+    ? getProposalProductMeasurementLabel(product)
+    : "";
   const priceUnitLabel = getProposalProductUnitLabel(product);
   const priceSuffix = isCurtainMeter
     ? " /mÂ²"
@@ -1130,6 +1129,11 @@ function EnvironmentProductRow({
               {isQuantityPricedProduct && (
                 <Badge variant="outline" className="h-auto shrink-0 px-2 py-0.5 text-[10px]">
                   Por quantidade
+                </Badge>
+              )}
+              {isDimensionProduct && panelCount > 1 && (
+                <Badge variant="outline" className="h-auto shrink-0 px-2 py-0.5 text-[10px]">
+                  Qtd. {panelCount}
                 </Badge>
               )}
               {isExtra && (
@@ -1280,7 +1284,7 @@ function EnvironmentProductRow({
           )}
 
           {isCurtainMeter ? (
-            <div className="grid w-full gap-2 rounded-lg border bg-muted/50 p-2 shadow-sm md:grid-cols-2 lg:w-[320px] shrink-0">
+            <div className="grid w-full gap-2 rounded-lg border bg-muted/50 p-2 shadow-sm md:grid-cols-3 md:items-end lg:w-[440px] shrink-0">
               <div className="space-y-1">
                 <span className="text-[10px] text-muted-foreground">Largura</span>
                 <CurrencyInput
@@ -1289,7 +1293,9 @@ function EnvironmentProductRow({
                   onChange={(event) => {
                     setMeterWidthInput(event.target.value);
                   }}
-                  onBlur={() => commitMeterPricing(meterWidthInput, meterHeightInput)}
+                  onBlur={() =>
+                    commitMeterPricing(meterWidthInput, meterHeightInput, panelCount)
+                  }
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.currentTarget.blur();
@@ -1308,7 +1314,9 @@ function EnvironmentProductRow({
                   onChange={(event) => {
                     setMeterHeightInput(event.target.value);
                   }}
-                  onBlur={() => commitMeterPricing(meterWidthInput, meterHeightInput)}
+                  onBlur={() =>
+                    commitMeterPricing(meterWidthInput, meterHeightInput, panelCount)
+                  }
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.currentTarget.blur();
@@ -1319,9 +1327,15 @@ function EnvironmentProductRow({
                   placeholder="0,00"
                 />
               </div>
+              <DimensionPanelsField
+                value={panelCount}
+                onChange={(nextPanels) =>
+                  commitMeterPricing(meterWidthInput, meterHeightInput, nextPanels)
+                }
+              />
             </div>
           ) : isCurtainHeight ? (
-             <div className="grid w-full gap-2 rounded-lg border bg-muted/40 p-2 shadow-sm md:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)] lg:w-[320px] shrink-0">
+             <div className="grid w-full gap-2 rounded-lg border bg-muted/40 p-2 shadow-sm md:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)_minmax(0,0.9fr)] md:items-end lg:w-[440px] shrink-0">
               <div className="space-y-1">
                 <span className="text-[10px] text-muted-foreground">
                   Faixa de altura
@@ -1330,7 +1344,11 @@ function EnvironmentProductRow({
                   value={selectedHeightTierId}
                   onChange={(event) => {
                     setSelectedHeightTierId(event.target.value);
-                    commitHeightPricing(heightWidthInput, event.target.value);
+                    commitHeightPricing(
+                      heightWidthInput,
+                      event.target.value,
+                      panelCount,
+                    );
                   }}
                   inputSize="sm"
                   className="w-full"
@@ -1352,7 +1370,11 @@ function EnvironmentProductRow({
                     setHeightWidthInput(event.target.value);
                   }}
                   onBlur={() =>
-                    commitHeightPricing(heightWidthInput, selectedHeightTierId)
+                    commitHeightPricing(
+                      heightWidthInput,
+                      selectedHeightTierId,
+                      panelCount,
+                    )
                   }
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
@@ -1364,8 +1386,14 @@ function EnvironmentProductRow({
                   placeholder="0,00"
                 />
               </div>
+              <DimensionPanelsField
+                value={panelCount}
+                onChange={(nextPanels) =>
+                  commitHeightPricing(heightWidthInput, selectedHeightTierId, nextPanels)
+                }
+              />
               {selectedHeightTier && (
-                <div className="col-span-2 mt-1 flex items-center justify-between rounded-md bg-background px-3 py-2 border border-border/50">
+                <div className="col-span-3 mt-1 flex items-center justify-between rounded-md bg-background px-3 py-2 border border-border/50">
                   <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                     Preço da faixa
                   </span>
@@ -1383,7 +1411,7 @@ function EnvironmentProductRow({
               )}
             </div>
           ) : isCurtainWidth ? (
-            <div className="grid w-full gap-2 rounded-lg border bg-muted/40 p-2 shadow-sm lg:w-[220px] shrink-0">
+            <div className="grid w-full gap-2 rounded-lg border bg-muted/40 p-2 shadow-sm md:grid-cols-[minmax(0,1fr)_max-content] md:items-end lg:w-[340px] shrink-0">
               <div className="space-y-1">
                 <span className="text-[10px] text-muted-foreground">Largura</span>
                 <CurrencyInput
@@ -1392,7 +1420,7 @@ function EnvironmentProductRow({
                   onChange={(event) => {
                     setLinearWidthInput(event.target.value);
                   }}
-                  onBlur={() => commitWidthPricing(linearWidthInput)}
+                  onBlur={() => commitWidthPricing(linearWidthInput, panelCount)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.currentTarget.blur();
@@ -1403,6 +1431,10 @@ function EnvironmentProductRow({
                   placeholder="0,00"
                 />
               </div>
+              <DimensionPanelsField
+                value={panelCount}
+                onChange={(nextPanels) => commitWidthPricing(linearWidthInput, nextPanels)}
+              />
             </div>
           ) : (
             <div className="flex min-w-[120px] flex-col items-start">
@@ -1542,6 +1574,88 @@ function EnvironmentProductRow({
             )}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function DimensionPanelsField({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  const [inputValue, setInputValue] = React.useState(
+    formatItemQuantity(value, false),
+  );
+  const [isEditing, setIsEditing] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isEditing) {
+      setInputValue(formatItemQuantity(value, false));
+    }
+  }, [isEditing, value]);
+
+  const commitValue = React.useCallback(() => {
+    const parsedValue = parseItemQuantityInput(inputValue, false);
+    setIsEditing(false);
+
+    if (parsedValue === null) {
+      setInputValue(formatItemQuantity(value, false));
+      return;
+    }
+
+    const nextValue = Math.max(1, Math.trunc(parsedValue));
+    onChange(nextValue);
+    setInputValue(formatItemQuantity(nextValue, false));
+  }, [inputValue, onChange, value]);
+
+  return (
+    <div className="flex min-w-[112px] flex-col items-start justify-end gap-1 self-end">
+      <Label className="text-[10px] font-medium text-muted-foreground">
+        Quantidade
+      </Label>
+      <div className="inline-flex h-9 items-center gap-0.5 rounded-md border bg-muted/30 p-0.5 shadow-sm">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 rounded-md hover:bg-background hover:text-destructive transition-colors"
+          onClick={() => onChange(Math.max(1, Math.trunc(value) - 1))}
+        >
+          <Minus className="w-3.5 h-3.5" />
+        </Button>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={inputValue}
+          onFocus={() => setIsEditing(true)}
+          onChange={(event) => setInputValue(event.target.value)}
+          onBlur={commitValue}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.currentTarget.blur();
+            }
+
+            if (event.key === "Escape") {
+              setIsEditing(false);
+              setInputValue(formatItemQuantity(value, false));
+              event.currentTarget.blur();
+            }
+          }}
+          className="h-8 w-11 rounded-md border border-border/60 bg-background px-1 text-center text-sm font-medium tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/20"
+          aria-label="Quantidade do produto"
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 rounded-md hover:bg-background hover:text-primary transition-colors"
+          onClick={() => onChange(Math.max(1, Math.trunc(value) + 1))}
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </Button>
       </div>
     </div>
   );

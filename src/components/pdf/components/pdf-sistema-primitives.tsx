@@ -2,6 +2,7 @@ import { formatCurrency } from "@/utils/format-utils";
 import { PdfDisplaySettings } from "@/types/pdf-display-settings";
 import type { TenantNiche } from "@/types";
 import {
+  formatProposalProductDisplayQuantity,
   getProposalLineUnitSellingPrice,
   getProposalProductMeasurementLabel,
   getProposalProductUnitLabel,
@@ -155,7 +156,11 @@ export function hasCortinasAwareProductFooterContent({
     const measurementLabel = showProductMeasurements
       ? getProposalProductMeasurementLabel(product)
       : null;
-    return !!measurementLabel;
+    const quantityLabel =
+      showProductQuantities !== false
+        ? formatProposalProductDisplayQuantity(product)
+        : null;
+    return Boolean(measurementLabel || quantityLabel);
   }
 
   if (isCortinasNeutralServiceLine(tenantNiche, product)) return false;
@@ -198,15 +203,8 @@ export function PdfCortinasAwareProductFooter({
     product,
   );
 
-  const shouldShowQuantity =
-    showProductQuantities !== false && !isDimensionProduct;
-
-  const quantityLabel = Number.isInteger(product.quantity)
-    ? String(product.quantity)
-    : product.quantity.toLocaleString("pt-BR", {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-      });
+  const shouldShowQuantity = showProductQuantities !== false;
+  const quantityLabel = formatProposalProductDisplayQuantity(product);
   const measurementLabel =
     showProductMeasurements && isDimensionProduct
       ? getProposalProductMeasurementLabel(product)
@@ -216,8 +214,25 @@ export function PdfCortinasAwareProductFooter({
     if (isDimensionProduct) {
       const sellingPrice = getProposalLineUnitSellingPrice(product);
       const unitLabel = getProposalProductUnitLabel(product);
+      const prefixParts = [
+        shouldShowQuantity ? `Qtd. ${quantityLabel}` : null,
+        measurementLabel,
+      ].filter(Boolean);
+
       if (!measurementLabel) {
-        return (
+        return prefixParts.length > 0 ? (
+          <>
+            <span className={`${grayTextClassName} block`}>
+              {prefixParts.join(" | ")}
+            </span>
+            <span
+              className={totalTextClassName}
+              style={primaryColor ? { color: primaryColor } : undefined}
+            >
+              {formatCurrency(product.total)}
+            </span>
+          </>
+        ) : (
           <span
             className={totalTextClassName}
             style={primaryColor ? { color: primaryColor } : undefined}
@@ -230,7 +245,7 @@ export function PdfCortinasAwareProductFooter({
       return (
         <>
           <span className={`${grayTextClassName} block`}>
-            {`${measurementLabel} x ${formatCurrency(sellingPrice)} / ${unitLabel}`}
+            {`${prefixParts.join(" | ")} x ${formatCurrency(sellingPrice)} / ${unitLabel}`}
           </span>
           <span
             className={totalTextClassName}
@@ -294,8 +309,17 @@ export function PdfCortinasAwareProductFooter({
   }
 
   if (isDimensionProduct) {
-    if (measurementLabel) {
-      return <span className="text-xs text-gray-600">{measurementLabel}</span>;
+    if (measurementLabel || shouldShowQuantity) {
+      return (
+        <span className="text-xs text-gray-600">
+          {[
+            shouldShowQuantity ? `Qtd: ${quantityLabel}` : null,
+            measurementLabel,
+          ]
+            .filter(Boolean)
+            .join(" | ")}
+        </span>
+      );
     }
     return null;
   }

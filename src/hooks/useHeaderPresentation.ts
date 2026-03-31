@@ -12,6 +12,7 @@ interface HeaderPresentation {
   logoUrl?: string;
   avatarSeed: string;
   isViewingAsTenant: boolean;
+  isPlanLabelLoading: boolean;
 }
 
 export function useHeaderPresentation(): HeaderPresentation {
@@ -105,7 +106,8 @@ export function useHeaderPresentation(): HeaderPresentation {
 
   const [resolvedPlanState, setResolvedPlanState] = useState<{
     key: string;
-    label: string;
+    label: string | null;
+    status: "loading" | "resolved";
   } | null>(null);
   const immediatePlanLabel = useMemo(
     () =>
@@ -113,37 +115,53 @@ export function useHeaderPresentation(): HeaderPresentation {
         role: planSubject?.role,
         planId: planSubject?.planId,
         preferredLabel: isViewingAsTenant ? tenantOwnerPlanName : null,
-      }) || "Sem Plano",
+      }),
     [isViewingAsTenant, planSubject?.planId, planSubject?.role, tenantOwnerPlanName],
   );
+  const resolvedPlanForKey =
+    resolvedPlanState?.key === presentationKey ? resolvedPlanState : null;
+  const needsAsyncResolution =
+    !tenantOwnerPlanName &&
+    !!planSubject?.planId &&
+    !immediatePlanLabel;
   const visiblePlanLabel =
-    resolvedPlanState?.key === presentationKey
-      ? resolvedPlanState.label
-      : immediatePlanLabel;
+    resolvedPlanForKey?.status === "resolved"
+      ? resolvedPlanForKey.label || "Sem Plano"
+      : immediatePlanLabel || "Sem Plano";
+  const isPlanLabelLoading =
+    needsAsyncResolution && resolvedPlanForKey?.status !== "resolved";
 
   useEffect(() => {
-    const needsAsyncResolution =
-      !tenantOwnerPlanName &&
-      !!planSubject?.planId &&
-      immediatePlanLabel === "Sem Plano";
-
     if (!needsAsyncResolution) {
       return;
     }
 
     let isActive = true;
-    void resolvePlanLabel(planSubject?.planId).then((resolvedLabel) => {
-      if (!isActive || !resolvedLabel) {
-        return;
+    setResolvedPlanState((currentState) => {
+      if (currentState?.key === presentationKey && currentState.status === "resolved") {
+        return currentState;
       }
 
-      setResolvedPlanState((currentState) =>
-        currentState?.key === presentationKey &&
-        currentState.label === resolvedLabel
-          ? currentState
-          : { key: presentationKey, label: resolvedLabel },
-      );
+      return {
+        key: presentationKey,
+        label: null,
+        status: "loading",
+      };
     });
+
+    void resolvePlanLabel(planSubject?.planId)
+      .catch(() => null)
+      .then((resolvedLabel) => {
+        if (!isActive) {
+          return;
+        }
+
+        setResolvedPlanState({
+          key: presentationKey,
+          label: resolvedLabel || null,
+          status: "resolved",
+        });
+      });
 
     return () => {
       isActive = false;
@@ -154,6 +172,7 @@ export function useHeaderPresentation(): HeaderPresentation {
     planSubject?.role,
     presentationKey,
     immediatePlanLabel,
+    needsAsyncResolution,
     tenantOwnerPlanName,
   ]);
 
@@ -163,5 +182,6 @@ export function useHeaderPresentation(): HeaderPresentation {
     logoUrl: tenant?.logoUrl || fetchedTenant?.logoUrl,
     avatarSeed: tenant?.name || fetchedTenant?.name || user?.name || "U",
     isViewingAsTenant,
+    isPlanLabelLoading,
   };
 }

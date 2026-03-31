@@ -10,6 +10,7 @@ import {
 import { CustomFieldService } from "@/services/custom-field-service";
 import type { TenantNiche } from "@/types";
 import {
+  formatProposalProductDisplayQuantity,
   getProposalLineUnitSellingPrice,
   getProposalProductMeasurementLabel,
   isCortinasDimensionProductLine,
@@ -99,7 +100,7 @@ export function ProductTableSection({
       0,
     );
 
-    const hasQuantityProducts = items.some(item => !isCortinasDimensionProductLine(tenantNiche, item));
+    const hasQuantityProducts = items.length > 0;
     const showQuantity = pdfSettings.showProductQuantities !== false && hasQuantityProducts;
     
     const hasDimensionProducts = items.some(item => isCortinasDimensionProductLine(tenantNiche, item));
@@ -182,7 +183,20 @@ export function ProductTableSection({
                   {showMiddleColumn && (
                     <td className="px-3 py-2 border-b border-gray-200 text-center text-sm">
                       {isDimension
-                        ? (showMeasurements ? getProposalProductMeasurementLabel(item) : "-")
+                        ? (
+                            showMeasurements || showQuantity ? (
+                              <div className="flex flex-col items-center gap-0.5 leading-tight">
+                                {showMeasurements && (
+                                  <span>{getProposalProductMeasurementLabel(item)}</span>
+                                )}
+                                {showQuantity && (
+                                  <span className="text-xs text-muted-foreground">
+                                    Qtd. {formatProposalProductDisplayQuantity(item)}
+                                  </span>
+                                )}
+                              </div>
+                            ) : "-"
+                          )
                         : (showQuantity ? item.quantity : "-")}
                     </td>
                   )}
