@@ -1,6 +1,8 @@
 import { onRequest } from "firebase-functions/v2/https";
 import express from "express";
 import cors from "cors";
+import { initSentry, Sentry } from "../lib/sentry";
+import { logger } from "../lib/logger";
 import { validateFirebaseIdToken } from "./middleware/auth";
 import { CORS_OPTIONS } from "../deploymentConfig";
 import { proxyImage } from "./controllers/proxy.controller";
@@ -36,6 +38,7 @@ import { runSecretRotationGuard } from "../lib/secret-rotation-guard";
 
 const app = express();
 
+initSentry();
 runSecretRotationGuard({ source: "api" });
 
 const DEFAULT_PUBLIC_WINDOW_MS = 60_000;
@@ -410,6 +413,49 @@ app.get("/authenticated", (req: express.Request, res: express.Response) => {
     role: user?.role || null,
   });
 });
+
+// Global error handler — must be the last middleware registered
+app.use(
+  (
+    err: Error,
+    req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction,
+  ) => {
+    const requestId = (
+      req as express.Request & { requestId?: string }
+    ).requestId;
+
+    // Report to Sentry with per-request context
+    Sentry.withScope((scope) => {
+      if (req.user) {
+        scope.setUser({ id: (req.user as { uid?: string }).uid });
+        scope.setTag(
+          "tenantId",
+          String((req.user as { tenantId?: string }).tenantId || "unknown"),
+        );
+      }
+      if (requestId) scope.setTag("requestId", requestId);
+      scope.setTag("route", sanitizeLoggedPath(req.path));
+      Sentry.captureException(err);
+    });
+
+    // Emit structured log entry picked up by GCP Cloud Logging
+    logger.error("Unhandled Express error", {
+      error: err.message,
+      stack: err.stack,
+      requestId,
+      route: sanitizeLoggedPath(req.path),
+      method: req.method,
+      tenantId: String((req.user as { tenantId?: string })?.tenantId || ""),
+      uid: String((req.user as { uid?: string })?.uid || ""),
+    });
+
+    if (!res.headersSent) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  },
+);
 
 export const api = onRequest(
   {

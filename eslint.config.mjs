@@ -13,6 +13,9 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "functions/**",
+    // Claude Code internal files — not part of the project source
+    ".claude/**",
+    ".agents/**",
   ]),
 ]);
 
