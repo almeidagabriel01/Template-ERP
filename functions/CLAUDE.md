@@ -84,9 +84,16 @@ cd functions && npm run lint
 - Usar `functions/.env.example` como referência (sem valores reais)
 
 ### Logging
-- Usar `console.log/error` (Firebase Functions captura automaticamente)
-- Incluir contexto: `[nomeHandler] mensagem` para facilitar busca nos logs
-- NUNCA logar tokens, senhas ou dados pessoais
+- **Em código novo**: usar `logger` de `../lib/logger` ou `../../lib/logger`
+  ```typescript
+  import { logger } from "../lib/logger";
+  logger.info("Proposta criada", { tenantId, proposalId, uid });
+  logger.error("Falha ao enviar WhatsApp", { tenantId, error: err.message });
+  ```
+- O logger emite JSON com campo `severity` reconhecido pelo GCP Cloud Logging, permitindo filtrar por severity no console.
+- Em código existente que usa `console.log/error`, não é necessário migrar — o GCP ainda captura esses logs.
+- NUNCA logar tokens, senhas, `FIREBASE_PRIVATE_KEY` ou dados pessoais (CPF, email completo, telefone).
+- Erros não tratados em rotas Express são capturados automaticamente pelo global error handler em `api/index.ts` (reporta ao Sentry + loga estruturado).
 
 ## Checklist antes de deploy para prod
 - [ ] Testado localmente com `npm run dev:backend`

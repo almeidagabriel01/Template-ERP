@@ -12,12 +12,15 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/shared/toast-provider";
+import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { TenantProvider } from "@/providers/tenant-provider";
 import { AuthProvider } from "@/providers/auth-provider";
 import { PermissionsProvider } from "@/providers/permissions-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -104,23 +107,27 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${interPdf.variable} ${robotoPdf.variable} ${latoPdf.variable} ${montserratPdf.variable} ${playfairPdf.variable} antialiased`}
       >
         <ThemeProvider>
-          <AuthProvider>
-            {isLandingPage ? (
-              <main className="min-h-screen">{children}</main>
-            ) : pathname.startsWith("/share/") ? (
-              // Public shared proposal pages - no authentication required
-              <main className="min-h-screen">{children}</main>
-            ) : isAuthOnlyPage ? (
-              <main className="min-h-screen flex flex-col">{children}</main>
-            ) : (
-              <PermissionsProvider>
-                <TenantProvider>
-                  <ProtectedRoute>{children}</ProtectedRoute>
-                </TenantProvider>
-              </PermissionsProvider>
-            )}
-          </AuthProvider>
+          <ErrorBoundary>
+            <AuthProvider>
+              {isLandingPage ? (
+                <main className="min-h-screen">{children}</main>
+              ) : pathname.startsWith("/share/") ? (
+                // Public shared proposal pages - no authentication required
+                <main className="min-h-screen">{children}</main>
+              ) : isAuthOnlyPage ? (
+                <main className="min-h-screen flex flex-col">{children}</main>
+              ) : (
+                <PermissionsProvider>
+                  <TenantProvider>
+                    <ProtectedRoute>{children}</ProtectedRoute>
+                  </TenantProvider>
+                </PermissionsProvider>
+              )}
+            </AuthProvider>
+          </ErrorBoundary>
           <ToastProvider />
+          <Analytics />
+          <SpeedInsights />
         </ThemeProvider>
       </body>
     </html>

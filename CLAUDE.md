@@ -97,7 +97,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=
 NEXT_PUBLIC_USE_FIREBASE_EMULATORS=false
 ```
 
-**Backend** (`functions/.env`):
+**Backend** (`functions/.env.erp-softcode` ou `functions/.env.erp-softcode-prod`):
 ```
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
@@ -107,7 +107,10 @@ CRON_SECRET=
 FIREBASE_PROJECT_ID=
 FIREBASE_PRIVATE_KEY=
 FIREBASE_CLIENT_EMAIL=
+SENTRY_DSN=          # Opcional — ativa error tracking no backend
 ```
+
+Use `.env.local.example` e `functions/.env.example` como referência completa de todas as variáveis.
 
 Firebase projects: `erp-softcode` (dev), `erp-softcode-prod` (prod). Configured in `.firebaserc`.
 
@@ -190,3 +193,27 @@ Firebase projects: `erp-softcode` (dev), `erp-softcode-prod` (prod). Configured 
 - `/new-api-route` — create Cloud Function route or Next.js Route Handler
 - `/new-firebase-query` — create typed Firestore query with tenant isolation
 - `/review-security` — security checklist for features, endpoints, rules
+
+## Observability Stack
+
+### Frontend
+- **Vercel Analytics** — page views e sessões (ativo automaticamente na Vercel)
+- **Vercel Speed Insights** — Core Web Vitals em produção
+- **Sentry** (`@sentry/nextjs`) — error tracking client + server. Requer `NEXT_PUBLIC_SENTRY_DSN` em `.env.local` e nas env vars da Vercel. Sem a variável, não inicializa.
+- **Error Boundary** (`src/components/shared/error-boundary.tsx`) — captura erros React com UI de fallback amigável
+- **`src/app/error.tsx`** — error page do App Router para erros em route segments
+- **`src/app/global-error.tsx`** — error page de último recurso (substitui o root layout)
+
+### Backend
+- **Sentry** (`@sentry/node`) — error tracking com contexto de tenant/user. Requer `SENTRY_DSN` em `functions/.env.*`. Global error handler em `functions/src/api/index.ts` reporta automaticamente.
+- **Structured Logger** (`functions/src/lib/logger.ts`) — emite JSON com campo `severity` reconhecido pelo GCP Cloud Logging. Use `logger.info/warn/error()` em vez de `console.log` em código novo.
+- **Security Observability** (`functions/src/lib/security-observability.ts`) — audit trail e métricas de segurança no Firestore (`security_audit_events`, `security_metrics`).
+
+### Infraestrutura / GCP
+- **Cloud Monitoring alerts** — configurar com o script:
+  ```bash
+  bash scripts/setup-gcp-monitoring.sh erp-softcode-prod ops@empresa.com
+  bash scripts/setup-gcp-monitoring.sh erp-softcode dev@empresa.com
+  ```
+  Cria: uptime check no `/api/health`, alerta de indisponibilidade (CRITICAL), alerta de erros 5xx (ERROR), alerta de latência p95 > 8s (WARNING), alerta de pico de instâncias (WARNING).
+- **GCP Cloud Logging** — logs de todas as Cloud Functions disponíveis em GCP Console → Logging. Filtrar por `severity=ERROR` ou pelo campo `tenantId` nos logs estruturados.

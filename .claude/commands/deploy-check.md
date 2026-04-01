@@ -4,9 +4,11 @@ Antes de fazer deploy, execute esta checklist completa:
 
 1. **Build check:**
    ```bash
-   npm run lint
+   npm run lint                           # ESLint frontend
+   npm run build                          # Next.js production build
+   cd functions && npm run build && cd .. # Compila TypeScript das Cloud Functions
    ```
-   Reporte qualquer error (não só warning).
+   Reporte qualquer error (não só warning). Confirme que ambos os builds passam antes de continuar.
 
 2. **TypeScript check:**
    Verifique se há erros de tipo óbvios nos arquivos modificados nesta sessão.
