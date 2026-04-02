@@ -10,6 +10,8 @@ import { formatDateBR } from "@/utils/date-format";
 import { FormErrors } from "@/hooks/useFormValidation";
 import { TrendingUp, TrendingDown, User, RefreshCw } from "lucide-react";
 import { TransactionFormData } from "../../_hooks/useTransactionForm";
+import { useWalletsData } from "@/app/wallets/_hooks/useWalletsData";
+import { statusConfig } from "../../_constants/config";
 interface ReviewStepProps {
   formData: TransactionFormData;
   onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
@@ -29,6 +31,7 @@ export function ReviewStep({
   errors = {},
   totalOverride,
 }: ReviewStepProps) {
+  const { wallets } = useWalletsData();
   const isIncome = formData.type === "income";
 
   const getDownPaymentAmount = () => {
@@ -87,11 +90,15 @@ export function ReviewStep({
   };
 
   // Get wallet display
+  const resolveWalletName = (v?: string) => {
+    if (!v) return "—";
+    return wallets.find((w) => w.id === v || w.name === v)?.name ?? v;
+  };
   const getWalletDisplay = () => {
     if (formData.paymentMode === "installmentValue") {
-      return formData.installmentsWallet || formData.wallet || "—";
+      return resolveWalletName(formData.installmentsWallet || formData.wallet);
     }
-    return formData.wallet || "—";
+    return resolveWalletName(formData.wallet);
   };
 
   return (
@@ -171,7 +178,7 @@ export function ReviewStep({
             </div>
             <div>
               <span className="text-muted-foreground">Status:</span>
-              <p className="font-medium capitalize">{formData.status}</p>
+              <p className="font-medium">{statusConfig[formData.status]?.label ?? formData.status}</p>
             </div>
           </div>
 
