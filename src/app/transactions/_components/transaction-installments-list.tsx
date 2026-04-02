@@ -13,6 +13,7 @@ import {
 import { Transaction, TransactionStatus } from "@/services/transaction-service";
 import { formatCurrency } from "@/utils/format";
 import { statusConfig } from "../_constants/config";
+import { Wallet } from "@/types";
 import {
   Check,
   Loader2,
@@ -45,6 +46,7 @@ interface TransactionInstallmentsListProps {
   onToggleSelection?: (id: string) => void;
   onPartialPayment?: (transaction: Transaction) => void;
   onUndoPartial?: (partialTransaction: Transaction) => Promise<void>;
+  wallets?: Wallet[];
 }
 
 export function TransactionInstallmentsList({
@@ -56,7 +58,12 @@ export function TransactionInstallmentsList({
   onToggleSelection,
   onPartialPayment,
   onUndoPartial,
+  wallets = [],
 }: TransactionInstallmentsListProps) {
+  const resolveWalletName = (v?: string) => {
+    if (!v) return v;
+    return wallets.find((w) => w.id === v || w.name === v)?.name ?? v;
+  };
   const { statuses: statusOptions } = useTransactionStatuses();
   const [updatingId, setUpdatingId] = React.useState<string | null>(null);
   const [editingId, setEditingId] = React.useState<string | null>(null);
@@ -380,7 +387,7 @@ export function TransactionInstallmentsList({
                         <div className="text-xs text-muted-foreground">
                           Venc:{" "}
                           {formatDate(downPayment.dueDate || downPayment.date)}
-                          {downPayment.wallet && ` • ${downPayment.wallet}`}
+                          {downPayment.wallet && ` • ${resolveWalletName(downPayment.wallet)}`}
                         </div>
                       </div>
                     </div>
@@ -526,7 +533,7 @@ export function TransactionInstallmentsList({
                               {formatDate(
                                 group.main.dueDate || group.main.date,
                               )}
-                              {group.main.wallet && ` • ${group.main.wallet}`}
+                              {group.main.wallet && ` • ${resolveWalletName(group.main.wallet)}`}
                             </div>
                           </div>
                         </div>
@@ -643,7 +650,7 @@ export function TransactionInstallmentsList({
                                     </div>
                                     <div className="text-xs text-muted-foreground">
                                       Pago em: {formatDate(subItem.date)}
-                                      {subItem.wallet && ` • ${subItem.wallet}`}
+                                      {subItem.wallet && ` • ${resolveWalletName(subItem.wallet)}`}
                                     </div>
                                   </div>
                                 </div>

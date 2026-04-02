@@ -1761,6 +1761,7 @@ export function TransactionCard({
                     onToggleSelection={onToggleSelection}
                     onPartialPayment={handlePartialPayment}
                     onUndoPartial={handleUndoPartial}
+                    wallets={wallets}
                   />
                 )}
 
