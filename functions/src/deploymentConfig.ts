@@ -1,32 +1,36 @@
 import { HttpsOptions } from "firebase-functions/v2/https";
+import { MemoryOption } from "firebase-functions/v2/options";
 
-// const PROJECT_ID = process.env.GCLOUD_PROJECT;
-// const IS_DEV = PROJECT_ID === "erp-softcode";
+const IS_DEV = process.env.GCLOUD_PROJECT === "erp-softcode";
 
 /**
  * Dynamic configuration for Cloud Functions.
  *
  * DEV (erp-softcode):
- * - cpu: 0.2 (Low cost, fits in 20 CPU quota)
- * - maxInstances: 1 (Prevents scaling spikes)
- * - concurrency: 1 (Implicit)
+ * - cpu: 0.083 (Minimum allowed — cheapest possible)
+ * - maxInstances: 1 (No scaling in dev)
+ * - concurrency: 1
+ * - memory: 256MiB
  *
- * PROD:
+ * PROD (erp-softcode-prod):
  * - cpu: 1 (Standard performance)
- * - maxInstances: 100 (Auto-scaling enabled)
- * - concurrency: 80 (High throughput)
+ * - maxInstances: 10 (Safe limit: 10 * 80 concurrent = 800 req/s)
+ * - concurrency: 80
+ * - memory: 1GiB
  */
 export const CORS_OPTIONS: HttpsOptions = {
   cors: true,
   region: "southamerica-east1",
-  cpu: 1, // Full performance for everyone
-  maxInstances: 10, // Safe limit (10 * 80 concurrent = 800 reqs/sec). Higher values (e.g. 100) hit Project Quota.
-  concurrency: 80, // Maximum V2 concurrency
+  cpu: IS_DEV ? 0.083 : 1,
+  maxInstances: IS_DEV ? 1 : 10,
+  concurrency: IS_DEV ? 1 : 80,
+  memory: IS_DEV ? "256MiB" : "1GiB",
 };
 
 export const SCHEDULE_OPTIONS = {
   timeZone: "America/Sao_Paulo",
   region: "southamerica-east1",
-  cpu: 1,
-  maxInstances: 10,
+  cpu: IS_DEV ? 0.083 : 0.25,
+  maxInstances: 1,
+  memory: "256MiB" as MemoryOption,
 };
