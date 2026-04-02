@@ -40,9 +40,8 @@ async function cleanupExpiredLinksInCollection(
 export const cleanupStorageAndSharedLinks = onSchedule(
   {
     ...SCHEDULE_OPTIONS,
-    schedule: "every 6 hours",
+    schedule: "every 24 hours",
     timeoutSeconds: 540,
-    memory: "512MiB",
   },
   async () => {
     const nowIso = new Date().toISOString();

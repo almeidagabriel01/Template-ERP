@@ -12,9 +12,9 @@ import { FieldValue } from "firebase-admin/firestore";
 export const checkStripeSubscriptions = onSchedule(
   {
     ...SCHEDULE_OPTIONS,
-    schedule: "every 24 hours",
-    timeoutSeconds: 540, // 9 minutos, abaixo do limite máximo de 1h da v2, mas seguro para timeout de http
-    memory: "512MiB",
+    schedule: "0 2 * * 1", // Toda segunda-feira às 02:00 BRT (webhooks Stripe cobrem mudanças em real-time)
+    timeoutSeconds: 540,
+    memory: "256MiB",
   },
   async () => {
     console.log("Starting daily Stripe subscription check...");
