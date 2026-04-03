@@ -186,7 +186,7 @@ export function TransactionInstallmentsList({
         );
         return group;
       });
-  }, [installments]);
+  }, [installments, hasTrueInstallments]);
 
   const handleStatusChange = async (
     transaction: Transaction,
