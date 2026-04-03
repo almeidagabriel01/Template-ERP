@@ -26,8 +26,9 @@ export function SummaryFooter({
     return sum + profit;
   }, 0);
 
-  // Calculate total cost (without markup)
+  // Calculate total cost (without markup) — exclude services (pure revenue, no cost basis)
   const totalCost = selectedProducts.reduce((sum, p) => {
+    if (p.itemType === "service") return sum;
     return sum + (p.unitPrice || 0) * p.quantity;
   }, 0);
 
