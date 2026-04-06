@@ -1,0 +1,10 @@
+10038	Content Security Policy (CSP) Header Not Set	WARN
+10049	Storable and Cacheable Content	WARN
+10096	Timestamp Disclosure - Unix	WARN
+10036	Server Leaks Version Information via "Server" HTTP Response Header Field	WARN
+10021	X-Content-Type-Options Header Missing	FAIL
+10020	X-Frame-Options Header Not Set	FAIL
+10035	Strict-Transport-Security Header Not Set	WARN
+10063	Permissions Policy Header Not Set	WARN
+10017	Cross-Domain JavaScript Source File Inclusion	WARN
+10094	Base64 Disclosure	WARN
