@@ -89,17 +89,45 @@
 
 ## Traceability
 
-*(Preenchido durante criação do roadmap)*
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01–07 | Phase 1 | Pending |
-| AUTH-01–06 | Phase 2 | Pending |
-| PROP-01–06 | Phase 3 | Pending |
-| FIN-01–06 | Phase 4 | Pending |
-| BILL-01–05 | Phase 5 | Pending |
-| PERF-01–03 | Phase 6 | Pending |
-| SEC-01–04 | Phase 7 | Pending |
+| INFRA-01 | Phase 1 | Pending |
+| INFRA-02 | Phase 1 | Pending |
+| INFRA-03 | Phase 1 | Pending |
+| INFRA-04 | Phase 1 | Pending |
+| INFRA-05 | Phase 1 | Pending |
+| INFRA-06 | Phase 1 | Pending |
+| INFRA-07 | Phase 1 | Pending |
+| AUTH-01 | Phase 2 | Pending |
+| AUTH-02 | Phase 2 | Pending |
+| AUTH-03 | Phase 2 | Pending |
+| AUTH-04 | Phase 2 | Pending |
+| AUTH-05 | Phase 2 | Pending |
+| AUTH-06 | Phase 2 | Pending |
+| PROP-01 | Phase 3 | Pending |
+| PROP-02 | Phase 3 | Pending |
+| PROP-03 | Phase 3 | Pending |
+| PROP-04 | Phase 3 | Pending |
+| PROP-05 | Phase 3 | Pending |
+| PROP-06 | Phase 3 | Pending |
+| FIN-01 | Phase 4 | Pending |
+| FIN-02 | Phase 4 | Pending |
+| FIN-03 | Phase 4 | Pending |
+| FIN-04 | Phase 4 | Pending |
+| FIN-05 | Phase 4 | Pending |
+| FIN-06 | Phase 4 | Pending |
+| BILL-01 | Phase 5 | Pending |
+| BILL-02 | Phase 5 | Pending |
+| BILL-03 | Phase 5 | Pending |
+| BILL-04 | Phase 5 | Pending |
+| BILL-05 | Phase 5 | Pending |
+| PERF-01 | Phase 6 | Pending |
+| PERF-02 | Phase 6 | Pending |
+| PERF-03 | Phase 6 | Pending |
+| SEC-01 | Phase 7 | Pending |
+| SEC-02 | Phase 7 | Pending |
+| SEC-03 | Phase 7 | Pending |
+| SEC-04 | Phase 7 | Pending |
 
 **Coverage:**
 - v1.0 requirements: 34 total
@@ -108,4 +136,4 @@
 
 ---
 *Requirements defined: 2026-04-06*
-*Last updated: 2026-04-06 after initial definition*
+*Last updated: 2026-04-06 — traceability filled after roadmap creation*
