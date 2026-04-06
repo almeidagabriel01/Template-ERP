@@ -85,7 +85,7 @@ jobs:
         run: npm run build
 
       - name: Run Lighthouse CI
-        run: npx lhci autorun --config=e2e/lighthouse/lighthouse.config.ts
+        run: npx lhci autorun --config=e2e/lighthouse/lighthouse.config.js
         env:
           LHCI_BUILD_CONTEXT__CURRENT_HASH: ${{ github.sha }}
 

@@ -32,7 +32,7 @@ async function main(): Promise<void> {
 
   console.log('Dev server is running. Starting Lighthouse audit...\n');
 
-  const configPath = path.resolve('e2e/lighthouse/lighthouse.config.ts');
+  const configPath = path.resolve('e2e/lighthouse/lighthouse.config.js');
 
   try {
     execSync(`npx lhci autorun --config=${configPath}`, {
