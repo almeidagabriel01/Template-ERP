@@ -69,10 +69,19 @@ async function globalSetup(): Promise<void> {
     console.log(`[global-setup] Emulator PID ${emulatorProcess.pid} saved to ${PID_FILE}`);
   }
 
-  await waitForEmulators();
+  // Unref so the setup process does not keep a reference that blocks Playwright's lifecycle
+  emulatorProcess.unref();
 
-  // Dynamically import seedAll after emulators are confirmed ready
-  const { seedAll } = await import("./seed/seed-factory");
+  try {
+    await waitForEmulators();
+  } catch (err) {
+    emulatorProcess.kill();
+    throw err;
+  }
+
+  // Dynamically import seedAll and clearAll after emulators are confirmed ready
+  const { seedAll, clearAll } = await import("./seed/seed-factory");
+  await clearAll();
   await seedAll();
 
   console.log("[global-setup] Seed data loaded. Emulators ready.");
