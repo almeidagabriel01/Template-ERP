@@ -150,7 +150,11 @@ export class ProposalsPage {
     await this.page.getByRole("button", { name: /próximo/i }).click();
 
     // --- Step 5: Resumo — click "Criar Proposta" ---
-    await this.page.waitForTimeout(500);
+    // Wait for network idle to ensure the product catalog fetch has completed and
+    // settled React state before submitting. Without this, the first test run triggers
+    // a mid-submission re-render (products load from Firestore asynchronously) that
+    // can disrupt the navigation after submit.
+    await this.page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     const submitButton = this.page.getByRole("button", { name: /criar proposta/i });
     await submitButton.waitFor({ state: "visible", timeout: 10000 });
     await submitButton.click();
