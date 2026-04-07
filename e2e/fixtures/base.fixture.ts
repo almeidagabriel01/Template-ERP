@@ -3,12 +3,14 @@ import { LoginPage } from "../pages/login.page";
 import { DashboardPage } from "../pages/dashboard.page";
 import { ProposalsPage } from "../pages/proposals.page";
 import { TransactionsPage } from "../pages/transactions.page";
+import { WalletsPage } from "../pages/wallets.page";
 
 interface PageFixtures {
   loginPage: LoginPage;
   dashboardPage: DashboardPage;
   proposalsPage: ProposalsPage;
   transactionsPage: TransactionsPage;
+  walletsPage: WalletsPage;
 }
 
 // Proxy Firebase API calls to local emulators.
@@ -91,6 +93,9 @@ export const test = base.extend<PageFixtures>({
   },
   transactionsPage: async ({ page }, use) => {
     await use(new TransactionsPage(page));
+  },
+  walletsPage: async ({ page }, use) => {
+    await use(new WalletsPage(page));
   },
 });
 
