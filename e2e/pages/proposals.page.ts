@@ -13,8 +13,8 @@ export class ProposalsPage {
     this.page = page;
     // Proposal list items — rows in the list/table
     this.proposalList = page.locator('[data-testid="proposal-item"], [data-testid="proposals-list"] > *');
-    // New proposal CTA button
-    this.newProposalButton = page.getByRole("button", { name: /nova proposta|new proposal|criar/i });
+    // New proposal CTA — rendered as a <Link> (anchor tag) in the UI
+    this.newProposalButton = page.getByRole("link", { name: /nova proposta|new proposal|criar/i });
     this.pageHeading = page.locator('h1, [data-testid="page-heading"]').first();
   }
 
@@ -23,7 +23,13 @@ export class ProposalsPage {
   }
 
   async isLoaded(): Promise<boolean> {
-    await this.page.waitForURL(/proposals/, { timeout: 15000 });
+    await this.page.waitForURL(/\/proposals$/, { timeout: 15000 });
+    // Wait for a seeded proposal link to confirm the list has rendered.
+    // "Automação Residencial - Casa Verde" is always present from seed data.
+    await this.page.getByRole("link", { name: /automação residencial/i }).waitFor({
+      state: "visible",
+      timeout: 15000,
+    });
     return true;
   }
 
@@ -41,7 +47,8 @@ export class ProposalsPage {
   }
 
   async getProposalByTitle(title: string): Promise<Locator> {
-    return this.page.locator(`text="${title}"`).first();
+    // The title renders as a link in the proposals list. Use getByRole for precision.
+    return this.page.getByRole("link", { name: title }).first();
   }
 
   /**
@@ -71,23 +78,33 @@ export class ProposalsPage {
     // Select client via ClientSelect (input with Portuguese placeholder)
     const clientInput = this.page.getByPlaceholder("Digite ou selecione um cliente...");
     await clientInput.fill(data.clientName);
-    // Wait for dropdown and click matching option
-    const clientOption = this.page.getByText(data.clientName, { exact: false }).nth(1);
-    await clientOption.waitFor({ state: "visible", timeout: 8000 });
+    // Wait for the "Clientes cadastrados" section header to confirm the dropdown is open,
+    // then click the option row that contains the client name. The option row is a sibling
+    // of the header inside the dropdown container.
+    const clientsHeader = this.page.getByText("Clientes cadastrados");
+    await clientsHeader.waitFor({ state: "visible", timeout: 8000 });
+    // Find the clickable option row: a generic/div that contains the name text and is NOT the header
+    const clientOption = this.page.locator("div, li").filter({
+      hasText: data.clientName,
+    }).filter({
+      hasNot: this.page.locator("input"),
+    }).last();
     await clientOption.click();
 
     // Fill phone (required field)
     const phoneInput = this.page.locator('#clientPhone');
     await phoneInput.fill('(11) 99999-9999');
 
-    // Fill validUntil date (required — must be today or future)
-    const validUntilInput = this.page.locator('#validUntil');
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 30);
-    const yyyy = tomorrow.getFullYear();
-    const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
-    const dd = String(tomorrow.getDate()).padStart(2, '0');
-    await validUntilInput.fill(`${yyyy}-${mm}-${dd}`);
+    // Fill validUntil date via the custom DatePicker component.
+    // The field renders a hidden <input type="hidden" id="validUntil"> and a visible
+    // <button> trigger. Clicking the trigger opens a calendar popover; clicking "Hoje"
+    // picks today's date (valid — not in the past).
+    const validUntilTrigger = this.page.getByRole("button", { name: /selecionar data/i });
+    await validUntilTrigger.click();
+    // Click "Hoje" in the calendar footer to select today's date
+    const hojeButton = this.page.getByRole("button", { name: /hoje/i });
+    await hojeButton.waitFor({ state: "visible", timeout: 5000 });
+    await hojeButton.click();
 
     // Click "Próximo" to advance to step 2
     await this.page.getByRole("button", { name: /próximo/i }).click();
@@ -100,19 +117,21 @@ export class ProposalsPage {
     await sistemaSearchInput.click();
     await sistemaSearchInput.fill("Iluminação");
 
-    // Wait for option and click it
-    const sistemaOption = this.page.getByText("Sistema de Iluminação", { exact: false }).first();
+    // The SearchableSelect renders matching items as <button> elements.
+    // Wait for the sistema button to appear and click it.
+    const sistemaOption = this.page.getByRole("button", { name: /sistema de iluminação/i });
     await sistemaOption.waitFor({ state: "visible", timeout: 8000 });
     await sistemaOption.click();
 
-    // After selecting sistema, ambiente selector becomes enabled
-    // Select ambiente using the "Selecione um ambiente..." placeholder
-    const ambienteSearchInput = this.page.getByPlaceholder("Selecione um ambiente...");
-    await ambienteSearchInput.waitFor({ state: "visible", timeout: 8000 });
-    await ambienteSearchInput.click();
+    // After selecting sistema, the ambiente selector becomes enabled.
+    // Its textbox placeholder is "Buscar ambiente..." once enabled.
+    // Click "Abrir opções" to open the dropdown, then pick "Sala de Estar".
+    const ambienteOpenBtn = this.page.getByRole("button", { name: /abrir opções/i }).last();
+    await ambienteOpenBtn.waitFor({ state: "visible", timeout: 8000 });
+    await ambienteOpenBtn.click();
 
-    // Wait for the dropdown to show options and pick the first one
-    const ambienteOption = this.page.getByText("Sala de Estar", { exact: false }).first();
+    // Ambiente options render as <button> elements
+    const ambienteOption = this.page.getByRole("button", { name: /sala de estar/i });
     await ambienteOption.waitFor({ state: "visible", timeout: 8000 });
     await ambienteOption.click();
 
@@ -131,15 +150,18 @@ export class ProposalsPage {
     await this.page.getByRole("button", { name: /próximo/i }).click();
 
     // --- Step 5: Resumo — click "Criar Proposta" ---
-    await this.page.waitForTimeout(300);
+    await this.page.waitForTimeout(500);
     const submitButton = this.page.getByRole("button", { name: /criar proposta/i });
     await submitButton.waitFor({ state: "visible", timeout: 10000 });
     await submitButton.click();
 
-    // Wait for redirect after save (to edit-pdf or back to proposals)
-    await this.page.waitForURL(/(\/proposals\/[^/]+\/edit-pdf|\/proposals)/, {
-      timeout: 20000,
-    });
+    // Wait for redirect away from /proposals/new to confirm the proposal was saved.
+    // The redirect goes to /proposals/{id}/edit-pdf after creation.
+    // We must NOT match /proposals/new or the pattern exits prematurely.
+    await this.page.waitForURL(
+      (url) => !url.pathname.includes("/proposals/new") && url.pathname.includes("/proposals/"),
+      { timeout: 20000 },
+    );
   }
 
   /**
@@ -189,32 +211,56 @@ export class ProposalsPage {
    * Tests run at default Playwright viewport (1280x720) which shows the compact dropdown.
    */
   async deleteProposal(title: string): Promise<void> {
-    // Find the row containing the proposal title
-    const proposalRow = this.page.locator("tr, [role='row']").filter({
-      has: this.page.getByText(title, { exact: false }),
-    }).first();
+    // Strategy: find the "Mais ações" button that shares a common ancestor with the
+    // proposal title link. We locate the title link, then navigate to its closest
+    // row-like ancestor that also contains the actions button.
+    // Use XPath to find the nearest ancestor div that has both the title text and
+    // a "Mais ações" button — then use Playwright's filter to narrow it.
+    //
+    // Simpler approach: find all "Mais ações" buttons and pick the one whose
+    // closest ancestor also contains the title. We use locator.filter with
+    // hasText on the parent's closest scoped container.
+    //
+    // The list rows are generic divs at the same level. Each row-div contains
+    // both a title link and a "Mais ações" button as direct or near-direct children.
+    // Playwright's `filter` with `hasText` stops at the element boundary, so we
+    // need the actual row element. Use `nth()` matching after filtering to find
+    // the deepest element that still matches both conditions.
+    const maisAcoesButtons = this.page.getByRole("button", { name: /mais ações/i });
 
-    // Try the direct delete button first (visible on wide viewports > 1700px)
-    const directDeleteButton = proposalRow.getByRole("button", { name: /excluir/i });
-    const isDirectVisible = await directDeleteButton.isVisible().catch(() => false);
+    // Find which "Mais ações" button is closest to the proposal title.
+    // Approach: for each button, check if its ancestor contains the title.
+    // We do this by using XPath from the button toward ancestor divs.
+    const buttonCount = await maisAcoesButtons.count();
+    let targetButton = maisAcoesButtons.first();
 
-    if (isDirectVisible) {
-      await directDeleteButton.click();
-    } else {
-      // Compact dropdown — click the MoreVertical (three dots) button to open dropdown
-      const moreButton = proposalRow.getByRole("button").filter({
-        has: this.page.locator('[class*="MoreVertical"], svg'),
-      }).last();
-
-      // Fallback: click any button in the row that opens the actions menu
-      const actionsButton = proposalRow.locator('button[aria-label], button').last();
-      await actionsButton.click();
-
-      // Wait for dropdown and click Excluir option
-      const deleteMenuItem = this.page.getByRole("menuitem", { name: /excluir/i });
-      await deleteMenuItem.waitFor({ state: "visible", timeout: 5000 });
-      await deleteMenuItem.click();
+    for (let i = 0; i < buttonCount; i++) {
+      const btn = maisAcoesButtons.nth(i);
+      // Use evaluate to check if this button's ancestor row contains the title
+      const isInRow = await btn.evaluate((el, searchTitle) => {
+        let node: Element | null = el;
+        for (let depth = 0; depth < 10; depth++) {
+          node = node?.parentElement ?? null;
+          if (!node) break;
+          if (node.textContent?.includes(searchTitle)) return true;
+        }
+        return false;
+      }, title);
+      if (isInRow) {
+        targetButton = btn;
+        break;
+      }
     }
+
+    await targetButton.click();
+
+    // The dropdown items render as generic divs (not menuitem role).
+    // Find the Excluir item by text content.
+    const deleteMenuItem = this.page.locator("div, button, li").filter({
+      hasText: /^excluir$/i,
+    }).last();
+    await deleteMenuItem.waitFor({ state: "visible", timeout: 5000 });
+    await deleteMenuItem.click();
 
     // Confirm the AlertDialog
     const confirmButton = this.page.getByRole("button", { name: /^excluir$/i });
@@ -233,15 +279,43 @@ export class ProposalsPage {
    * Used by PROP-06 assertions.
    */
   async getProposalStatus(title: string): Promise<string> {
-    const proposalRow = this.page.locator("tr, [role='row']").filter({
-      has: this.page.getByText(title, { exact: false }),
-    }).first();
+    // The proposals list renders each row as a generic div containing both a title
+    // link and a status button. Walk UP from each status button to find the SMALLEST
+    // ancestor that contains the title text — stopping when the ancestor contains
+    // more than one status button (meaning we've reached the list container, not a row).
+    const statusButtons = this.page.getByRole("button", {
+      name: /rascunho|enviada|aprovada|rejeitada|em aberto|em progresso/i,
+    });
 
-    // Status is shown as a Badge element in the status column
-    const statusBadge = proposalRow.locator("span[class*='badge'], [class*='Badge'], span").filter({
-      hasText: /rascunho|enviada|aprovada|rejeitada|em aberto|em progresso/i,
-    }).first();
+    const buttonCount = await statusButtons.count();
+    for (let i = 0; i < buttonCount; i++) {
+      const btn = statusButtons.nth(i);
+      const isInRow = await btn.evaluate((el, searchTitle) => {
+        let node: Element | null = el.parentElement;
+        for (let depth = 0; depth < 10; depth++) {
+          if (!node) break;
+          // Stop if this ancestor contains more than one status button
+          // (that means we've left the row boundary and are at the list container)
+          const statusBtns = node.querySelectorAll(
+            'button[aria-label], button'
+          );
+          const statusCount = Array.from(statusBtns).filter((b) =>
+            /rascunho|enviada|aprovada|rejeitada|em aberto|em progresso/i.test(b.textContent ?? '')
+          ).length;
+          if (statusCount > 1) return false;
 
-    return await statusBadge.textContent() ?? "";
+          // Check if this ancestor contains the title
+          if (node.textContent?.includes(searchTitle)) return true;
+
+          node = node.parentElement;
+        }
+        return false;
+      }, title);
+      if (isInRow) {
+        return await btn.textContent() ?? "";
+      }
+    }
+
+    return "";
   }
 }
