@@ -12,7 +12,12 @@ Propostas e gestão financeira funcionando com confiança — se tudo mais falha
 
 ### Validated
 
-*(Nenhum ainda — primeiro ciclo de planejamento formal)*
+- FIN-01: Transaction creation E2E — Validated in Phase 04: financial-module-e2e
+- FIN-02: Transaction edit E2E — Validated in Phase 04: financial-module-e2e
+- FIN-03: Transaction delete E2E — Validated in Phase 04: financial-module-e2e
+- FIN-04: Wallet creation + balance transfer E2E — Validated in Phase 04: financial-module-e2e
+- FIN-05: Wallet balance atomicity verification E2E — Validated in Phase 04: financial-module-e2e
+- FIN-06: Installment group E2E (API create + UI mark-as-paid) — Validated in Phase 04: financial-module-e2e
 
 ### Active
 
@@ -88,4 +93,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-06 after Milestone v1.0 kickoff*
+*Last updated: 2026-04-07 — Phase 04 complete: financial module E2E coverage (FIN-01 through FIN-06 passing)*
