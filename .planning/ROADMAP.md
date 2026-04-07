@@ -47,11 +47,10 @@ Plans:
   2. Test suite validates that session persists after page refresh via `__session` cookie and that logout clears the session
   3. Test suite validates that unauthenticated requests to protected routes are redirected to the login page
   4. Test suite validates that Tenant A cannot read, create, or modify any document belonging to Tenant B — CI blocks the PR if this test fails
-**Plans:** 3 plans
+**Plans:** 2 plans
 Plans:
-- [x] 01-01-PLAN.md -- Playwright + Firebase Emulators + Seed Data + Page Object Model
-- [x] 01-02-PLAN.md -- Lighthouse Performance + Security Scan Scripts
-- [x] 01-03-PLAN.md -- GitHub Actions CI Pipeline
+- [x] 02-01-PLAN.md -- Auth Flow E2E Tests (Login, Session, Logout, Custom Claims)
+- [x] 02-02-PLAN.md -- Route Guards + Tenant Isolation E2E Tests
 
 ### Phase 3: Proposals & CRM E2E
 **Goal**: E2E tests cover the full proposal lifecycle — the highest-value business flow in ProOps — from creation through status transitions, PDF generation, and public sharing.
