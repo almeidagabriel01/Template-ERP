@@ -6,6 +6,7 @@ import { seedUsers } from "./data/users";
 import { seedProposals } from "./data/proposals";
 import { seedTransactions } from "./data/transactions";
 import { seedWallets } from "./data/wallets";
+import { seedSistemas } from "./data/sistemas";
 
 const PROJECT_ID = "demo-proops-test";
 
@@ -51,6 +52,7 @@ export async function seedAll(): Promise<void> {
   await seedTenants(db);
   await seedUsers(auth, db);
   await seedWallets(db);
+  await seedSistemas(db);
   await seedProposals(db);
   await seedTransactions(db);
 
@@ -67,7 +69,7 @@ export async function clearAll(): Promise<void> {
   const db = getDb();
   const auth = getAuth();
 
-  const collections = ["tenants", "users", "wallets", "proposals", "transactions"];
+  const collections = ["tenants", "users", "wallets", "sistemas", "ambientes", "proposals", "transactions"];
 
   for (const col of collections) {
     const snapshot = await db.collection(col).get();
