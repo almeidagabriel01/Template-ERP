@@ -61,11 +61,10 @@ Plans:
   2. Test suite validates that a proposal generates a PDF correctly via the backend endpoint
   3. Test suite validates that a public proposal link is accessible without authentication
   4. Test suite validates the full status lifecycle: draft → sent → approved/rejected
-**Plans:** 3 plans
+**Plans:** 2 plans
 Plans:
-- [ ] 01-01-PLAN.md -- Playwright + Firebase Emulators + Seed Data + Page Object Model
-- [ ] 01-02-PLAN.md -- Lighthouse Performance + Security Scan Scripts
-- [ ] 01-03-PLAN.md -- GitHub Actions CI Pipeline
+- [ ] 03-01-PLAN.md — Proposal CRUD POM Extension + E2E Tests (PROP-01, PROP-02, PROP-03)
+- [ ] 03-02-PLAN.md — PDF, Public Share, and Status Transition E2E Tests (PROP-04, PROP-05, PROP-06)
 
 ### Phase 4: Financial Module E2E
 **Goal**: E2E tests validate the complete financial module — transactions, wallets, transfers, and installments — ensuring the core billing cycle works correctly and atomically.
