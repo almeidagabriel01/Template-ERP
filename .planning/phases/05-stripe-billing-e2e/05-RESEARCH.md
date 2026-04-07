@@ -410,16 +410,15 @@ Not applicable — greenfield test files. No rename/refactor.
 | A2 | Plan cache (30s TTL) does not interfere if test uses a unique throwaway tenantId | Common Pitfalls (Pitfall 4) | BILL-04 might pass even when it should block (stale "starter" cache entry) |
 | A3 | The `tenant-plan-policy.ts` in-memory cache is cold for a fresh throwaway tenantId | Critical Finding 7 | Low risk — new tenantIds are never pre-cached |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **CRON_SECRET value for tests**
+1. **CRON_SECRET value for tests** *(RESOLVED)*
    - What we know: `internal.controller.ts` reads `process.env.CRON_SECRET` and returns 401 if it doesn't match
-   - What's unclear: The committed `functions/.env.example` was not readable; the actual test env value is unknown
-   - Recommendation: Planner should add a Wave 0 task to ensure `CRON_SECRET=test-cron-secret` is injected into the Functions emulator environment during test runs (via `functions/.env.local` or equivalent that the emulator loads for the demo project)
+   - Resolution: Plan 05-01 Task 1 creates `functions/.env.local` with `CRON_SECRET=test-cron-secret`. Tests use `process.env.CRON_SECRET || "test-cron-secret"` as fallback.
 
-2. **Whether BILL-02/03 should be one test or two**
+2. **Whether BILL-02/03 should be one test or two** *(RESOLVED)*
    - What we know: CONTEXT.md leaves this to Claude's discretion
-   - Recommendation: Two separate describe blocks, each self-contained with setup/teardown. Easier to debug failures and matches the single-responsibility pattern from phases 3-4.
+   - Resolution: Two separate describe blocks in `subscription.spec.ts`, each self-contained with setup/teardown.
 
 ## Sources
 
