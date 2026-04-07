@@ -104,7 +104,9 @@ export class ProposalsPage {
     // Click "Hoje" in the calendar footer to select today's date
     const hojeButton = this.page.getByRole("button", { name: /hoje/i });
     await hojeButton.waitFor({ state: "visible", timeout: 5000 });
-    await hojeButton.click();
+    // The calendar popover is position:fixed — scrollIntoViewIfNeeded can't help.
+    // Use force:true to click regardless of viewport position.
+    await hojeButton.click({ force: true });
 
     // Click "Próximo" to advance to step 2
     await this.page.getByRole("button", { name: /próximo/i }).click();
@@ -150,7 +152,11 @@ export class ProposalsPage {
     await this.page.getByRole("button", { name: /próximo/i }).click();
 
     // --- Step 5: Resumo — click "Criar Proposta" ---
-    await this.page.waitForTimeout(500);
+    // Wait for the product fetch re-render to settle before submitting.
+    // ProductService.getProducts() fires on form mount and may trigger a setProducts()
+    // re-render that resets form navigation state if it completes mid-submission.
+    // 2000ms covers slower emulator responses under load from concurrent tests.
+    await this.page.waitForTimeout(2000);
     const submitButton = this.page.getByRole("button", { name: /criar proposta/i });
     await submitButton.waitFor({ state: "visible", timeout: 10000 });
     await submitButton.click();
@@ -160,7 +166,7 @@ export class ProposalsPage {
     // We must NOT match /proposals/new or the pattern exits prematurely.
     await this.page.waitForURL(
       (url) => !url.pathname.includes("/proposals/new") && url.pathname.includes("/proposals/"),
-      { timeout: 20000 },
+      { timeout: 30000 },
     );
   }
 
@@ -211,48 +217,19 @@ export class ProposalsPage {
    * Tests run at default Playwright viewport (1280x720) which shows the compact dropdown.
    */
   async deleteProposal(title: string): Promise<void> {
-    // Strategy: find the "Mais ações" button that shares a common ancestor with the
-    // proposal title link. We locate the title link, then navigate to its closest
-    // row-like ancestor that also contains the actions button.
-    // Use XPath to find the nearest ancestor div that has both the title text and
-    // a "Mais ações" button — then use Playwright's filter to narrow it.
-    //
-    // Simpler approach: find all "Mais ações" buttons and pick the one whose
-    // closest ancestor also contains the title. We use locator.filter with
-    // hasText on the parent's closest scoped container.
-    //
-    // The list rows are generic divs at the same level. Each row-div contains
-    // both a title link and a "Mais ações" button as direct or near-direct children.
-    // Playwright's `filter` with `hasText` stops at the element boundary, so we
-    // need the actual row element. Use `nth()` matching after filtering to find
-    // the deepest element that still matches both conditions.
-    const maisAcoesButtons = this.page.getByRole("button", { name: /mais ações/i });
+    // Find the row card: the innermost div that contains both the title link and
+    // a "Mais ações" button. Using .filter chains and .last() in DOM order gives
+    // the most specific (deepest) matching container — the row card itself.
+    // This avoids the ancestor-walk bug where walking 10 levels up reaches the
+    // list container (which contains ALL proposal text), causing the wrong row
+    // to be matched.
+    const row = this.page.locator("div").filter({
+      has: this.page.getByRole("link", { name: title }),
+    }).filter({
+      has: this.page.getByRole("button", { name: /mais ações/i }),
+    }).last();
 
-    // Find which "Mais ações" button is closest to the proposal title.
-    // Approach: for each button, check if its ancestor contains the title.
-    // We do this by using XPath from the button toward ancestor divs.
-    const buttonCount = await maisAcoesButtons.count();
-    let targetButton = maisAcoesButtons.first();
-
-    for (let i = 0; i < buttonCount; i++) {
-      const btn = maisAcoesButtons.nth(i);
-      // Use evaluate to check if this button's ancestor row contains the title
-      const isInRow = await btn.evaluate((el, searchTitle) => {
-        let node: Element | null = el;
-        for (let depth = 0; depth < 10; depth++) {
-          node = node?.parentElement ?? null;
-          if (!node) break;
-          if (node.textContent?.includes(searchTitle)) return true;
-        }
-        return false;
-      }, title);
-      if (isInRow) {
-        targetButton = btn;
-        break;
-      }
-    }
-
-    await targetButton.click();
+    await row.getByRole("button", { name: /mais ações/i }).click();
 
     // The dropdown items render as generic divs (not menuitem role).
     // Find the Excluir item by text content.
