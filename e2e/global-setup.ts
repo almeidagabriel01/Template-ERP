@@ -7,9 +7,15 @@ import { seedAll, clearAll } from "./seed/seed-factory";
 // so the hub URL at :4400 is not reliably available (especially on Windows).
 const FIRESTORE_READY_URL = "http://127.0.0.1:8080";
 const AUTH_READY_URL = "http://127.0.0.1:9099";
+// Functions emulator: poll /api health endpoint to confirm the api function is loaded.
+// Port 5001 becomes available before functions finish loading, so we poll an actual
+// endpoint rather than the base URL. An "Unauthorized" response (401) means the function
+// IS loaded and auth middleware is working — that is the expected response for a protected
+// route with no auth token.
+const FUNCTIONS_HEALTH_URL = "http://127.0.0.1:5001/demo-proops-test/southamerica-east1/api/v1/proposals";
 const PID_FILE = path.join(process.cwd(), ".emulator-pid");
 const MAX_WAIT_MS = 120000; // 2 min — Windows emulator startup is slower
-const POLL_INTERVAL_MS = 1000;
+const POLL_INTERVAL_MS = 2000;
 
 async function waitForPort(url: string, label: string): Promise<void> {
   const start = Date.now();
@@ -28,10 +34,41 @@ async function waitForPort(url: string, label: string): Promise<void> {
   );
 }
 
+async function waitForFunctionsEmulator(): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < MAX_WAIT_MS) {
+    try {
+      const resp = await fetch(FUNCTIONS_HEALTH_URL, { signal: AbortSignal.timeout(3000) });
+      // 401 = function loaded and auth middleware is enforcing auth (expected for protected route)
+      // 200 = function loaded and returned data
+      // Any non-404 response = functions emulator is serving the api function
+      if (resp.status !== 404) {
+        console.log(`[global-setup] Functions emulator (:5001) is ready (status ${resp.status}).`);
+        return;
+      }
+      // 404 might mean functions are still loading — check body
+      const text = await resp.text();
+      if (!text.includes("does not exist")) {
+        // 404 from Express route = function loaded but route doesn't exist (unexpected)
+        console.log(`[global-setup] Functions emulator (:5001) is ready (404 from Express).`);
+        return;
+      }
+      // "does not exist, valid functions are" — emulator up but functions not yet registered
+    } catch {
+      // Emulator not yet accepting connections
+    }
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+  }
+  throw new Error(
+    `Functions emulator did not become ready within ${MAX_WAIT_MS / 1000}s.`
+  );
+}
+
 async function waitForEmulators(): Promise<void> {
   await Promise.all([
     waitForPort(FIRESTORE_READY_URL, "Firestore emulator (:8080)"),
     waitForPort(AUTH_READY_URL, "Auth emulator (:9099)"),
+    waitForFunctionsEmulator(),
   ]);
   console.log("[global-setup] Firebase Emulators are ready.");
 }
@@ -62,8 +99,8 @@ async function globalSetup(): Promise<void> {
   const isWin = process.platform === "win32";
   const cmd = isWin ? "cmd" : "npx";
   const cmdArgs = isWin
-    ? ["/c", "npx", "firebase", "emulators:start", "--project", "demo-proops-test", "--only", "auth,firestore,storage"]
-    : ["firebase", "emulators:start", "--project", "demo-proops-test", "--only", "auth,firestore,storage"];
+    ? ["/c", "npx", "firebase", "emulators:start", "--project", "demo-proops-test", "--only", "auth,firestore,storage,functions"]
+    : ["firebase", "emulators:start", "--project", "demo-proops-test", "--only", "auth,firestore,storage,functions"];
 
   const emulatorProcess: ChildProcess = spawn(cmd, cmdArgs, {
     detached: true,

@@ -41,6 +41,9 @@ export default defineConfig({
       FIREBASE_AUTH_EMULATOR_HOST: "127.0.0.1:9099",
       FIREBASE_STORAGE_EMULATOR_HOST: "127.0.0.1:9199",
       NEXT_PUBLIC_SKIP_EMAIL_VERIFICATION: "true",
+      // Route backend API calls to the Functions emulator under the demo project.
+      // The demo-proops-test project matches the emulator project in global-setup.ts.
+      FUNCTIONS_LOCAL_API_URL: "http://127.0.0.1:5001/demo-proops-test/southamerica-east1/api",
     },
   },
 });
