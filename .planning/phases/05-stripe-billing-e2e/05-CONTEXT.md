@@ -15,20 +15,20 @@ E2E tests covering Stripe subscription flows, webhook handling, plan limit enfor
 
 ### BILL-01: Subscription feature unlock
 - **D-01:** No real Stripe checkout in emulator — subscription state is simulated via **Admin SDK direct write** (set `planId`, `subscriptionStatus`, `stripeSubscriptionId` on master user doc in Firestore).
-- **D-02:** Test pattern: start tenant on `free` plan with `usage.proposals = 5` (at limit), assert `POST /api/backend/v1/proposals` returns 403 (blocked). Then write `planId = "pro"` via Admin SDK. Assert same POST now returns 201 (unblocked). Tests the before/after enforcement consequence — not just data shape.
+- **D-02:** Test pattern: start tenant on `free` plan with `usage.proposals = 5` (at limit), assert `POST /api/backend/v1/proposals` returns **402** (blocked — `ProposalMonthlyLimitError` in `proposals.controller.ts:1327` returns 402, not 403). Then write `planId = "pro"` via Admin SDK. Assert same POST now returns 201 (unblocked). Tests the before/after enforcement consequence — not just data shape.
 
 ### BILL-02 + BILL-03: Webhook subscription.created / subscription.cancelled
 - **D-03:** Webhook simulation is done via **Admin SDK direct write** — bypasses the `stripeWebhook` Cloud Function signature verification entirely. The `stripeWebhook` function itself is not called in these tests.
 - **D-04:** BILL-02 asserts that after writing `planId = "pro"` + `subscriptionStatus = "active"`, a previously-blocked API call is now allowed (API behavior change proves state is respected).
-- **D-05:** BILL-03 asserts that after writing `planId = "free"` + `subscriptionStatus = "canceled"`, a previously-allowed action is blocked again (503/403 on protected API call).
+- **D-05:** BILL-03 asserts that after writing `planId = "free"` + `subscriptionStatus = "canceled"`, a previously-allowed action is blocked again (**402** on protected API call — matches `ProposalMonthlyLimitError` status code).
 
 ### BILL-04: Plan limit enforcement
-- **D-06:** Test is **API level only** — no UI interaction. Set tenant to `free` plan with `usage.proposals` at the free limit (5) via Admin SDK. Then `POST /api/backend/v1/proposals` (authenticated, with valid payload) and assert the response is 403/422 with the plan limit error message from `checkProposalLimit()`.
+- **D-06:** Test is **API level only** — no UI interaction. Set tenant to `free` plan with `usage.proposals` at the free limit (5) via Admin SDK. Then `POST /api/backend/v1/proposals` (authenticated, with valid payload) and assert the response is **402** with the plan limit error message from `checkProposalLimit()` (returns 402, not 403/422).
 - **D-07:** Use a **separate seed tenant** for plan limit tests — don't mutate `tenant-alpha` (which is seeded with `planId = "pro"` to avoid polluting other tests). Create a fresh tenant or use `tenant-beta` with temporary plan downgrade.
 
 ### BILL-05: WhatsApp overage cron
 - **D-08:** Test is a **direct HTTP test — no browser / no Playwright page**. Use Node `fetch` (or Playwright's `request` fixture) directly.
-- **D-09:** Test flow: seed Firestore with `whatsapp_usage/{tenantId}/{month}` doc having `overageMessages > 0` and `stripeReported = false`. Then `POST /internal/cron/whatsapp-overage-report` with `x-cron-secret` header. Then **read back the Firestore doc** and assert `stripeReported = true` (or equivalent idempotency flag update). The Stripe usage API call itself is allowed to fail silently in emulator — we don't mock it.
+- **D-09:** Test flow: seed Firestore with `whatsappUsage/{tenantId}/months/{YYYY-MM}` doc having `overageMessages > 0` and `stripeReported = false` (no `stripeCustomerId` on tenant doc). Then `POST /internal/cron/whatsapp-overage-report` with `x-cron-secret` header. Then **read back the Firestore doc** and assert `stripeReported = false` (Stripe call fails in emulator — expected) and `errors[]` array is non-empty containing an entry with `tenantId` matching the seeded tenant. This exercises the pre-Stripe guard path and idempotency boundary without requiring a live Stripe call.
 - **D-10:** The `x-cron-secret` value for tests must match `CRON_SECRET` in `functions/.env` — add a known test value to the Functions emulator env or read from the existing env.
 
 ### Claude's Discretion
