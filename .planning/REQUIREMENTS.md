@@ -35,9 +35,9 @@
 
 ### Módulo Financeiro
 
-- [ ] **FIN-01**: E2E valida que usuário consegue criar uma transação com dados válidos
-- [ ] **FIN-02**: E2E valida que usuário consegue editar uma transação existente
-- [ ] **FIN-03**: E2E valida que usuário consegue deletar uma transação
+- [x] **FIN-01**: E2E valida que usuário consegue criar uma transação com dados válidos
+- [x] **FIN-02**: E2E valida que usuário consegue editar uma transação existente
+- [x] **FIN-03**: E2E valida que usuário consegue deletar uma transação
 - [ ] **FIN-04**: E2E valida que usuário consegue criar uma carteira e transferir saldo entre carteiras
 - [ ] **FIN-05**: E2E valida que saldo da carteira é atualizado corretamente após operações (atomic Firestore)
 - [ ] **FIN-06**: E2E valida que usuário consegue criar transação parcelada e baixar parcelas individualmente
@@ -110,9 +110,9 @@
 | PROP-04 | Phase 3 | Complete |
 | PROP-05 | Phase 3 | Complete |
 | PROP-06 | Phase 3 | Complete |
-| FIN-01 | Phase 4 | Pending |
-| FIN-02 | Phase 4 | Pending |
-| FIN-03 | Phase 4 | Pending |
+| FIN-01 | Phase 4 | Complete |
+| FIN-02 | Phase 4 | Complete |
+| FIN-03 | Phase 4 | Complete |
 | FIN-04 | Phase 4 | Pending |
 | FIN-05 | Phase 4 | Pending |
 | FIN-06 | Phase 4 | Pending |
