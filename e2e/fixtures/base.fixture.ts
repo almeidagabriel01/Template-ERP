@@ -53,6 +53,17 @@ async function setupEmulatorRoutes(page: import("@playwright/test").Page) {
     });
   });
 
+  // Stub /v1/stripe/plans — the Functions emulator has no Stripe configured and
+  // returns 504, which blocks dashboard load and cascades into navigation failures.
+  // Return an empty plans array so the app renders normally in the test environment.
+  await page.route("**/api/backend/v1/stripe/plans", (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ plans: [] }),
+    });
+  });
+
   // Firestore REST API (used by getDoc / getDocs one-time reads)
   await page.route("https://firestore.googleapis.com/**", async (route) => {
     const url = route.request().url().replace(
