@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-04-08T00:08:26.477Z"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-04-08T02:30:00.000Z"
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 12
-  completed_plans: 9
-  percent: 75
+  completed_plans: 10
+  percent: 83
 ---
 
 # Project State
@@ -24,8 +24,8 @@ See: .planning/PROJECT.md (updated 2026-04-06)
 
 ## Current Position
 
-Phase: 05 (stripe-billing-e2e) — EXECUTING
-Plan: 2 of 2
+Phase: 05 (stripe-billing-e2e) — COMPLETE
+Plan: 2 of 2 (done)
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Plan: 2 of 2
 | Phase 04-financial-module-e2e P02 | 13 | 2 tasks | 4 files |
 | Phase 04 P03 | 80 | 1 tasks | 1 files |
 | Phase 05 P01 | 35 | 2 tasks | 4 files |
+| Phase 05 P02 | 120 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,9 @@ Recent decisions affecting current work:
 - [Phase 05]: TENANT_PLAN_CACHE_TTL_MS=5000 added to functions/.env.local to reduce cache wait from 31s to 6s in billing E2E tests
 - [Phase 05]: Non-draft status (in_progress) required in billing test proposal payload — plan limit enforcement is skipped for drafts in proposals.controller.ts
 - [Phase 05]: Cache-expiry wait placed in beforeEach (not inline) so 6s wait happens during test setup, not inside test assertions
+- [Phase 05]: /internal/cron/* requires Firebase ID token — registered after validateFirebaseIdToken in api/index.ts (line 371 vs line 402)
+- [Phase 05]: resolveCronSecret() reads env files in emulator load order (not process.env) — avoids mismatch when .env.local overrides global-setup's process.env.CRON_SECRET
+- [Phase 05]: stripeReported stays false when stripeCustomerId missing — Stripe call never happens, errors[] populated instead
 
 ### Pending Todos
 
@@ -88,6 +92,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-08T00:08:26.474Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-04-08T02:30:00.000Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
