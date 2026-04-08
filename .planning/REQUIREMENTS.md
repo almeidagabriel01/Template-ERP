@@ -44,9 +44,9 @@
 
 ### Stripe & Billing
 
-- [ ] **BILL-01**: E2E valida que tenant consegue assinar um plano e que features são desbloqueadas conforme o plano
-- [ ] **BILL-02**: E2E valida que webhook Stripe `subscription.created` atualiza status do tenant corretamente
-- [ ] **BILL-03**: E2E valida que webhook Stripe `subscription.cancelled` revoga acesso ao plano
+- [x] **BILL-01**: E2E valida que tenant consegue assinar um plano e que features são desbloqueadas conforme o plano
+- [x] **BILL-02**: E2E valida que webhook Stripe `subscription.created` atualiza status do tenant corretamente
+- [x] **BILL-03**: E2E valida que webhook Stripe `subscription.cancelled` revoga acesso ao plano
 - [ ] **BILL-04**: E2E valida que tenant no plano free recebe bloqueio ao atingir limite de criação (ex: max proposals)
 - [ ] **BILL-05**: E2E valida que cron de overage WhatsApp calcula e registra cobrança correta para o mês
 
@@ -116,9 +116,9 @@
 | FIN-04 | Phase 4 | Complete |
 | FIN-05 | Phase 4 | Complete |
 | FIN-06 | Phase 4 | Complete |
-| BILL-01 | Phase 5 | Pending |
-| BILL-02 | Phase 5 | Pending |
-| BILL-03 | Phase 5 | Pending |
+| BILL-01 | Phase 5 | Complete |
+| BILL-02 | Phase 5 | Complete |
+| BILL-03 | Phase 5 | Complete |
 | BILL-04 | Phase 5 | Pending |
 | BILL-05 | Phase 5 | Pending |
 | PERF-01 | Phase 6 | Pending |

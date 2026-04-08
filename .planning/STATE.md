@@ -2,14 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-stopped_at: Phase 5 context gathered
-last_updated: "2026-04-07T23:23:31.409Z"
+status: Ready to execute
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-04-08T00:08:26.477Z"
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 10
-  completed_plans: 8
+  total_plans: 12
+  completed_plans: 9
+  percent: 75
 ---
 
 # Project State
@@ -19,12 +20,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-06)
 
 **Core value:** Propostas e gestão financeira funcionando com confiança — ciclo proposta → aprovação → cobrança não pode quebrar.
-**Current focus:** Phase 04 — financial-module-e2e
+**Current focus:** Phase 05 — stripe-billing-e2e
 
 ## Current Position
 
-Phase: 04 (financial-module-e2e) — EXECUTING
-Plan: 3 of 3
+Phase: 05 (stripe-billing-e2e) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -51,6 +52,7 @@ Plan: 3 of 3
 | Phase 04 P01 | 45 | 2 tasks | 2 files |
 | Phase 04-financial-module-e2e P02 | 13 | 2 tasks | 4 files |
 | Phase 04 P03 | 80 | 1 tasks | 1 files |
+| Phase 05 P01 | 35 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -72,6 +74,9 @@ Recent decisions affecting current work:
 - [Phase 04]: isLoaded() URL predicate: pathname check avoids false-match on /login?redirect=/wallets query string
 - [Phase 04]: FIN-06: Installment group creation via API (D-04) — avoids multi-step wizard complexity
 - [Phase 04]: FIN-06: Custom DropdownMenu portal pattern — body > div[style*='position: fixed'] with waitForFunction detection, no ARIA role attrs
+- [Phase 05]: TENANT_PLAN_CACHE_TTL_MS=5000 added to functions/.env.local to reduce cache wait from 31s to 6s in billing E2E tests
+- [Phase 05]: Non-draft status (in_progress) required in billing test proposal payload — plan limit enforcement is skipped for drafts in proposals.controller.ts
+- [Phase 05]: Cache-expiry wait placed in beforeEach (not inline) so 6s wait happens during test setup, not inside test assertions
 
 ### Pending Todos
 
@@ -83,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-07T23:23:31.406Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-stripe-billing-e2e/05-CONTEXT.md
+Last session: 2026-04-08T00:08:26.474Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None
