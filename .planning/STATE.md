@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: E2E Coverage Expansion
-status: planning
-stopped_at: New milestone initialized — ready to plan Phase 8
-last_updated: "2026-04-08T00:00:00Z"
-last_activity: 2026-04-08 — v2.0 milestone initialized; phases 8–11 defined
+status: in_progress
+stopped_at: Phase 9 complete — ready to plan Phase 10
+last_updated: "2026-04-09T00:00:00Z"
+last_activity: 2026-04-09 — Phase 8 (Contacts & Products CRUD) and Phase 9 (Auth Registration) completed
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 0
-  percent: 0
+  completed_plans: 3
+  percent: 50
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** Propostas e gestão financeira funcionando com confiança — ciclo proposta → aprovação → cobrança não pode quebrar.
-**Current focus:** Phase 8 — Contacts & Products CRUD E2E (not started)
+**Current focus:** Phase 10 — Financial Gaps E2E (not started)
 
 ## Current Position
 
-Phase: 8 of 11 (Contacts & Products CRUD E2E)
+Phase: 10 of 11 (Financial Gaps E2E)
 Plan: 0 of 2 in current phase
 Status: Not started — ready to plan
-Last activity: 2026-04-08 — v2.0 milestone initialized
+Last activity: 2026-04-09 — Phase 9 executed; REG-01, REG-02, REG-03 pass
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 3
 - Average duration: —
 - Total execution time: —
 
@@ -44,11 +44,12 @@ Progress: [░░░░░░░░░░] 0%
 
 | Phase | Plans | Total | Avg/Plan |
 | ----- | ----- | ----- | -------- |
-| -     | -     | -     | -        |
+| 8     | 2     | -     | -        |
+| 9     | 1     | -     | -        |
 
 **Recent Trend:**
 
-- Last 5 plans: —
+- Last 5 plans: Phase 8 plan 1, Phase 8 plan 2, Phase 9 plan 1
 - Trend: —
 
 _Updated after each plan completion_
@@ -67,17 +68,21 @@ Carry-forward decisions from v1.0 relevant to v2.0 work:
 - Custom DropdownMenu portal pattern — body > div[style*='position: fixed'] with waitForFunction detection
 - DatePicker Hoje uses dispatchEvent — fixed portal positioning requires non-viewport click bypass
 - FIN-06 pattern: complex multi-step wizard creation via API (D-04) to avoid UI wizard complexity
+- Registration form: inputs use readOnly to prevent autofill — must click() before fill() to unlock
+- Step 2 StepNavigation uses default nextLabel="Próximo" (not "Continuar" like step 1)
+- waitForURL must use URL predicate `(url) => url.pathname === "/"` not regex — regex matches full URL string not just path
+- Email domain for registration tests: use gmail.com (has valid MX records); test.com is a parked domain with no MX records and fails backend DNS validation
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
-None yet.
+None.
 
 ## Session Continuity
 
-Last session: 2026-04-08T00:00:00Z
-Stopped at: v2.0 milestone initialized — phases 8–11 added to ROADMAP.md
+Last session: 2026-04-09T00:00:00Z
+Stopped at: Phase 9 complete — Phase 10 (Financial Gaps E2E) ready to plan
 Resume file: None

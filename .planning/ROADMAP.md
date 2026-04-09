@@ -165,8 +165,8 @@ Decimal phases appear between their surrounding integers in numeric order.
    **Plans:** 2 plans
    Plans:
 
-- [ ] 08-01-PLAN.md -- Contacts CRUD E2E Tests
-- [ ] 08-02-PLAN.md -- Products CRUD E2E Tests
+- [x] 08-01-PLAN.md -- Contacts CRUD E2E Tests
+- [x] 08-02-PLAN.md -- Products CRUD E2E Tests
 
 ### Phase 9: Auth Registration E2E
 
@@ -181,7 +181,7 @@ Decimal phases appear between their surrounding integers in numeric order.
    **Plans:** 1 plan
    Plans:
 
-- [ ] 09-01-PLAN.md -- Auth Registration E2E Tests
+- [x] 09-01-PLAN.md -- Auth Registration E2E Tests
 
 ### Phase 10: Financial Gaps E2E
 
@@ -228,7 +228,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 5. Stripe & Billing E2E         | 3/3            | Complete    | 2026-04-08 |
 | 6. Performance Tests            | 2/2            | Complete    | 2026-04-08 |
 | 7. Security Tests               | 2/2            | Complete    | 2026-04-08 |
-| 8. Contacts & Products CRUD E2E | 0/2            | Not started | -          |
-| 9. Auth Registration E2E        | 0/1            | Not started | -          |
+| 8. Contacts & Products CRUD E2E | 2/2            | Complete    | 2026-04-09 |
+| 9. Auth Registration E2E        | 1/1            | Complete    | 2026-04-09 |
 | 10. Financial Gaps E2E          | 0/2            | Not started | -          |
 | 11. Performance Expansion       | 0/1            | Not started | -          |
