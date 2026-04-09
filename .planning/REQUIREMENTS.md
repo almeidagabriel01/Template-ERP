@@ -83,8 +83,8 @@
 
 ### Financial Gaps
 
-- [ ] **FIN-07**: E2E valida CRUD completo de transações do tipo `expense` (diferente do income já coberto)
-- [ ] **FIN-08**: E2E valida pagamento seletivo de parcelas — pagar algumas parcelas de um grupo sem pagar todas
+- [x] **FIN-07**: E2E valida CRUD completo de transações do tipo `expense` (diferente do income já coberto)
+- [x] **FIN-08**: E2E valida pagamento seletivo de parcelas — pagar algumas parcelas de um grupo sem pagar todas
 - [ ] **FIN-09**: E2E valida que aprovar uma proposta dispara `syncApprovedProposalTransactions` e cria as transações correspondentes no módulo financeiro com os valores e estrutura corretos
 
 ### Performance Expansion
@@ -167,8 +167,8 @@
 | REG-01      | Phase 9  | Pending  |
 | REG-02      | Phase 9  | Pending  |
 | REG-03      | Phase 9  | Pending  |
-| FIN-07      | Phase 10 | Pending  |
-| FIN-08      | Phase 10 | Pending  |
+| FIN-07      | Phase 10 | Complete |
+| FIN-08      | Phase 10 | Complete |
 | FIN-09      | Phase 10 | Pending  |
 | PERF-04     | Phase 11 | Pending  |
 | PERF-05     | Phase 11 | Pending  |

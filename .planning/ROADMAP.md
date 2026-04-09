@@ -193,10 +193,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 1. Test suite validates CRUD for transactions with `type=expense` (create, edit, delete)
 2. Test suite validates that a user can pay individual installments in a group without paying all — remaining installments stay unpaid
 3. Test suite validates that approving a proposal triggers `syncApprovedProposalTransactions` and the correct transactions (amount, structure) appear in the financial module
-   **Plans:** 2 plans
+   **Plans:** 1/2 plans executed
    Plans:
 
-- [ ] 10-01-PLAN.md -- Expense CRUD + Selective Installment Payment E2E
+- [x] 10-01-PLAN.md -- Expense CRUD + Selective Installment Payment E2E
 - [ ] 10-02-PLAN.md -- Proposal Approval → Transaction Sync E2E
 
 ### Phase 11: Performance Expansion
@@ -230,5 +230,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 7. Security Tests               | 2/2            | Complete    | 2026-04-08 |
 | 8. Contacts & Products CRUD E2E | 2/2            | Complete    | 2026-04-09 |
 | 9. Auth Registration E2E        | 1/1            | Complete    | 2026-04-09 |
-| 10. Financial Gaps E2E          | 0/2            | Not started | -          |
+| 10. Financial Gaps E2E          | 1/2 | In Progress|  |
 | 11. Performance Expansion       | 0/1            | Not started | -          |
