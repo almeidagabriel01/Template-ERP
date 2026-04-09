@@ -1,42 +1,42 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
+milestone: v2.0
+milestone_name: — E2E Coverage Expansion
 status: executing
-stopped_at: Phase 2 complete — both plans executed, pending UAT
-last_updated: "2026-04-06T00:00:00Z"
-last_activity: 2026-04-06 — Phase 2 Auth & Multi-Tenant E2E plans executed
+stopped_at: Completed 10-01-PLAN.md
+last_updated: "2026-04-09T14:22:14.488Z"
+last_activity: 2026-04-09 -- Phase 10 execution started
 progress:
-  total_phases: 7
-  completed_phases: 0
-  total_plans: 2
-  completed_plans: 2
-  percent: 14
+  total_phases: 11
+  completed_phases: 7
+  total_plans: 21
+  completed_plans: 16
+  percent: 76
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-06)
+See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** Propostas e gestão financeira funcionando com confiança — ciclo proposta → aprovação → cobrança não pode quebrar.
-**Current focus:** Phase 2 — Auth & Multi-Tenant E2E (pending UAT)
+**Current focus:** Phase 10 — financial-gaps-e2e
 
 ## Current Position
 
-Phase: 2 of 7 (Auth & Multi-Tenant E2E)
-Plan: 2 of 2 in current phase
-Status: Pending UAT / verification
-Last activity: 2026-04-06 — Phase 2 executed: auth-flow.spec.ts, route-guards.spec.ts, tenant-isolation.spec.ts created
+Phase: 10 (financial-gaps-e2e) — EXECUTING
+Plan: 1 of 2
+Status: Executing Phase 10
+Last activity: 2026-04-09 -- Phase 10 execution started
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 3
 - Average duration: —
 - Total execution time: —
 
@@ -44,11 +44,12 @@ Progress: [░░░░░░░░░░] 0%
 
 | Phase | Plans | Total | Avg/Plan |
 | ----- | ----- | ----- | -------- |
-| -     | -     | -     | -        |
+| 8     | 2     | -     | -        |
+| 9     | 1     | -     | -        |
 
 **Recent Trend:**
 
-- Last 5 plans: —
+- Last 5 plans: Phase 8 plan 1, Phase 8 plan 2, Phase 9 plan 1
 - Trend: —
 
 _Updated after each plan completion_
@@ -58,42 +59,30 @@ _Updated after each plan completion_
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
+Carry-forward decisions from v1.0 relevant to v2.0 work:
 
-- Roadmap: Playwright for E2E (App Router compatibility), Firebase Emulators for test isolation, OWASP ZAP for security scanning, Lighthouse CI for performance.
-- [Phase 03]: Seeded sistema-iluminacao-001 + ambiente-sala-001 for tenant-alpha so automacao_residencial wizard step 2 has selectable options in E2E tests
-- [Phase 03]: editProposal POM uses allowClickAhead=true (existing proposals) to jump directly to Resumo step, bypassing step 2 re-validation
-- [Phase 03-proposals-crm-e2e]: Admin SDK emulator mode: initialize without cert() when FIREBASE_AUTH_EMULATOR_HOST is set to match demo-proops-test project ID
-- [Phase 03-proposals-crm-e2e]: getProposalStatus uses row-boundary guard: stop ancestor walk when ancestor has multiple status buttons
-- [Phase 04]: CurrencyInput requires pressSequentially with cent digits — onChange is noop, keyboard-only input
-- [Phase 04]: editTransaction derives ID from view link href — edit button absent in list for new transactions at default viewport
-- [Phase 04]: DatePicker Hoje uses dispatchEvent — fixed portal positioning requires non-viewport click bypass
-- [Phase 04]: WalletCard locator: div.rounded-lg.border with h3 filter — CardContent renders as plain div without class suffix
-- [Phase 04]: Radix DropdownMenuItem: use text filter not getByRole(menuitem) — items render as generic divs in Playwright
-- [Phase 04]: isLoaded() URL predicate: pathname check avoids false-match on /login?redirect=/wallets query string
-- [Phase 04]: FIN-06: Installment group creation via API (D-04) — avoids multi-step wizard complexity
-- [Phase 04]: FIN-06: Custom DropdownMenu portal pattern — body > div[style*='position: fixed'] with waitForFunction detection, no ARIA role attrs
-- [Phase 05]: TENANT_PLAN_CACHE_TTL_MS=5000 added to functions/.env.local to reduce cache wait from 31s to 6s in billing E2E tests
-- [Phase 05]: Non-draft status (in_progress) required in billing test proposal payload — plan limit enforcement is skipped for drafts in proposals.controller.ts
-- [Phase 05]: Cache-expiry wait placed in beforeEach (not inline) so 6s wait happens during test setup, not inside test assertions
-- [Phase 05]: /internal/cron/\* requires Firebase ID token — registered after validateFirebaseIdToken in api/index.ts (line 371 vs line 402)
-- [Phase 05]: resolveCronSecret() reads env files in emulator load order (not process.env) — avoids mismatch when .env.local overrides global-setup's process.env.CRON_SECRET
-- [Phase 05]: stripeReported stays false when stripeCustomerId missing — Stripe call never happens, errors[] populated instead
-- [Phase 07-security-tests]: jest.config.js uses CommonJS module.exports (not ESM) to avoid ts-node requirement at Jest config load time
-- [Phase 07-security-tests]: tsconfig.rules.json overrides module to commonjs — root tsconfig bundler resolution is incompatible with Jest
-- [Phase 07-security-tests]: firestore-rules CI job runs parallel (no needs:) using firebase emulators:exec --only firestore
-- [Phase 07-security-tests]: ZAP security job validated as fully correct with all required components present
+- Playwright for E2E (App Router compatibility), Firebase Emulators for test isolation
+- Seed data uses Admin SDK emulator mode: initialize without cert() when FIREBASE_AUTH_EMULATOR_HOST is set
+- CurrencyInput requires pressSequentially with cent digits — onChange is noop, keyboard-only input
+- Radix DropdownMenuItem: use text filter not getByRole(menuitem) — items render as generic divs in Playwright
+- Custom DropdownMenu portal pattern — body > div[style*='position: fixed'] with waitForFunction detection
+- DatePicker Hoje uses dispatchEvent — fixed portal positioning requires non-viewport click bypass
+- FIN-06 pattern: complex multi-step wizard creation via API (D-04) to avoid UI wizard complexity
+- Registration form: inputs use readOnly to prevent autofill — must click() before fill() to unlock
+- Step 2 StepNavigation uses default nextLabel="Próximo" (not "Continuar" like step 1)
+- waitForURL must use URL predicate `(url) => url.pathname === "/"` not regex — regex matches full URL string not just path
+- Email domain for registration tests: use gmail.com (has valid MX records); test.com is a parked domain with no MX records and fails backend DNS validation
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
-None yet.
+None.
 
 ## Session Continuity
 
-Last session: 2026-04-08T23:09:37.769Z
-Stopped at: Completed 07-02-PLAN.md
+Last session: 2026-04-09T14:17:23.926Z
+Stopped at: Completed 10-01-PLAN.md
 Resume file: None
