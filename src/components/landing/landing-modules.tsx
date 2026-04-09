@@ -32,8 +32,8 @@ const MODULES: ModuleHighlight[] = [
       "Carteiras com ajuste de saldo e histórico detalhado",
       "Resumo financeiro com saldo total e indicadores rápidos",
     ],
-    imageSrc: "/hero/generic-document-workflow.jpg",
-    imageAlt: "Análise financeira com gráficos de desempenho e indicadores",
+    imageSrc: "/hero/proposal-module.jpeg",
+    imageAlt: "Módulo financeiro com controle de receitas e despesas",
     icon: Wallet,
   },
   {
@@ -46,8 +46,8 @@ const MODULES: ModuleHighlight[] = [
       "Atualização de status com arraste entre colunas",
       "Organização de prioridades e atrasos em um único fluxo",
     ],
-    imageSrc: "/hero/generic-team-analytics.jpg",
-    imageAlt: "Equipe acompanhando evolução do pipeline comercial",
+    imageSrc: "/hero/kanban-module.jpeg",
+    imageAlt: "Quadro kanban para acompanhamento do funil comercial",
     icon: Kanban,
   },
   {
@@ -60,8 +60,8 @@ const MODULES: ModuleHighlight[] = [
       "Preview em tempo real com exportação em PDF",
       "Compartilhamento por link e rastreio do documento",
     ],
-    imageSrc: "/hero/generic-strategy-meeting.jpg",
-    imageAlt: "Reunião comercial para revisão de propostas e aprovações",
+    imageSrc: "/hero/editPDF-module.jpeg",
+    imageAlt: "Editor de PDF para propostas comerciais com preview em tempo real",
     icon: FileText,
   },
 ];
@@ -190,7 +190,7 @@ export function LandingModules() {
               </div>
 
               <div
-                className={`w-full lg:w-1/2 relative ${
+                className={`w-full lg:w-1/2 relative flex items-center ${
                   isReversed ? "gsap-media-left" : "gsap-media-right"
                 }`}
               >
