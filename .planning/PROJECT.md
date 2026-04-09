@@ -72,17 +72,30 @@ _(Definidos no Milestone v1.0 — veja REQUIREMENTS.md)_
 | OWASP ZAP para security scanning           | Padrão da indústria, suporte a autenticação, integração CI                         | — Pending |
 | Lighthouse CI para performance             | Integrado ao GitHub Actions, métricas Core Web Vitals, thresholds configuráveis    | — Pending |
 
-## Current Milestone: v1.0 — Testing Suite
+## Milestone History
+
+### v1.0 — Testing Suite (Complete)
 
 **Goal:** Implementar suite completa de testes E2E, performance e segurança para garantir confiança nos fluxos críticos do SaaS multi-tenant.
 
-**Target features:**
+**Delivered:**
 
 - Infraestrutura de testes com Playwright + Firebase Emulators + seed data realista
 - E2E funcional: Auth multi-tenant, Proposals/CRM, Módulo financeiro, Stripe/billing
 - Performance: Lighthouse CI com benchmarks de Core Web Vitals e API response times
 - Security: OWASP ZAP + validação de isolamento multi-tenant + Firestore rules audit
 - CI: GitHub Actions pipeline rodando testes em PRs + scripts locais npm
+
+## Current Milestone: v2.0 — E2E Coverage Expansion
+
+**Goal:** Fechar as lacunas de cobertura identificadas no gap analysis pós-v1.0: módulos Contacts e Products sem nenhum teste, fluxo de registro de tenant, gaps financeiros (expense type, parcelas seletivas, sincronização proposta→transação) e performance de páginas adicionais.
+
+**Target features:**
+
+- E2E completo para Contacts CRUD e Products CRUD
+- E2E do fluxo de auto-registro de tenant (self-signup)
+- Gaps financeiros: transações do tipo expense, pagamento seletivo de parcelas, validação do sync proposta-aprovada → transações
+- Performance: Core Web Vitals + API baseline para /contacts e /products
 
 ## Evolution
 

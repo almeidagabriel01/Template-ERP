@@ -2,7 +2,7 @@
 
 ## Overview
 
-This milestone builds a complete testing suite from zero for a brownfield multi-tenant SaaS. The work flows from infrastructure outward: the Playwright + Firebase Emulator foundation enables auth E2E, which unlocks proposal and financial flow tests, then billing/webhook tests, and finally performance and security validation. Every phase delivers independently verifiable confidence in a critical slice of the system.
+This roadmap spans two milestones. **v1.0** built the full testing infrastructure and coverage for Auth, Proposals, Financial, Billing, Performance, and Security. **v2.0** closes the gaps identified post-v1.0: Contacts CRUD, Products CRUD, Auth registration, missing financial flows, and performance expansion to additional pages.
 
 ## Phases
 
@@ -145,21 +145,90 @@ Decimal phases appear between their surrounding integers in numeric order.
    **Plans:** 3 plans
    Plans:
 
-- [ ] 01-01-PLAN.md -- Playwright + Firebase Emulators + Seed Data + Page Object Model
-- [ ] 01-02-PLAN.md -- Lighthouse Performance + Security Scan Scripts
-- [ ] 01-03-PLAN.md -- GitHub Actions CI Pipeline
+- [x] 07-01-PLAN.md -- Firestore Rules Tests + Tenant Isolation Validation
+- [x] 07-02-PLAN.md -- OWASP ZAP Automated Scan + CI Integration
+
+---
+
+## v2.0 — E2E Coverage Expansion
+
+### Phase 8: Contacts & Products CRUD E2E
+
+**Goal**: E2E tests cover the full CRUD lifecycle for Contacts and Products — two modules with zero coverage in v1.0.
+**Depends on**: Phase 1 (infrastructure)
+**Requirements**: CONT-01, CONT-02, CONT-03, PROD-01, PROD-02, PROD-03
+**Success Criteria** (what must be TRUE):
+
+1. Test suite validates that a user can create, edit, and delete a contact with valid data
+2. Test suite validates that a user can create, edit, and delete a product with valid data
+3. Seed data includes at least one contact and one product for tenant-alpha before tests run
+   **Plans:** 2 plans
+   Plans:
+
+- [ ] 08-01-PLAN.md -- Contacts CRUD E2E Tests
+- [ ] 08-02-PLAN.md -- Products CRUD E2E Tests
+
+### Phase 9: Auth Registration E2E
+
+**Goal**: E2E tests validate the tenant self-signup flow end-to-end — new tenant registers, gets provisioned with correct Firebase custom claims, and can access the dashboard.
+**Depends on**: Phase 1 (infrastructure)
+**Requirements**: REG-01, REG-02, REG-03
+**Success Criteria** (what must be TRUE):
+
+1. Test suite validates that a new user can complete the registration form and submit successfully
+2. Test suite validates that the newly registered tenant has correct custom claims (`tenantId`, `role`, `masterId`) after signup
+3. Test suite validates that the new tenant can navigate to and load the dashboard after registration
+   **Plans:** 1 plan
+   Plans:
+
+- [ ] 09-01-PLAN.md -- Auth Registration E2E Tests
+
+### Phase 10: Financial Gaps E2E
+
+**Goal**: E2E tests close the three financial coverage gaps: expense-type transactions, selective installment payment, and the proposal-approval → transaction sync flow.
+**Depends on**: Phase 4 (financial module E2E baseline)
+**Requirements**: FIN-07, FIN-08, FIN-09
+**Success Criteria** (what must be TRUE):
+
+1. Test suite validates CRUD for transactions with `type=expense` (create, edit, delete)
+2. Test suite validates that a user can pay individual installments in a group without paying all — remaining installments stay unpaid
+3. Test suite validates that approving a proposal triggers `syncApprovedProposalTransactions` and the correct transactions (amount, structure) appear in the financial module
+   **Plans:** 2 plans
+   Plans:
+
+- [ ] 10-01-PLAN.md -- Expense CRUD + Selective Installment Payment E2E
+- [ ] 10-02-PLAN.md -- Proposal Approval → Transaction Sync E2E
+
+### Phase 11: Performance Expansion
+
+**Goal**: Extend Lighthouse CI and API baseline coverage to /contacts and /products pages — closing the performance gap left by v1.0 which only covered login, dashboard, proposals, and transactions.
+**Depends on**: Phase 6 (performance tests baseline)
+**Requirements**: PERF-04, PERF-05, PERF-06
+**Success Criteria** (what must be TRUE):
+
+1. Lighthouse CI measures LCP ≤ 2.5s and CLS ≤ 0.1 on /contacts and /products pages
+2. API response time baseline for contacts list and products list endpoints is documented and validated (≤ 500ms p95)
+3. CI fails if Lighthouse scores for these pages degrade beyond configured thresholds
+   **Plans:** 1 plan
+   Plans:
+
+- [ ] 11-01-PLAN.md -- Contacts & Products Performance Tests
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11
 
-| Phase                      | Plans Complete | Status      | Completed |
-| -------------------------- | -------------- | ----------- | --------- |
-| 1. Test Infrastructure     | 0/?            | Not started | -         |
-| 2. Auth & Multi-Tenant E2E | 0/?            | Not started | -         |
-| 3. Proposals & CRM E2E     | 0/?            | Not started | -         |
-| 4. Financial Module E2E    | 0/?            | Not started | -         |
-| 5. Stripe & Billing E2E    | 0/?            | Not started | -         |
-| 6. Performance Tests       | 0/?            | Not started | -         |
-| 7. Security Tests          | 0/?            | Not started | -         |
+| Phase                           | Plans Complete | Status      | Completed  |
+| ------------------------------- | -------------- | ----------- | ---------- |
+| 1. Test Infrastructure          | 3/3            | Complete    | 2026-04-06 |
+| 2. Auth & Multi-Tenant E2E      | 2/2            | Complete    | 2026-04-06 |
+| 3. Proposals & CRM E2E          | 3/3            | Complete    | 2026-04-07 |
+| 4. Financial Module E2E         | 3/3            | Complete    | 2026-04-07 |
+| 5. Stripe & Billing E2E         | 3/3            | Complete    | 2026-04-08 |
+| 6. Performance Tests            | 2/2            | Complete    | 2026-04-08 |
+| 7. Security Tests               | 2/2            | Complete    | 2026-04-08 |
+| 8. Contacts & Products CRUD E2E | 0/2            | Not started | -          |
+| 9. Auth Registration E2E        | 0/1            | Not started | -          |
+| 10. Financial Gaps E2E          | 0/2            | Not started | -          |
+| 11. Performance Expansion       | 0/1            | Not started | -          |

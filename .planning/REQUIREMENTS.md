@@ -1,6 +1,7 @@
 # Requirements: ProOps Testing Suite
 
 **Defined:** 2026-04-06
+**Updated:** 2026-04-08 — v2.0 requirements added
 **Core Value:** Propostas e gestão financeira funcionando com confiança — ciclo proposta → aprovação → cobrança não pode quebrar.
 
 ## v1.0 Requirements
@@ -63,7 +64,36 @@
 - [x] **SEC-03**: Firestore rules tests validam que usuário sem claims não acessa nenhuma coleção
 - [x] **SEC-04**: Firestore rules tests validam que usuário de Tenant A não acessa documentos do Tenant B
 
-## v2 Requirements
+## v2.0 Requirements
+
+### Contacts & Products CRUD
+
+- [ ] **CONT-01**: E2E valida que usuário consegue criar um novo contato com dados válidos
+- [ ] **CONT-02**: E2E valida que usuário consegue editar um contato existente
+- [ ] **CONT-03**: E2E valida que usuário consegue deletar um contato
+- [ ] **PROD-01**: E2E valida que usuário consegue criar um novo produto com dados válidos
+- [ ] **PROD-02**: E2E valida que usuário consegue editar um produto existente
+- [ ] **PROD-03**: E2E valida que usuário consegue deletar um produto
+
+### Auth Registration
+
+- [ ] **REG-01**: E2E valida que um novo tenant consegue se registrar via formulário de signup
+- [ ] **REG-02**: E2E valida que após registro o tenant recebe custom claims corretos (`tenantId`, `role`, `masterId`) no Firebase Auth
+- [ ] **REG-03**: E2E valida que após registro o tenant consegue acessar o dashboard normalmente
+
+### Financial Gaps
+
+- [ ] **FIN-07**: E2E valida CRUD completo de transações do tipo `expense` (diferente do income já coberto)
+- [ ] **FIN-08**: E2E valida pagamento seletivo de parcelas — pagar algumas parcelas de um grupo sem pagar todas
+- [ ] **FIN-09**: E2E valida que aprovar uma proposta dispara `syncApprovedProposalTransactions` e cria as transações correspondentes no módulo financeiro com os valores e estrutura corretos
+
+### Performance Expansion
+
+- [ ] **PERF-04**: Lighthouse CI mede Core Web Vitals na página /contacts (LCP ≤ 2.5s, CLS ≤ 0.1)
+- [ ] **PERF-05**: Lighthouse CI mede Core Web Vitals na página /products (LCP ≤ 2.5s, CLS ≤ 0.1)
+- [ ] **PERF-06**: Baseline de response time para endpoints de contacts e products está documentado e validado (≤ 500ms p95)
+
+## Backlog Requirements
 
 ### Testes de Integração WhatsApp
 
@@ -124,18 +154,34 @@
 | PERF-01     | Phase 6 | Pending  |
 | PERF-02     | Phase 6 | Pending  |
 | PERF-03     | Phase 6 | Pending  |
-| SEC-01      | Phase 7 | Complete |
-| SEC-02      | Phase 7 | Complete |
-| SEC-03      | Phase 7 | Complete |
-| SEC-04      | Phase 7 | Complete |
+| SEC-01      | Phase 7  | Complete |
+| SEC-02      | Phase 7  | Complete |
+| SEC-03      | Phase 7  | Complete |
+| SEC-04      | Phase 7  | Complete |
+| CONT-01     | Phase 8  | Pending  |
+| CONT-02     | Phase 8  | Pending  |
+| CONT-03     | Phase 8  | Pending  |
+| PROD-01     | Phase 8  | Pending  |
+| PROD-02     | Phase 8  | Pending  |
+| PROD-03     | Phase 8  | Pending  |
+| REG-01      | Phase 9  | Pending  |
+| REG-02      | Phase 9  | Pending  |
+| REG-03      | Phase 9  | Pending  |
+| FIN-07      | Phase 10 | Pending  |
+| FIN-08      | Phase 10 | Pending  |
+| FIN-09      | Phase 10 | Pending  |
+| PERF-04     | Phase 11 | Pending  |
+| PERF-05     | Phase 11 | Pending  |
+| PERF-06     | Phase 11 | Pending  |
 
 **Coverage:**
 
-- v1.0 requirements: 34 total
-- Mapped to phases: 34
+- v1.0 requirements: 34 total (all mapped)
+- v2.0 requirements: 15 total
+- Mapped to phases: 15
 - Unmapped: 0 ✓
 
 ---
 
 _Requirements defined: 2026-04-06_
-_Last updated: 2026-04-06 — traceability filled after roadmap creation_
+_Last updated: 2026-04-08 — v2.0 requirements added (phases 8–11)_
