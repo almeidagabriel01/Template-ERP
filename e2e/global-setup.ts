@@ -98,6 +98,9 @@ async function globalSetup(): Promise<void> {
   if (!process.env.CRON_SECRET) {
     process.env.CRON_SECRET = "test-cron-secret";
   }
+  if (!process.env.STRIPE_SECRET_KEY) {
+    process.env.STRIPE_SECRET_KEY = "sk_test_fake_for_testing";
+  }
 
   // Ensure Java is on PATH — Firebase emulators require the JVM.
   // Eclipse Adoptium (Temurin) installs to a versioned directory that Windows

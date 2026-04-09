@@ -188,16 +188,6 @@ jobs:
           allow_issue_writing: false
           artifact_name: zap-scan
 
-      - name: Upload ZAP report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap-report
-          path: |
-            zap-report.html
-            zap-report.json
-          retention-days: 14
-
       - name: Upload security scan report
         if: always()
         uses: actions/upload-artifact@v4
