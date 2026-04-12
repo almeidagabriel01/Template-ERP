@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -49,6 +52,9 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -73,6 +79,9 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -97,15 +106,15 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
       - name: Install functions dependencies
         run: cd functions && npm ci
-
-      - name: Build functions
-        run: cd functions && npm run build
 
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
@@ -170,6 +179,9 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -207,15 +219,15 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
       - name: Install functions dependencies
         run: cd functions && npm ci
-
-      - name: Build functions
-        run: cd functions && npm run build
 
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
@@ -271,6 +283,9 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
 
       - name: Install dependencies
         run: npm ci

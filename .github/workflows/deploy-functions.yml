@@ -25,9 +25,7 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-
-      - name: Install root dependencies
-        run: npm ci
+          cache-dependency-path: functions/package-lock.json
 
       - name: Install functions dependencies
         run: cd functions && npm ci
@@ -63,9 +61,7 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-
-      - name: Install root dependencies
-        run: npm ci
+          cache-dependency-path: functions/package-lock.json
 
       - name: Install functions dependencies
         run: cd functions && npm ci
