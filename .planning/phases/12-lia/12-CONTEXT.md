@@ -114,3 +114,52 @@ Todas as decisões foram fechadas na Fase 1 (pesquisa de codebase).
 **Decisão:** Não implementar exportação de conversa em PDF neste milestone.
 **Justificativa:** O sistema de geração de PDF já usa Playwright/Chromium headless (alto custo de CPU, rate-limitado em 5 req/60s por usuário). Adicionar exportação de chat ao mesmo pipeline aumenta a pressão sobre o rate limit. A feature tem valor secundário comparado com a funcionalidade core da Lia. Pode ser adicionada como addon em v3.1 se houver demanda.
 **Alternativa futura:** Exportação como CSV/JSON (simples, sem Playwright) poderia ser implementada como endpoint leve. Não bloqueia o milestone atual.
+
+---
+
+## Schemas Firestore (validados na Fase 1)
+
+### `AiUsageDocument`
+
+Subcoleção: `tenants/{tenantId}/aiUsage/{YYYY-MM}`
+
+```typescript
+interface AiUsageDocument {
+  tenantId: string;
+  month: string;               // "YYYY-MM"
+  messagesUsed: number;        // incrementado com FieldValue.increment(1)
+  totalTokensUsed: number;     // incrementado com FieldValue.increment(tokens)
+  lastUpdatedAt: Timestamp;
+}
+```
+
+**Regra de reset:** Não há cron de reset. O documento `YYYY-MM` do mês anterior simplesmente deixa de ser consultado quando o mês vira. Novos documentos são criados com `{ merge: true }` no primeiro uso do mês.
+
+**Validação de conflito:** Nenhum documento com este path existe no codebase atual. O padrão é consistente com `tenant_usage/{tenantId}/months/{YYYY-MM}` já em uso.
+
+---
+
+### `AiConversationDocument`
+
+Subcoleção: `tenants/{tenantId}/aiConversations/{sessionId}`
+
+```typescript
+interface AiConversationMessage {
+  role: 'user' | 'model';
+  content: string;             // texto da mensagem ou JSON de tool result
+  timestamp: Timestamp;
+}
+
+interface AiConversationDocument {
+  sessionId: string;           // gerado no cliente (uuid v4)
+  uid: string;                 // Firebase Auth UID do usuário
+  tenantId: string;
+  messages: AiConversationMessage[];  // limitado às últimas 10 trocas (20 mensagens)
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+```
+
+**Planos com persistência:** Pro e Enterprise apenas. Para Starter, o frontend mantém o histórico apenas em memória (array no estado do `useAiChat`).
+
+**Validação de conflito:** Nenhum documento com este path existe no codebase atual.
