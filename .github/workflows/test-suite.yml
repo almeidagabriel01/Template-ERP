@@ -347,7 +347,7 @@ jobs:
           CI: true
 
   all-checks-passed:
-    name: All Checks Passed
+    name: all-checks-passed
     runs-on: ubuntu-latest
     if: always()
     needs: [type-check, lint, e2e, performance, firestore-rules, security]
