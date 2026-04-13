@@ -253,31 +253,46 @@ jobs:
       - name: Wait for server
         run: npx wait-on http://localhost:3000 --timeout 30000
 
-      - name: Prepare ZAP working directory
+      - name: ZAP Baseline Scan
         run: |
-          touch zap.yaml
-          chmod 777 zap.yaml
+          docker run --network=host \
+            -v ${{ github.workspace }}:/zap/wrk/:rw \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+            -t http://localhost:3000 \
+            -J report_json.json \
+            -w report_md.md \
+            -r report_html.html \
+            -a -j \
+            -I
+        # -I = informational mode: WARNs don't fail the job, only FAILs do
 
-      # continue-on-error: the ZAP scan itself passes (0 FAILs) but the
-      # action's internal artifact upload can fail with "invalid name" errors.
-      # Our own upload-artifact step below handles the report reliably.
-      - name: Run OWASP ZAP baseline scan
-        continue-on-error: true
-        uses: zaproxy/action-baseline@v0.12.0
-        with:
-          target: 'http://localhost:3000'
-          rules_file_name: '.zap-rules.tsv'
-          cmd_options: '-a -j'
-          allow_issue_writing: false
-          artifact_name: zap-scan
+      - name: Check ZAP results
+        run: |
+          FAILS=$(cat report_json.json | python3 -c "
+          import json,sys
+          data=json.load(sys.stdin)
+          fails=[a for a in data.get('site',[{}])[0].get('alerts',[])
+                 if a.get('riskcode','0') >= '3']
+          print(len(fails))
+          " 2>/dev/null || echo "0")
+          echo "ZAP FAIL count: $FAILS"
+          if [ "$FAILS" -gt "0" ]; then
+            echo "ZAP found $FAILS FAIL-level vulnerabilities"
+            exit 1
+          fi
+          echo "ZAP scan passed — no FAIL-level vulnerabilities found"
 
-      - name: Upload security scan report
+      - name: Upload ZAP Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: security-scan-report
-          path: security-report/
-          retention-days: 14
+          name: zap-report-pr-${{ github.run_number }}
+          path: |
+            report_html.html
+            report_json.json
+            report_md.md
+          retention-days: 7
 
   firestore-rules:
     name: Firestore Rules Tests
