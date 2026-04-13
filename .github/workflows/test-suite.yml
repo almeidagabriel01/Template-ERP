@@ -260,11 +260,13 @@ jobs:
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
             -t http://localhost:3000 \
+            -c .zap-rules.tsv \
             -J report_json.json \
             -w report_md.md \
             -r report_html.html \
             -a -j \
             -I
+        # -c = rules config file (suppresses known false positives)
         # -I = informational mode: WARNs don't fail the job, only FAILs do
 
       - name: Check ZAP results
