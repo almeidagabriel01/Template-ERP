@@ -30,9 +30,9 @@ const CreateProposalSchema = z.object({
   status: z.string().max(30).optional(),
   notes: z.string().max(5000).trim().optional().or(z.literal("")),
   customNotes: z.string().max(5000).trim().optional().or(z.literal("")),
-  totalValue: z.number().min(0).optional(),
-  discount: z.number().min(0).max(100).optional(),
-  extraExpense: z.number().min(0).optional(),
+  totalValue: z.number().min(0).nullable().optional(),
+  discount: z.number().min(0).max(100).nullable().optional(),
+  extraExpense: z.number().min(0).nullable().optional(),
   validUntil: z.string().max(30).optional(),
   targetTenantId: z.string().max(100).optional(),
   // Complex fields — passed through, already validated by sanitizeAttachmentsInput/sanitizeProposalProductsInput
@@ -44,19 +44,19 @@ const CreateProposalSchema = z.object({
   // Payment options — passed through
   downPaymentEnabled: z.boolean().optional(),
   downPaymentType: z.string().max(50).optional(),
-  downPaymentPercentage: z.number().optional(),
-  downPaymentValue: z.number().optional(),
+  downPaymentPercentage: z.number().nullable().optional(),
+  downPaymentValue: z.number().nullable().optional(),
   downPaymentWallet: z.string().max(200).optional(),
   downPaymentDueDate: z.string().max(30).optional(),
   downPaymentMethod: z.string().max(50).optional(),
   installmentsEnabled: z.boolean().optional(),
-  installmentsCount: z.number().int().min(1).max(120).optional(),
-  installmentValue: z.number().optional(),
+  installmentsCount: z.number().int().min(1).max(120).nullable().optional(),
+  installmentValue: z.number().nullable().optional(),
   installmentsWallet: z.string().max(200).optional(),
   firstInstallmentDate: z.string().max(30).optional(),
   installmentsPaymentMethod: z.string().max(50).optional(),
   paymentMethod: z.string().max(50).optional(),
-  closedValue: z.number().optional(),
+  closedValue: z.number().nullable().optional(),
 }).passthrough();
 
 const UpdateProposalSchema = CreateProposalSchema.partial();
