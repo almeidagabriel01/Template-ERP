@@ -150,6 +150,47 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 ---
 
+## v3.0 — AI Assistant (Lia)
+
+### Phase 12: Lia — Arquitetura & Pesquisa
+
+**Goal**: Mapear o codebase real, fechar todas as decisões de arquitetura e produzir um plano de execução detalhado para a Lia antes de escrever qualquer código.
+**Depends on**: Nothing (research phase)
+**Requirements**: LIA-01
+**Success Criteria** (what must be TRUE):
+
+1. RESEARCH.md preenchido com achados reais do codebase (services, auth, Firestore patterns, layout constraints)
+2. Todas as decisões em aberto no CONTEXT.md fechadas com justificativa
+3. Schema TypeScript de `AiUsageDocument` e `AiConversationDocument` validado contra o Firestore existente
+4. PLAN.md com checklist granular por arquivo para as fases 2–6
+
+**Plans:** 1 plan
+Plans:
+
+- [x] 12-PLAN.md -- Arquitetura, pesquisa e plano de execução da Lia
+
+### Phase 13: Lia — Backend Core
+
+**Goal**: API de chat com streaming SSE, integração com Gemini, controle de usage mensal, persistência de conversa Pro/Enterprise, e rota Express `/v1/ai/chat` integrada ao monolito.
+**Depends on**: Phase 12
+**Requirements**: LIA-02
+**Success Criteria** (what must be TRUE):
+
+1. `POST /v1/ai/chat` recebe mensagem e retorna streaming SSE com resposta da Lia via Gemini
+2. Tenant Free recebe 403; tenant com limite esgotado recebe 429 com `resetAt`
+3. `aiUsage/{YYYY-MM}` incrementado atomicamente após cada mensagem processada
+4. Histórico persiste em `aiConversations/{sessionId}` para planos Pro/Enterprise; Starter retorna array vazio
+5. Todos os testes passam nos emuladores Firebase locais
+
+**Plans:** 3 plans
+Plans:
+
+- [ ] 13-01-PLAN.md -- Fundacao: tipos AI_LIMITS, model-router, usage-tracker
+- [ ] 13-02-PLAN.md -- Conversation store e context builder (system prompt)
+- [ ] 13-03-PLAN.md -- Chat route SSE, integracao Express monolith, Firestore rules
+
+---
+
 ## v2.0 — E2E Coverage Expansion
 
 ### Phase 8: Contacts & Products CRUD E2E
@@ -232,3 +273,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 9. Auth Registration E2E        | 1/1            | Complete    | 2026-04-09 |
 | 10. Financial Gaps E2E          | 1/2 | In Progress|  |
 | 11. Performance Expansion       | 0/1            | Not started | -          |
+| 12. Lia — Arquitetura & Pesquisa | 1/1           | Complete    | 2026-04-13 |
+| 13. Lia — Backend Core          | 0/3            | Not started | -          |
