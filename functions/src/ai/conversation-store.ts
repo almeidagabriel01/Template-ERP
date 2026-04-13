@@ -1,0 +1,104 @@
+import { Timestamp } from "firebase-admin/firestore";
+import { db } from "../init";
+import {
+  AI_LIMITS,
+  type AiConversationDocument,
+  type AiConversationMessage,
+  type TenantPlanTier,
+} from "./ai.types";
+
+const MAX_STORED_MESSAGES = 20; // 10 exchanges (user + model)
+
+/**
+ * Path helper: tenants/{tenantId}/aiConversations/{sessionId}
+ */
+function getConversationDocRef(tenantId: string, sessionId: string) {
+  return db
+    .collection("tenants")
+    .doc(tenantId)
+    .collection("aiConversations")
+    .doc(sessionId);
+}
+
+/**
+ * Load conversation history for a session.
+ *
+ * - Pro/Enterprise: loads persisted messages from Firestore.
+ * - Starter: returns empty array (no persistence — frontend handles in-memory).
+ * - Free: should never be called (blocked at route level).
+ *
+ * @returns Array of conversation messages, or empty array if no history exists
+ */
+export async function loadConversation(
+  tenantId: string,
+  sessionId: string,
+  planTier: Exclude<TenantPlanTier, "free">,
+): Promise<AiConversationMessage[]> {
+  const config = AI_LIMITS[planTier];
+
+  if (!config.persistHistory) {
+    return [];
+  }
+
+  if (!sessionId) {
+    return [];
+  }
+
+  const docRef = getConversationDocRef(tenantId, sessionId);
+  const snap = await docRef.get();
+
+  if (!snap.exists) {
+    return [];
+  }
+
+  const data = snap.data() as AiConversationDocument;
+  return data.messages || [];
+}
+
+/**
+ * Save conversation history for a session.
+ *
+ * - Pro/Enterprise: persists to Firestore, trimmed to last 10 exchanges (20 messages).
+ * - Starter: no-op (returns immediately).
+ * - Free: should never be called.
+ *
+ * Uses set with merge:false — overwrites the entire document each time
+ * with the trimmed message array.
+ */
+export async function saveConversation(
+  tenantId: string,
+  sessionId: string,
+  uid: string,
+  messages: AiConversationMessage[],
+  planTier: Exclude<TenantPlanTier, "free">,
+): Promise<void> {
+  const config = AI_LIMITS[planTier];
+
+  if (!config.persistHistory) {
+    return;
+  }
+
+  if (!sessionId) {
+    return;
+  }
+
+  // Trim to last MAX_STORED_MESSAGES (20 = 10 exchanges)
+  const trimmedMessages = messages.slice(-MAX_STORED_MESSAGES);
+
+  const docRef = getConversationDocRef(tenantId, sessionId);
+  const snap = await docRef.get();
+  const now = Timestamp.now();
+
+  const doc: AiConversationDocument = {
+    sessionId,
+    uid,
+    tenantId,
+    messages: trimmedMessages,
+    createdAt: snap.exists
+      ? (snap.data() as AiConversationDocument).createdAt
+      : now,
+    updatedAt: now,
+  };
+
+  await docRef.set(doc);
+}
