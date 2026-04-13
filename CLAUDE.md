@@ -231,7 +231,7 @@ Firebase projects: `erp-softcode` (dev), `erp-softcode-prod` (prod). Configured 
 - Firebase Admin: 12.7.0
 - Tailwind CSS: v4 (configured via CSS, no `tailwind.config.ts`)
 - Stripe SDK: 20.0.0
-- Node.js target: 20
+- Node.js target: 22
 
 ## Repository Structure
 

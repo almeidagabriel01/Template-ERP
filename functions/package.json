@@ -17,7 +17,7 @@
     "security:audit:runtime": "npm audit --omit=dev --audit-level=critical"
   },
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "dependencies": {
     "@sparticuz/chromium": "^143.0.4",
