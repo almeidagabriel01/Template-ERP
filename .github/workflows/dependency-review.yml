@@ -25,17 +25,5 @@ jobs:
         with:
           fail-on-severity: high
           comment-summary-in-pr: always
-          allow-licenses: >-
-            MIT,
-            Apache-2.0,
-            ISC,
-            BSD-2-Clause,
-            BSD-3-Clause,
-            BlueOak-1.0.0,
-            0BSD,
-            Unlicense,
-            CC0-1.0,
-            Python-2.0
-          allow-ghsas: []
-          warn-only: false
+          allow-licenses: 'MIT, Apache-2.0, ISC, BSD-2-Clause, BSD-3-Clause, BlueOak-1.0.0, 0BSD, Unlicense, CC0-1.0, Python-2.0'
           warn-on-openssf-scorecard-level: 1
