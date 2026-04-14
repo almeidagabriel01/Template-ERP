@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { useAiChat } from "@/hooks/useAiChat";
 import { useLiaSession } from "@/hooks/useLiaSession";
@@ -88,6 +88,9 @@ export function LiaContainer() {
   const chat = useAiChat();
   const session = useLiaSession();
   const usage = useLiaUsage();
+
+  const [nearLimitDismissed, setNearLimitDismissed] = useState(false);
+  const showNearLimitBanner = usage.isNearLimit && !usage.isAtLimit && !nearLimitDismissed;
 
   const routeConfig = getRouteConfig(pathname);
 
@@ -178,12 +181,29 @@ export function LiaContainer() {
           </LiaChatWindow>
         }
         inputBar={
-          <LiaInputBar
-            onSend={chat.sendMessage}
-            isStreaming={chat.isStreaming}
-            isAtLimit={usage.isAtLimit}
-            resetDate={usage.resetDate}
-          />
+          <>
+            {showNearLimitBanner && (
+              <div className="flex items-center justify-between gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-950/40 border-t border-amber-200 dark:border-amber-800 text-sm text-amber-700 dark:text-amber-300 shrink-0">
+                <span>
+                  Você usou {usage.messagesUsed} de {usage.messagesLimit} mensagens este mês. Renova em {usage.resetDate}.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setNearLimitDismissed(true)}
+                  aria-label="Fechar aviso de limite"
+                  className="shrink-0 p-0.5 rounded hover:bg-amber-200/50 dark:hover:bg-amber-800/50 transition-colors"
+                >
+                  <span aria-hidden="true" className="text-base leading-none">✕</span>
+                </button>
+              </div>
+            )}
+            <LiaInputBar
+              onSend={chat.sendMessage}
+              isStreaming={chat.isStreaming}
+              isAtLimit={usage.isAtLimit}
+              resetDate={usage.resetDate}
+            />
+          </>
         }
       />
 
