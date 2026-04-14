@@ -251,7 +251,12 @@ Plans:
 3. User can view an AI usage section on the billing page showing a progress bar (messages used / limit) and the next reset date in Portuguese
 4. User sees an in-app warning when their message usage reaches 80% of the monthly limit
 5. Firestore rules enforce that `aiUsage` documents are read-only from client and `aiConversations` documents are accessible only to the owning user
-**Plans**: TBD
+**Plans:** 4 plans
+Plans:
+- [ ] 16-01-PLAN.md -- Wave 0: Install Progress component + verify AIBI-01, AIBI-03, AIBI-06
+- [ ] 16-02-PLAN.md -- Backend: inactive subscription 403 check (AIBI-02)
+- [ ] 16-03-PLAN.md -- Frontend: AI usage card on billing page (AIBI-04)
+- [ ] 16-04-PLAN.md -- Frontend: near-limit warning banner in Lia panel (AIBI-05)
 
 ### Phase 17: Lia Testes & QA
 
@@ -265,7 +270,12 @@ Plans:
 3. E2E scenario AI-08 passes: tenant at message limit sees disabled input with reset date displayed
 4. E2E scenarios AI-10 to AI-12 pass: cross-tenant data isolation holds; member role cannot execute admin actions; delete confirmation dialog appears and cancelling does not delete
 5. Seed data creates `ai-test` pro tenant with `ai-admin@test.com` (admin) and `ai-member@test.com` (member) and all modules active; Lia smoke test job runs on every CI PR
-**Plans**: TBD
+**Plans:** 4 plans
+Plans:
+- [ ] 16-01-PLAN.md -- Wave 0: Install Progress component + verify AIBI-01, AIBI-03, AIBI-06
+- [ ] 16-02-PLAN.md -- Backend: inactive subscription 403 check (AIBI-02)
+- [ ] 16-03-PLAN.md -- Frontend: AI usage card on billing page (AIBI-04)
+- [ ] 16-04-PLAN.md -- Frontend: near-limit warning banner in Lia panel (AIBI-05)
 
 ---
 
