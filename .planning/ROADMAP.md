@@ -189,6 +189,22 @@ Plans:
 - [ ] 13-02-PLAN.md -- Conversation store e context builder (system prompt)
 - [ ] 13-03-PLAN.md -- Chat route SSE, integracao Express monolith, Firestore rules
 
+### Phase 14: Lia — Tool System
+
+**Goal**: Implementar o sistema completo de tools da Lia — definitions, schemas Zod, executor com validação dupla, e lógica de filtro de disponibilidade por planId, role e módulo. A Lia passa a executar ações reais no ProOps (criar propostas, buscar contatos, lançar transações, etc.) com confirmação obrigatória antes de qualquer delete.
+**Depends on**: Phase 13
+**Requirements**: LIA-03
+**Success Criteria** (what must be TRUE):
+
+1. `buildAvailableTools()` filtra tools por planId, role e módulo ativo antes de enviá-las ao modelo
+2. `executeToolCall()` valida módulo + role antes de executar e chama services existentes (nunca Firestore direto)
+3. Toda tool de delete exige `confirmed === true` (precedida por `request_confirmation`)
+4. Criar uma proposta via Lia com emuladores funcionando end-to-end
+5. Tentar criar transação com módulo financeiro inativo → Lia recusa sem executar
+
+**Plans:** 0 plans
+Plans:
+
 ---
 
 ## v2.0 — E2E Coverage Expansion
@@ -275,3 +291,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 11. Performance Expansion       | 0/1            | Not started | -          |
 | 12. Lia — Arquitetura & Pesquisa | 1/1           | Complete    | 2026-04-13 |
 | 13. Lia — Backend Core          | 3/3 | Complete   | 2026-04-13 |
+| 14. Lia — Tool System           | 0/0            | Not started | -          |
