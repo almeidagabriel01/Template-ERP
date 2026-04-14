@@ -118,4 +118,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-04-13 — Phase 12 complete: Lia AI assistant architecture research (Fase 1) — RESEARCH.md populated, CONTEXT.md decisions closed, Firestore schemas validated_
+_Last updated: 2026-04-14 — Phase 14 complete: Lia tool system live — 29 tools, Gemini multi-turn function calling loop, service layer contract, plan/role gating, delete confirmation flow_
