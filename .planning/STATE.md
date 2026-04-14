@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — AI Assistant
-status: Executing Phase 12
-stopped_at: Completed 14-02-PLAN.md
-last_updated: "2026-04-14T01:46:00.000Z"
+status: Ready to execute
+stopped_at: Completed 14-03-PLAN.md
+last_updated: "2026-04-14T01:45:37.567Z"
 progress:
   total_phases: 10
   completed_phases: 8
   total_plans: 24
-  completed_plans: 20
-  percent: 83
+  completed_plans: 21
+  percent: 88
 ---
 
 # Project State
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-04-08)
 ## Current Position
 
 Phase: 14 (lia-tool-system) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ _Updated after each plan completion_
 | Phase 13-lia-backend-core P02 | 2 | 2 tasks | 2 files |
 | Phase 13-lia-backend-core P03 | 20 | 2 tasks | 4 files |
 | Phase 14-lia-tool-system P01 | 4 | 2 tasks | 5 files |
+| Phase 14 P03 | 8 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,7 @@ Carry-forward decisions from v1.0 relevant to v2.0 work:
 - [Phase 14-lia-tool-system P02]: format: "enum" required on EnumStringSchema in @google/generative-ai SDK v0.24.1 — plain enum array without format field fails TypeScript type check
 - [Phase 14-lia-tool-system P02]: makeDeleteSchema() uses z.literal(true) with Zod v4 error callback syntax { error: () => "..." } not { errorMap: () => ({message: "..."}) }
 - [Phase 14-lia-tool-system P02]: ADMIN_ROLES includes WK — WK is a functional-admin role needing admin-level tool access
+- [Phase 14]: Proposal items mapped at executor boundary: AI schema uses productId+unitPrice, service uses name+price — resolveProposalItems() looks up product names from productsService.getProduct()
 
 ### Pending Todos
 
@@ -99,6 +101,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-14T01:35:09.320Z
-Stopped at: Completed 14-01-PLAN.md
+Last session: 2026-04-14T01:45:37.564Z
+Stopped at: Completed 14-03-PLAN.md
 Resume file: None
