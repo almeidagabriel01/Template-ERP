@@ -110,7 +110,7 @@
 ### AI Billing & Security
 
 - [ ] **AIBI-01**: Free plan tenant is blocked with 403 before the stream starts
-- [ ] **AIBI-02**: Tenant with inactive subscription is blocked with 403 before stream starts
+- [x] **AIBI-02**: Tenant with inactive subscription is blocked with 403 before stream starts
 - [ ] **AIBI-03**: Tenant at message limit receives 429 with `resetAt`; input is disabled in UI
 - [ ] **AIBI-04**: User can view AI usage section on the billing page (progress bar + reset date)
 - [ ] **AIBI-05**: User sees in-app warning when reaching 80% of their monthly message limit
@@ -216,7 +216,7 @@
 | CHAT-08     | Phase 15 | Complete |
 | CHAT-09     | Phase 15 | Complete |
 | AIBI-01     | Phase 16 | Pending  |
-| AIBI-02     | Phase 16 | Pending  |
+| AIBI-02     | Phase 16 | Complete |
 | AIBI-03     | Phase 16 | Pending  |
 | AIBI-04     | Phase 16 | Pending  |
 | AIBI-05     | Phase 16 | Pending  |

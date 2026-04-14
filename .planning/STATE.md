@@ -2,14 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — AI Assistant
-status: unknown
-stopped_at: Completed 15-10-PLAN.md
-last_updated: "2026-04-14T15:14:13.654Z"
+status: Ready to execute
+stopped_at: Completed 16-02-PLAN.md
+last_updated: "2026-04-14T21:41:45.420Z"
 progress:
   total_phases: 13
   completed_phases: 10
-  total_plans: 34
-  completed_plans: 32
+  total_plans: 38
+  completed_plans: 34
+  percent: 89
 ---
 
 # Project State
@@ -19,12 +20,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Propostas e gestão financeira funcionando com confiança — ciclo proposta → aprovação → cobrança não pode quebrar.
-**Current focus:** Phase 15 — lia-frontend-chat-ui
+**Current focus:** Phase 16 — lia-seguranca-billing
 
 ## Current Position
 
-Phase: 15 (lia-frontend-chat-ui) — EXECUTING
-Plan: 2 of 10
+Phase: 16 (lia-seguranca-billing) — EXECUTING
+Plan: 2 of 4
 
 ## Performance Metrics
 
@@ -64,6 +65,7 @@ _Updated after each plan completion_
 | Phase 15 P08 | 5 | 1 tasks | 2 files |
 | Phase 15 P09 | 2 | 2 tasks | 2 files |
 | Phase 15 P10 | 3 | 1 tasks | 1 files |
+| Phase 16 P02 | 5 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -117,6 +119,7 @@ Carry-forward decisions from v1.0 relevant to v2.0 work:
 - [Phase 15]: clientName fallback placed after ...data spread in mapProposalDoc so it overrides any undefined value from Firestore
 - [Phase 15]: [Phase 15-09]: Rendering layer uses ?? as avatar fallback and 'Cliente sem nome' as display fallback for undefined clientName
 - [Phase 15]: user !== null explicit check before user.role access — optional chaining user?.role returns undefined when user is null, which !== 'free' evaluated to true (auth bypass); explicit null check closes this gap
+- [Phase 16]: evaluateSubscriptionStatusAccess pure function — no telemetry inside check block; pastDueSince always passed from planProfile to preserve grace-period logic for past_due tenants
 
 ### Pending Todos
 
@@ -128,6 +131,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-14T15:01:57.111Z
-Stopped at: Completed 15-10-PLAN.md
+Last session: 2026-04-14T21:41:45.416Z
+Stopped at: Completed 16-02-PLAN.md
 Resume file: None
