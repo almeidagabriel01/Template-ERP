@@ -365,5 +365,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 13. Lia — Backend Core            | 3/3            | Complete    | 2026-04-13 |
 | 14. Lia — Tool System             | 4/4            | Complete    | 2026-04-14 |
 | 15. Lia Frontend Chat UI          | 10/10 | Complete    | 2026-04-14 |
-| 16. Lia Segurança & Billing       | 4/4 | Complete   | 2026-04-14 |
+| 16. Lia Segurança & Billing       | 4/4 | Complete    | 2026-04-14 |
 | 17. Lia Testes & QA               | 0/?            | Not started | -          |
