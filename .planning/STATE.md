@@ -2,15 +2,14 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — AI Assistant
-status: Ready to execute
-stopped_at: Completed 15-08-PLAN.md
-last_updated: "2026-04-14T14:25:09.122Z"
+status: unknown
+stopped_at: Completed 15-09-PLAN.md
+last_updated: "2026-04-14T15:00:04.720Z"
 progress:
   total_phases: 13
-  completed_phases: 10
-  total_plans: 32
-  completed_plans: 30
-  percent: 94
+  completed_phases: 9
+  total_plans: 34
+  completed_plans: 31
 ---
 
 # Project State
@@ -25,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 15 (lia-frontend-chat-ui) — EXECUTING
-Plan: 2 of 8
+Plan: 1 of 10
 
 ## Performance Metrics
 
@@ -63,6 +62,7 @@ _Updated after each plan completion_
 | Phase 15 P05 | 212 | 3 tasks | 3 files |
 | Phase 15 P07 | 5 | 3 tasks | 2 files |
 | Phase 15 P08 | 5 | 1 tasks | 2 files |
+| Phase 15 P09 | 2 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -113,6 +113,8 @@ Carry-forward decisions from v1.0 relevant to v2.0 work:
 - [Phase 15]: [Phase 15-07]: PlanTier type is starter|pro|enterprise only — free tier does not exist in TypeScript; guard uses planTier !== undefined instead of planTier !== 'free'
 - [Phase 15]: [Phase 15-07]: LiaContainer renders at root level in ProtectedAppShell as sibling to BottomDock — position:fixed components don't affect flex layout
 - [Phase 15]: Free plan UI gating uses user?.role !== 'free' from useAuth — planTier maps free to starter so role is the only reliable free-plan signal
+- [Phase 15]: clientName fallback placed after ...data spread in mapProposalDoc so it overrides any undefined value from Firestore
+- [Phase 15]: [Phase 15-09]: Rendering layer uses ?? as avatar fallback and 'Cliente sem nome' as display fallback for undefined clientName
 
 ### Pending Todos
 
@@ -124,6 +126,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-14T14:25:09.118Z
-Stopped at: Completed 15-08-PLAN.md
+Last session: 2026-04-14T15:00:04.717Z
+Stopped at: Completed 15-09-PLAN.md
 Resume file: None
