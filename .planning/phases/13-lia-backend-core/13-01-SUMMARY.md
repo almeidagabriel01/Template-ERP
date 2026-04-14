@@ -108,6 +108,17 @@ None - no external service configuration required. @google/generative-ai install
 - All exports match the interfaces documented in the plan's `artifacts` spec
 - TypeScript compiles cleanly — no blockers for 13-02
 
+## Self-Check: PASSED
+
+- FOUND: functions/src/ai/ai.types.ts
+- FOUND: functions/src/ai/model-router.ts
+- FOUND: functions/src/ai/usage-tracker.ts
+- FOUND: .planning/phases/13-lia-backend-core/13-01-SUMMARY.md
+- FOUND: commit 06bafd49 (Task 1)
+- FOUND: commit 9b9a68c6 (Task 2)
+- FOUND: commit 689db335 (Task 3)
+- FOUND: commit 31da3df2 (docs/metadata)
+
 ---
 *Phase: 13-lia-backend-core*
 *Completed: 2026-04-13*

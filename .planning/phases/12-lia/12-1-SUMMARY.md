@@ -119,7 +119,13 @@ Fase 2 (Backend Core: AI Engine) can begin immediately. The following is confirm
 
 No blockers.
 
-## Self-Check
+## Self-Check: PASSED
+
+- `.planning/phases/12-lia/12-RESEARCH.md` — FOUND
+- `.planning/phases/12-lia/12-CONTEXT.md` — FOUND
+- `.planning/phases/12-lia/12-1-SUMMARY.md` — FOUND
+- Commit `1dc3f989` — FOUND (RESEARCH + CONTEXT)
+- Commit `8cee7169` — FOUND (SUMMARY + STATE)
 
 ---
 *Phase: 12-lia*

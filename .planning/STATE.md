@@ -4,11 +4,11 @@ milestone: v3.0
 milestone_name: — AI Assistant
 status: unknown
 stopped_at: Completed 16-01-PLAN.md
-last_updated: "2026-04-14T22:10:19.621Z"
+last_updated: "2026-04-14T23:58:41.353Z"
 progress:
   total_phases: 13
   completed_phases: 11
-  total_plans: 38
+  total_plans: 43
   completed_plans: 36
 ---
 
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Propostas e gestão financeira funcionando com confiança — ciclo proposta → aprovação → cobrança não pode quebrar.
-**Current focus:** Phase 16 — lia-seguranca-billing
+**Current focus:** Phase 17 — lia-testes-qa
 
 ## Current Position
 
-Phase: 16 (lia-seguranca-billing) — EXECUTING
-Plan: 3 of 4
+Phase: 17 (lia-testes-qa) — EXECUTING
+Plan: 1 of 5
 
 ## Performance Metrics
 
