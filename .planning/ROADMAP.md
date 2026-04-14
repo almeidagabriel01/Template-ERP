@@ -235,8 +235,8 @@ Plans:
 - [x] 15-06-PLAN.md -- Tool result card and tool confirm dialog components
 - [x] 15-07-PLAN.md -- LiaContainer integration and ProtectedAppShell mount
 - [x] 15-08-PLAN.md -- CHAT-08 free plan guard fix
-- [ ] 15-09-PLAN.md -- Dashboard regression: clientName null safety
-- [ ] 15-10-PLAN.md -- CHAT-08 auth loading guard bypass fix
+- [x] 15-09-PLAN.md -- Dashboard regression: clientName null safety
+- [x] 15-10-PLAN.md -- CHAT-08 auth loading guard bypass fix
 **UI hint**: yes
 
 ### Phase 16: Lia Segurança & Billing
@@ -281,7 +281,7 @@ Plans:
 1. Test suite validates that a user can create, edit, and delete a contact with valid data
 2. Test suite validates that a user can create, edit, and delete a product with valid data
 3. Seed data includes at least one contact and one product for tenant-alpha before tests run
-   **Plans:** 9/10 plans executed
+   **Plans:** 10/10 plans complete
    Plans:
 
 - [x] 08-01-PLAN.md -- Contacts CRUD E2E Tests
@@ -354,6 +354,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 12. Lia — Arquitetura & Pesquisa  | 1/1            | Complete    | 2026-04-13 |
 | 13. Lia — Backend Core            | 3/3            | Complete    | 2026-04-13 |
 | 14. Lia — Tool System             | 4/4            | Complete    | 2026-04-14 |
-| 15. Lia Frontend Chat UI          | 9/10 | In Progress|  |
+| 15. Lia Frontend Chat UI          | 10/10 | Complete   | 2026-04-14 |
 | 16. Lia Segurança & Billing       | 0/?            | Not started | -          |
 | 17. Lia Testes & QA               | 0/?            | Not started | -          |

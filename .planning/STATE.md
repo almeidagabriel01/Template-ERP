@@ -2,14 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — AI Assistant
-status: unknown
-stopped_at: Completed 15-09-PLAN.md
-last_updated: "2026-04-14T15:00:04.720Z"
+status: Ready to execute
+stopped_at: Completed 15-10-PLAN.md
+last_updated: "2026-04-14T15:01:57.114Z"
 progress:
   total_phases: 13
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 34
-  completed_plans: 31
+  completed_plans: 32
+  percent: 94
 ---
 
 # Project State
@@ -24,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 15 (lia-frontend-chat-ui) — EXECUTING
-Plan: 1 of 10
+Plan: 2 of 10
 
 ## Performance Metrics
 
@@ -63,6 +64,7 @@ _Updated after each plan completion_
 | Phase 15 P07 | 5 | 3 tasks | 2 files |
 | Phase 15 P08 | 5 | 1 tasks | 2 files |
 | Phase 15 P09 | 2 | 2 tasks | 2 files |
+| Phase 15 P10 | 3 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -115,6 +117,7 @@ Carry-forward decisions from v1.0 relevant to v2.0 work:
 - [Phase 15]: Free plan UI gating uses user?.role !== 'free' from useAuth — planTier maps free to starter so role is the only reliable free-plan signal
 - [Phase 15]: clientName fallback placed after ...data spread in mapProposalDoc so it overrides any undefined value from Firestore
 - [Phase 15]: [Phase 15-09]: Rendering layer uses ?? as avatar fallback and 'Cliente sem nome' as display fallback for undefined clientName
+- [Phase 15]: user !== null explicit check before user.role access — optional chaining user?.role returns undefined when user is null, which !== 'free' evaluated to true (auth bypass); explicit null check closes this gap
 
 ### Pending Todos
 
@@ -126,6 +129,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-14T15:00:04.717Z
-Stopped at: Completed 15-09-PLAN.md
+Last session: 2026-04-14T15:01:57.111Z
+Stopped at: Completed 15-10-PLAN.md
 Resume file: None
