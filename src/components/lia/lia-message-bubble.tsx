@@ -3,6 +3,7 @@
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import type { LiaMessage } from "@/types/ai";
+import { LiaToolResultCard } from "./lia-tool-result-card";
 
 interface LiaMessageBubbleProps {
   message: LiaMessage;
@@ -22,20 +23,6 @@ function ErrorBadge({ message }: { message: string }) {
   );
 }
 
-function ToolResultInline({
-  toolResult,
-}: {
-  toolResult: NonNullable<LiaMessage["toolResults"]>[number];
-}) {
-  return (
-    <div className="mt-2 rounded-xl border border-border bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-      <span className="font-semibold text-foreground">{toolResult.name}</span>
-      {typeof toolResult.result === "string"
-        ? `: ${toolResult.result}`
-        : ` — ${JSON.stringify(toolResult.result).slice(0, 120)}`}
-    </div>
-  );
-}
 
 export function LiaMessageBubble({ message }: LiaMessageBubbleProps) {
   const isUser = message.role === "user";
@@ -66,11 +53,15 @@ export function LiaMessageBubble({ message }: LiaMessageBubbleProps) {
           <ErrorBadge message={message.error} />
         )}
 
-        {/* Tool results (inline display — replaced by LiaToolResultCard in Plan 06) */}
+        {/* Tool results using collapsible cards */}
         {message.toolResults && message.toolResults.length > 0 && (
-          <div className="mt-2 space-y-1">
+          <div className="mt-1 space-y-1">
             {message.toolResults.map((tr, i) => (
-              <ToolResultInline key={i} toolResult={tr} />
+              <LiaToolResultCard
+                key={i}
+                toolName={tr.name}
+                result={tr.result}
+              />
             ))}
           </div>
         )}
