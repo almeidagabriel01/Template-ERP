@@ -105,7 +105,7 @@
 - [x] **CHAT-06**: User is shown a confirmation dialog before Lia executes any delete action
 - [x] **CHAT-07**: User sees usage badge (used/limit) in the panel header
 - [x] **CHAT-08**: Free plan tenants cannot see or access the Lia panel
-- [ ] **CHAT-09**: Chat history persists across sessions for Pro/Enterprise tenants
+- [x] **CHAT-09**: Chat history persists across sessions for Pro/Enterprise tenants
 
 ### AI Billing & Security
 
@@ -214,7 +214,7 @@
 | CHAT-06     | Phase 15 | Complete |
 | CHAT-07     | Phase 15 | Complete |
 | CHAT-08     | Phase 15 | Complete |
-| CHAT-09     | Phase 15 | Pending  |
+| CHAT-09     | Phase 15 | Complete |
 | AIBI-01     | Phase 16 | Pending  |
 | AIBI-02     | Phase 16 | Pending  |
 | AIBI-03     | Phase 16 | Pending  |
