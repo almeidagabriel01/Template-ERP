@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: AI Assistant (Frontend & QA)
-status: defining_requirements
-stopped_at: Defining requirements for phases 15-17
+status: ready_to_plan
+stopped_at: Phase 15 not started
 last_updated: "2026-04-13T00:00:00.000Z"
 progress:
   total_phases: 3
@@ -16,17 +16,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-08)
+See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Propostas e gestão financeira funcionando com confiança — ciclo proposta → aprovação → cobrança não pode quebrar.
-**Current focus:** Phase 14 — lia-tool-system
+**Current focus:** Phase 15 — Lia Frontend Chat UI
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 15 — Lia Frontend Chat UI
 Plan: —
-Status: Defining requirements for milestone v3.0 Frontend & QA (phases 15–17)
-Last activity: 2026-04-13 — Milestone v3.0 Frontend & QA cycle started
+Status: Not started
+Last activity: 2026-04-13 — Roadmap for v3.0 Frontend & QA written (phases 15–17)
 
 ## Performance Metrics
 
@@ -105,5 +105,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-04-14T01:51:03.587Z
-Stopped at: Completed 14-04-PLAN.md
+Stopped at: Completed 14-04-PLAN.md — roadmap phases 15–17 written
 Resume file: None

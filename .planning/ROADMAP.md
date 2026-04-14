@@ -20,6 +20,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 5: Stripe & Billing E2E** - Subscription flows, webhooks, plan limits, WhatsApp overage
 - [ ] **Phase 6: Performance Tests** - Lighthouse CI with Core Web Vitals thresholds and API baselines
 - [ ] **Phase 7: Security Tests** - OWASP ZAP scan, Firestore rules audit, tenant isolation validation
+- [ ] **Phase 15: Lia Frontend Chat UI** - LiaPanel, streaming SSE, message bubbles, tool dialogs, useAiChat hook
+- [ ] **Phase 16: Lia Segurança & Billing** - ai-auth middleware, AI_LIMITS, Firestore rules, billing page AI usage
+- [ ] **Phase 17: Lia Testes & QA** - E2E AI-01–12, seed tenant ai-test pro, CI smoke test
 
 ## Phase Details
 
@@ -212,6 +215,53 @@ Plans:
 
 ---
 
+## v3.0 — AI Assistant (Frontend & QA)
+
+### Phase 15: Lia Frontend Chat UI
+
+**Goal**: Users can interact with Lia through a full chat interface — opening the panel, sending messages, seeing streaming responses, reviewing tool results, and confirming or cancelling destructive actions.
+**Depends on**: Phase 14
+**Requirements**: CHAT-01, CHAT-02, CHAT-03, CHAT-04, CHAT-05, CHAT-06, CHAT-07, CHAT-08, CHAT-09
+**Success Criteria** (what must be TRUE):
+
+1. User can click the floating trigger button (bottom-right) to open the LiaPanel and click again (or a close button) to slide it out with animation
+2. User types a message, submits, and sees the response streamed token by token with a "Lia está digitando..." indicator during active streaming
+3. User sees tool execution results in compact LiaToolResultCards that can be expanded for full details
+4. User is shown a confirmation dialog before Lia executes any delete action; cancelling leaves data unchanged
+5. Free plan tenants do not see the trigger button or panel; Pro/Enterprise tenants see a usage badge and chat history persists across sessions
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 16: Lia Segurança & Billing
+
+**Goal**: The AI chat endpoint is protected by plan and subscription checks before any stream starts, usage limits are enforced at the API boundary, and users can see their AI consumption on the billing page.
+**Depends on**: Phase 14
+**Requirements**: AIBI-01, AIBI-02, AIBI-03, AIBI-04, AIBI-05, AIBI-06
+**Success Criteria** (what must be TRUE):
+
+1. A free plan tenant calling the chat endpoint receives 403 before any stream begins; an inactive subscription also returns 403
+2. A tenant at their monthly message limit receives 429 with a `resetAt` timestamp; the input bar in the UI is disabled and shows the reset date
+3. User can view an AI usage section on the billing page showing a progress bar (messages used / limit) and the next reset date in Portuguese
+4. User sees an in-app warning when their message usage reaches 80% of the monthly limit
+5. Firestore rules enforce that `aiUsage` documents are read-only from client and `aiConversations` documents are accessible only to the owning user
+**Plans**: TBD
+
+### Phase 17: Lia Testes & QA
+
+**Goal**: A dedicated E2E suite covering all 12 AI scenarios (access control, tool execution, plan limits, isolation, permissions, delete confirmation) runs automatically in CI on every PR.
+**Depends on**: Phase 15, Phase 16
+**Requirements**: AIQA-01, AIQA-02, AIQA-03, AIQA-04, AIQA-05, AIQA-06
+**Success Criteria** (what must be TRUE):
+
+1. E2E scenarios AI-01 to AI-03 pass: free tenant sees no trigger button; Starter badge shows correct limit (80); Pro badge shows correct limit (400)
+2. E2E scenarios AI-04 to AI-07 pass: tool execution creates real data; inactive module causes Lia to refuse; plan limits surface correct messaging
+3. E2E scenario AI-08 passes: tenant at message limit sees disabled input with reset date displayed
+4. E2E scenarios AI-10 to AI-12 pass: cross-tenant data isolation holds; member role cannot execute admin actions; delete confirmation dialog appears and cancelling does not delete
+5. Seed data creates `ai-test` pro tenant with `ai-admin@test.com` (admin) and `ai-member@test.com` (member) and all modules active; Lia smoke test job runs on every CI PR
+**Plans**: TBD
+
+---
+
 ## v2.0 — E2E Coverage Expansion
 
 ### Phase 8: Contacts & Products CRUD E2E
@@ -279,21 +329,24 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17
 
-| Phase                           | Plans Complete | Status      | Completed  |
-| ------------------------------- | -------------- | ----------- | ---------- |
-| 1. Test Infrastructure          | 3/3            | Complete    | 2026-04-06 |
-| 2. Auth & Multi-Tenant E2E      | 2/2            | Complete    | 2026-04-06 |
-| 3. Proposals & CRM E2E          | 3/3            | Complete    | 2026-04-07 |
-| 4. Financial Module E2E         | 3/3            | Complete    | 2026-04-07 |
-| 5. Stripe & Billing E2E         | 3/3            | Complete    | 2026-04-08 |
-| 6. Performance Tests            | 2/2            | Complete    | 2026-04-08 |
-| 7. Security Tests               | 2/2            | Complete    | 2026-04-08 |
-| 8. Contacts & Products CRUD E2E | 2/2            | Complete    | 2026-04-09 |
-| 9. Auth Registration E2E        | 1/1            | Complete    | 2026-04-09 |
-| 10. Financial Gaps E2E          | 1/2 | In Progress|  |
-| 11. Performance Expansion       | 0/1            | Not started | -          |
-| 12. Lia — Arquitetura & Pesquisa | 1/1           | Complete    | 2026-04-13 |
-| 13. Lia — Backend Core          | 3/3 | Complete   | 2026-04-13 |
-| 14. Lia — Tool System           | 4/4 | Complete    | 2026-04-14 |
+| Phase                             | Plans Complete | Status      | Completed  |
+| --------------------------------- | -------------- | ----------- | ---------- |
+| 1. Test Infrastructure            | 3/3            | Complete    | 2026-04-06 |
+| 2. Auth & Multi-Tenant E2E        | 2/2            | Complete    | 2026-04-06 |
+| 3. Proposals & CRM E2E            | 3/3            | Complete    | 2026-04-07 |
+| 4. Financial Module E2E           | 3/3            | Complete    | 2026-04-07 |
+| 5. Stripe & Billing E2E           | 3/3            | Complete    | 2026-04-08 |
+| 6. Performance Tests              | 2/2            | Complete    | 2026-04-08 |
+| 7. Security Tests                 | 2/2            | Complete    | 2026-04-08 |
+| 8. Contacts & Products CRUD E2E   | 2/2            | Complete    | 2026-04-09 |
+| 9. Auth Registration E2E          | 1/1            | Complete    | 2026-04-09 |
+| 10. Financial Gaps E2E            | 1/2            | In Progress | -          |
+| 11. Performance Expansion         | 0/1            | Not started | -          |
+| 12. Lia — Arquitetura & Pesquisa  | 1/1            | Complete    | 2026-04-13 |
+| 13. Lia — Backend Core            | 3/3            | Complete    | 2026-04-13 |
+| 14. Lia — Tool System             | 4/4            | Complete    | 2026-04-14 |
+| 15. Lia Frontend Chat UI          | 0/?            | Not started | -          |
+| 16. Lia Segurança & Billing       | 0/?            | Not started | -          |
+| 17. Lia Testes & QA               | 0/?            | Not started | -          |
