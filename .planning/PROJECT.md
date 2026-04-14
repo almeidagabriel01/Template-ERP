@@ -23,6 +23,12 @@ Propostas e gestão financeira funcionando com confiança — se tudo mais falha
 - BILL-03: Stripe webhook subscription state transition E2E — Validated in Phase 05: stripe-billing-e2e
 - BILL-04: Plan limit enforcement (402 + error body) E2E — Validated in Phase 05: stripe-billing-e2e
 - BILL-05: WhatsApp overage cron E2E — Validated in Phase 05: stripe-billing-e2e
+- AIBI-01: Free tier 403 at AI chat endpoint — Validated in Phase 16: lia-seguranca-billing
+- AIBI-02: Inactive subscription 403 at AI chat endpoint — Validated in Phase 16: lia-seguranca-billing
+- AIBI-03: Monthly limit 429 + UI input disabled — Validated in Phase 16: lia-seguranca-billing
+- AIBI-04: AI usage card on billing/subscription page — Validated in Phase 16: lia-seguranca-billing
+- AIBI-05: Near-limit warning banner in Lia panel — Validated in Phase 16: lia-seguranca-billing
+- AIBI-06: Firestore deny-write rules for aiUsage + aiConversations — Validated in Phase 16: lia-seguranca-billing
 
 ### Active
 
@@ -117,4 +123,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-04-13 — Milestone v3.0 Frontend & QA cycle started: phases 15–17 defined (Chat UI, Segurança & Billing, Testes & QA)_
+_Last updated: 2026-04-14 — Phase 16 complete: Lia AI security & billing enforced (AIBI-01–06). Advancing to Phase 17: lia-testes-&-qa._
