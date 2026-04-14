@@ -86,16 +86,15 @@ _(Definidos no Milestone v1.0 — veja REQUIREMENTS.md)_
 - Security: OWASP ZAP + validação de isolamento multi-tenant + Firestore rules audit
 - CI: GitHub Actions pipeline rodando testes em PRs + scripts locais npm
 
-## Current Milestone: v2.0 — E2E Coverage Expansion
+## Current Milestone: v3.0 — AI Assistant (Frontend & QA)
 
-**Goal:** Fechar as lacunas de cobertura identificadas no gap analysis pós-v1.0: módulos Contacts e Products sem nenhum teste, fluxo de registro de tenant, gaps financeiros (expense type, parcelas seletivas, sincronização proposta→transação) e performance de páginas adicionais.
+**Goal:** Completar o milestone v3.0 implementando a interface de chat da Lia, camada de segurança e billing para IA, e suite de testes E2E que cobre todos os fluxos de IA (AI-01 a AI-12).
 
 **Target features:**
 
-- E2E completo para Contacts CRUD e Products CRUD
-- E2E do fluxo de auto-registro de tenant (self-signup)
-- Gaps financeiros: transações do tipo expense, pagamento seletivo de parcelas, validação do sync proposta-aprovada → transações
-- Performance: Core Web Vitals + API baseline para /contacts e /products
+- Frontend Chat UI: LiaPanel (aside 420px fixed right), streaming token-a-token, LiaMessageBubble, LiaInputBar, LiaToolConfirmDialog, LiaToolResultCard, LiaTriggerButton, hook useAiChat com SSE
+- Segurança & Billing: ai-auth.middleware.ts (verificação de planId, subscriptionStatus, limite), Firestore rules para aiUsage e aiConversations, seção de uso da Lia na página de billing, warning a 80% do limite
+- Testes & QA: seed data para tenant ai-test pro, E2E AI-01 a AI-12, smoke test no CI
 
 ## Evolution
 
@@ -118,4 +117,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-04-14 — Phase 14 complete: Lia tool system live — 29 tools, Gemini multi-turn function calling loop, service layer contract, plan/role gating, delete confirmation flow_
+_Last updated: 2026-04-13 — Milestone v3.0 Frontend & QA cycle started: phases 15–17 defined (Chat UI, Segurança & Billing, Testes & QA)_
