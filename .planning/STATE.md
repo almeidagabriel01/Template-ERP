@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — AI Assistant
-status: Ready to execute
-stopped_at: Completed 18-02-PLAN.md
-last_updated: "2026-04-15T16:35:03.295Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 18-03-PLAN.md
+last_updated: "2026-04-15T16:35:19.430Z"
 progress:
   total_phases: 14
   completed_phases: 13
@@ -77,6 +77,7 @@ _Updated after each plan completion_
 | Phase 17 P05 | 2 | 2 tasks | 1 files |
 | Phase 18 P02 | 5 | 2 tasks | 3 files |
 | Phase 18 P01 | 113 | 2 tasks | 2 files |
+| Phase 18 P03 | 2 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -143,6 +144,10 @@ Carry-forward decisions from v1.0 relevant to v2.0 work:
 - [Phase 17]: API tests and UI tests coexist in same spec file via import aliasing (test vs uiTest from base.fixture)
 - [Phase 18]: remark-breaks for post-stream markdown path; whitespace-pre-wrap for user/streaming plain-text span — two rendering contexts require two separate newline-preservation approaches
 - [Phase 18]: Tool result chip uses inline-flex (rounded-full) not block — collapsed state shows name+summary inline; JSON only visible after 'Ver detalhes' click
+- [Phase 18]: skipIncrement flag derived from server-side requiresConfirmation — never from client input; saveConversation also guarded to avoid persisting incomplete conversations
+- [Phase 18]: System prompt rule 15 explicitly forbids ID exposure with correct/incorrect examples — defense in depth with existing rule 11 (T-18-02 mitigated)
+- [Phase 18]: Bug 4 fix: LiaTriggerButton always mounted; CSS visibility classes (opacity-0 scale-75 pointer-events-none) drive hide/show instead of conditional render
+- [Phase 18]: Bug 2 fix: sessionId useState uses generateSessionId() directly; restoration deferred to useEffect with isRestoredRef guard preventing race between tenantId availability and localStorage read
 
 ### Pending Todos
 
@@ -154,6 +159,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-15T16:34:59.529Z
-Stopped at: Completed 18-02-PLAN.md
+Last session: 2026-04-15T16:35:19.426Z
+Stopped at: Completed 18-03-PLAN.md
 Resume file: None
