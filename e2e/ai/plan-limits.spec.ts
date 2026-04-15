@@ -179,8 +179,8 @@ uiTest.describe("AI-08: At-limit disabled input with reset date", () => {
       await lia.openPanel();
 
       // Hover over disabled send button to trigger tooltip
-      // The custom Tooltip component renders a portal div with role="tooltip"
-      await lia.sendButton.hover();
+      // { force: true } bypasses the Tooltip's inline-flex wrapper that intercepts pointer events
+      await lia.sendButton.hover({ force: true });
 
       // Wait for tooltip to appear — custom Tooltip uses role="tooltip" on the portal div
       const tooltip = page.getByRole("tooltip");
