@@ -76,9 +76,8 @@ export const TOOL_DEFINITIONS: Record<string, FunctionDeclaration> = {
       properties: {
         status: {
           type: SchemaType.STRING,
-          format: "enum",
-          enum: ["draft", "sent", "approved", "rejected"],
-          description: "Filtrar por status (opcional)",
+          description:
+            "Filtrar por status: draft, sent, approved, rejected (opcional). Omita para listar todos.",
         },
         search: {
           type: SchemaType.STRING,
@@ -428,7 +427,8 @@ export const TOOL_DEFINITIONS: Record<string, FunctionDeclaration> = {
 
   create_product: {
     name: "create_product",
-    description: "Cria um novo produto no catálogo do tenant.",
+    description:
+      "Cria um novo produto no catálogo do tenant. OBRIGATÓRIO: Colete nome, preço, categoria e fabricante do usuário ANTES de chamar esta tool. Nunca assuma valores padrão para esses campos.",
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
@@ -436,24 +436,24 @@ export const TOOL_DEFINITIONS: Record<string, FunctionDeclaration> = {
           type: SchemaType.STRING,
           description: "Nome do produto",
         },
+        price: {
+          type: SchemaType.NUMBER,
+          description: "Preço de venda em reais (ex: 1500.00)",
+        },
+        category: {
+          type: SchemaType.STRING,
+          description: "Categoria do produto (ex: Automação, Iluminação, Câmeras)",
+        },
+        manufacturer: {
+          type: SchemaType.STRING,
+          description: "Fabricante ou fornecedor do produto",
+        },
         description: {
           type: SchemaType.STRING,
           description: "Descrição do produto (opcional)",
         },
-        price: {
-          type: SchemaType.NUMBER,
-          description: "Preço em reais (opcional)",
-        },
-        category: {
-          type: SchemaType.STRING,
-          description: "Categoria do produto (opcional)",
-        },
-        manufacturer: {
-          type: SchemaType.STRING,
-          description: "Fabricante/fornecedor (opcional)",
-        },
       },
-      required: ["name"],
+      required: ["name", "price", "category", "manufacturer"],
     },
   },
 

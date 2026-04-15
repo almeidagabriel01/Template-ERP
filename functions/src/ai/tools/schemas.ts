@@ -15,6 +15,24 @@ const AddressSchema = z
 
 // ─── Proposal schemas ────────────────────────────────────────────────────────
 
+const VALID_PROPOSAL_STATUSES = ["draft", "sent", "approved", "rejected"] as const;
+
+export const ListProposalsArgsSchema = z.object({
+  // Accept any string from the model, coerce unrecognised values (e.g. "", "all") to undefined
+  // so the executor lists all proposals instead of passing a bad filter downstream.
+  status: z
+    .string()
+    .optional()
+    .transform((v) => {
+      if (v && (VALID_PROPOSAL_STATUSES as readonly string[]).includes(v)) {
+        return v as (typeof VALID_PROPOSAL_STATUSES)[number];
+      }
+      return undefined;
+    }),
+  search: z.string().max(500).trim().optional(),
+  limit: z.number().int().min(1).max(50).optional(),
+});
+
 const ProposalItemSchema = z.object({
   productId: z.string().min(1),
   quantity: z.number().positive("Quantidade deve ser maior que zero."),
@@ -84,10 +102,10 @@ export const UpdateContactArgsSchema = z.object({
 
 export const CreateProductArgsSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório.").max(200).trim(),
+  price: z.number().min(0, "Preço não pode ser negativo."),
+  category: z.string().min(1, "Categoria é obrigatória.").max(100).trim(),
+  manufacturer: z.string().min(1, "Fabricante é obrigatório.").max(200).trim(),
   description: z.string().max(2000).trim().optional(),
-  price: z.number().min(0, "Preço não pode ser negativo.").optional(),
-  category: z.string().max(100).trim().optional(),
-  manufacturer: z.string().max(200).trim().optional(),
 });
 
 export const UpdateProductArgsSchema = z.object({
@@ -179,6 +197,7 @@ export const SearchHelpArgsSchema = z.object({
 // ─── ToolSchemas registry ────────────────────────────────────────────────────
 
 export const ToolSchemas: Record<string, z.ZodType> = {
+  list_proposals: ListProposalsArgsSchema,
   create_proposal: CreateProposalArgsSchema,
   update_proposal: UpdateProposalArgsSchema,
   update_proposal_status: UpdateProposalStatusArgsSchema,
