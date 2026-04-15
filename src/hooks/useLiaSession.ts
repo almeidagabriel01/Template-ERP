@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/providers/auth-provider";
@@ -53,6 +53,8 @@ export interface UseLiaSessionReturn {
   isLoadingHistory: boolean;
   /** Start a new session: clears localStorage and generates fresh sessionId */
   startNewSession: () => void;
+  /** Resume a specific past session by ID (Pro/Enterprise only) */
+  loadSession: (id: string) => void;
   /** Whether the plan supports persistent history */
   persistHistory: boolean;
 }
@@ -73,19 +75,26 @@ export function useLiaSession(): UseLiaSessionReturn {
   const tierConfig = AI_TIER_LIMITS[planTier ?? "starter"];
   const persistHistory = tierConfig?.persistHistory ?? false;
 
-  const [sessionId, setSessionId] = useState<string>(() => {
-    // Only restore from localStorage on client, only for persistent plans
-    if (typeof window === "undefined") return generateSessionId();
-    if (!persistHistory || !tenantId) return generateSessionId();
-    return localStorage.getItem(getStorageKey(tenantId)) ?? generateSessionId();
-  });
+  const [sessionId, setSessionId] = useState<string>(generateSessionId);
+  const isRestoredRef = useRef(false);
 
   const [historyMessages, setHistoryMessages] = useState<LiaMessage[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
+  // Restore sessionId from localStorage once auth context is ready (Pro/Enterprise only)
+  useEffect(() => {
+    if (isRestoredRef.current) return;
+    if (!persistHistory || !tenantId) return;
+    isRestoredRef.current = true;
+    const stored = localStorage.getItem(getStorageKey(tenantId));
+    if (stored) {
+      setSessionId(stored);
+    }
+  }, [persistHistory, tenantId]);
+
   // Persist sessionId in localStorage whenever it changes (Pro/Enterprise only)
   useEffect(() => {
-    if (!persistHistory || !tenantId) return;
+    if (!persistHistory || !tenantId || !isRestoredRef.current) return;
     localStorage.setItem(getStorageKey(tenantId), sessionId);
   }, [sessionId, tenantId, persistHistory]);
 
@@ -153,11 +162,20 @@ export function useLiaSession(): UseLiaSessionReturn {
     }
   }, [persistHistory, tenantId]);
 
+  const loadSession = useCallback((id: string) => {
+    setHistoryMessages([]);
+    setSessionId(id);
+    if (persistHistory && tenantId) {
+      localStorage.setItem(getStorageKey(tenantId), id);
+    }
+  }, [persistHistory, tenantId]);
+
   return {
     sessionId,
     historyMessages,
     isLoadingHistory,
     startNewSession,
+    loadSession,
     persistHistory,
   };
 }
