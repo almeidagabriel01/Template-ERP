@@ -144,15 +144,18 @@ export function LiaContainer() {
 
   return (
     <>
-      <LiaTriggerButton
-        isOpen={chat.isOpen}
-        hasUnread={chat.hasUnread}
-        onOpen={chat.openPanel}
-        onClose={chat.closePanel}
-      />
+      {!chat.isOpen && (
+        <LiaTriggerButton
+          isOpen={false}
+          hasUnread={chat.hasUnread}
+          onOpen={chat.openPanel}
+          onClose={chat.closePanel}
+        />
+      )}
 
       <LiaPanel
         isOpen={chat.isOpen}
+        onClose={chat.closePanel}
         onStartNewSession={handleStartNewSession}
         usageBadge={
           <LiaUsageBadge

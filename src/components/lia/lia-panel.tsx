@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, X } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 
 interface LiaPanelProps {
   isOpen: boolean;
+  onClose: () => void;
   onStartNewSession: () => void;
   /** Slot: usage badge rendered by parent */
   usageBadge?: React.ReactNode;
@@ -25,6 +26,7 @@ interface LiaPanelProps {
 
 export function LiaPanel({
   isOpen,
+  onClose,
   onStartNewSession,
   usageBadge,
   chatWindow,
@@ -66,6 +68,17 @@ export function LiaPanel({
 
         {/* Usage badge slot */}
         {usageBadge}
+
+        {/* Close button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="w-8 h-8 shrink-0"
+          aria-label="Fechar Lia"
+          onClick={onClose}
+        >
+          <X className="w-4 h-4" />
+        </Button>
 
         {/* Options menu */}
         <DropdownMenu>
