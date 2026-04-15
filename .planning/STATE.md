@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — AI Assistant
-status: Ready to execute
-stopped_at: Completed 17-03-PLAN.md
-last_updated: "2026-04-15T00:28:29.544Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 17-04-PLAN.md
+last_updated: "2026-04-15T00:28:58.155Z"
 progress:
   total_phases: 13
-  completed_phases: 11
+  completed_phases: 12
   total_plans: 43
-  completed_plans: 40
-  percent: 93
+  completed_plans: 41
+  percent: 95
 ---
 
 # Project State
@@ -71,6 +71,8 @@ _Updated after each plan completion_
 | Phase 16 P01 | 201 | 2 tasks | 1 files |
 | Phase 17 P01 | 6 | 3 tasks | 5 files |
 | Phase 17 P03 | 100 | 2 tasks | 1 files |
+| Phase 17 P04 | 99 | 2 tasks | 1 files |
+| Phase 17 P05 | 1 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -132,6 +134,8 @@ Carry-forward decisions from v1.0 relevant to v2.0 work:
 - [Phase 17]: SeedUserFreeRole extends Omit<SeedUser, 'role'> with role: 'free' — accommodates free-role custom claim without casting
 - [Phase 17]: clearAll() deletes AI subcollections (aiConversations, aiUsage) per tenant — subcollections not deleted by parent document deletion in Firestore
 - [Phase 17]: AI-06/07 as pure API tests using signInWithEmailPassword+fetch; AI-08 uses uiTest fixture; custom Tooltip uses role=tooltip portal div
+- [Phase 17]: Dialog role=dialog not alertdialog — LiaToolConfirmDialog uses Shadcn Dialog; cancel is Nao, manter; toolCall.name not toolName
+- [Phase 17]: AI-05 requires temporarily upgrading ai-test tenant to enterprise plan before testing whatsapp module gating — send_whatsapp_message requires enterprise plan rank so testing module-only gating requires first satisfying the plan gate
 
 ### Pending Todos
 
@@ -143,6 +147,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-15T00:28:04.543Z
-Stopped at: Completed 17-03-PLAN.md
+Last session: 2026-04-15T00:28:49.201Z
+Stopped at: Completed 17-04-PLAN.md
 Resume file: None
