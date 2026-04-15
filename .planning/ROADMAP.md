@@ -21,8 +21,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 6: Performance Tests** - Lighthouse CI with Core Web Vitals thresholds and API baselines
 - [ ] **Phase 7: Security Tests** - OWASP ZAP scan, Firestore rules audit, tenant isolation validation
 - [x] **Phase 15: Lia Frontend Chat UI** - LiaPanel, streaming SSE, message bubbles, tool dialogs, useAiChat hook (completed 2026-04-14)
-- [x] **Phase 16: Lia Segurança & Billing** - ai-auth middleware, AI_LIMITS, Firestore rules, billing page AI usage (completed 2026-04-14)
-- [x] **Phase 17: Lia Testes & QA** - E2E AI-01–12, seed tenant ai-test pro, CI smoke test (completed 2026-04-15)
+- [x] **Phase 16: Lia Seguranca & Billing** - ai-auth middleware, AI_LIMITS, Firestore rules, billing page AI usage (completed 2026-04-14)
+- [x] **Phase 17: Lia Testes & QA** - E2E AI-01-12, seed tenant ai-test pro, CI smoke test (completed 2026-04-15)
 
 ## Phase Details
 
@@ -278,6 +278,18 @@ Plans:
 - [x] 17-04-PLAN.md -- Isolation tests: AI-10 cross-tenant, AI-11 member role, AI-12 delete confirm (AIQA-04)
 - [x] 17-05-PLAN.md -- Tool execution tests: AI-04 creates data, AI-05 inactive module (AIQA-02)
 
+### Phase 18: fix(lia): 5 correções — contador de uso, histórico, quebras de linha, minimizar sem perder estado, tool results sem JSON bruto
+
+**Goal:** Fix all 5 Lia bugs identified during QA (usage counter, session history, line breaks, minimize state, tool result display) without regressions.
+**Requirements**: BUG-1, BUG-2, BUG-3, BUG-4, BUG-5A, BUG-5B
+**Depends on:** Phase 17
+**Plans:** 3 plans
+
+Plans:
+- [ ] 18-01-PLAN.md -- Backend: usage counter skipIncrement + system prompt ID-hiding rule (Bug 1 + Bug 5b)
+- [ ] 18-02-PLAN.md -- Frontend: line break rendering + tool result chip redesign (Bug 3 + Bug 5a)
+- [ ] 18-03-PLAN.md -- Frontend: always-mounted trigger + sessionId restoration fix (Bug 4 + Bug 2)
+
 ---
 
 ## v2.0 — E2E Coverage Expansion
@@ -347,7 +359,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18
 
 | Phase                             | Plans Complete | Status      | Completed  |
 | --------------------------------- | -------------- | ----------- | ---------- |
@@ -365,6 +377,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 12. Lia — Arquitetura & Pesquisa  | 1/1            | Complete    | 2026-04-13 |
 | 13. Lia — Backend Core            | 3/3            | Complete    | 2026-04-13 |
 | 14. Lia — Tool System             | 4/4            | Complete    | 2026-04-14 |
-| 15. Lia Frontend Chat UI          | 10/10 | Complete    | 2026-04-14 |
-| 16. Lia Segurança & Billing       | 4/4 | Complete    | 2026-04-14 |
-| 17. Lia Testes & QA               | 5/5 | Complete   | 2026-04-15 |
+| 15. Lia Frontend Chat UI          | 10/10          | Complete    | 2026-04-14 |
+| 16. Lia Segurança & Billing       | 4/4            | Complete    | 2026-04-14 |
+| 17. Lia Testes & QA               | 5/5            | Complete    | 2026-04-15 |
+| 18. fix(lia) 5 correções          | 0/3            | Not started | -          |
