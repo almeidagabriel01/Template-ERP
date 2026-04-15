@@ -1,6 +1,7 @@
 "use client";
 
 import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
 import { cn } from "@/lib/utils";
 import type { LiaMessage } from "@/types/ai";
 import { LiaToolResultCard } from "./lia-tool-result-card";
@@ -40,11 +41,11 @@ export function LiaMessageBubble({ message }: LiaMessageBubbleProps) {
         {/* Message content */}
         {isUser || message.isStreaming ? (
           // User messages and streaming Lia messages: plain text
-          <span>{message.content}</span>
+          <span className="whitespace-pre-wrap">{message.content}</span>
         ) : (
           // Post-stream Lia messages: render with ReactMarkdown
           <div className="prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown>{message.content}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkBreaks]}>{message.content}</ReactMarkdown>
           </div>
         )}
 
