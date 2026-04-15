@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAiChat } from "@/hooks/useAiChat";
 import { useLiaSession } from "@/hooks/useLiaSession";
 import { useLiaUsage } from "@/hooks/useLiaUsage";
+import { useLiaHistory } from "@/hooks/useLiaHistory";
 import { LiaTriggerButton } from "./lia-trigger-button";
 import { LiaPanel } from "./lia-panel";
 import { LiaChatWindow } from "./lia-chat-window";
@@ -12,6 +13,7 @@ import { LiaMessageBubble } from "./lia-message-bubble";
 import { LiaInputBar } from "./lia-input-bar";
 import { LiaUsageBadge } from "./lia-usage-badge";
 import { LiaToolConfirmDialog } from "./lia-tool-confirm-dialog";
+import { LiaHistoryPanel } from "./lia-history-panel";
 import { cn } from "@/lib/utils";
 
 // Route-based greetings and quick-action chips per UI-SPEC
@@ -92,6 +94,9 @@ export function LiaContainer() {
   const [nearLimitDismissed, setNearLimitDismissed] = useState(false);
   const showNearLimitBanner = usage.isNearLimit && !usage.isAtLimit && !nearLimitDismissed;
 
+  const [view, setView] = useState<"chat" | "history">("chat");
+  const history = useLiaHistory(session.persistHistory);
+
   const routeConfig = getRouteConfig(pathname);
 
   // Hydrate messages from Firestore history on session load
@@ -133,6 +138,21 @@ export function LiaContainer() {
   const handleStartNewSession = useCallback(() => {
     session.startNewSession();
     chat.startNewSession();
+    setView("chat");
+  }, [session, chat]);
+
+  const handleToggleHistory = useCallback(() => {
+    setView((v) => {
+      const next = v === "chat" ? "history" : "chat";
+      if (next === "history") void history.reload();
+      return next;
+    });
+  }, [history]);
+
+  const handleLoadSession = useCallback((sessionId: string) => {
+    session.loadSession(sessionId);
+    chat.startNewSession();
+    setView("chat");
   }, [session, chat]);
 
   const showChips =
@@ -144,19 +164,20 @@ export function LiaContainer() {
 
   return (
     <>
-      {!chat.isOpen && (
-        <LiaTriggerButton
-          isOpen={false}
-          hasUnread={chat.hasUnread}
-          onOpen={chat.openPanel}
-          onClose={chat.closePanel}
-        />
-      )}
+      <LiaTriggerButton
+        isOpen={chat.isOpen}
+        hasUnread={chat.hasUnread}
+        onOpen={chat.openPanel}
+        onClose={chat.closePanel}
+      />
 
       <LiaPanel
         isOpen={chat.isOpen}
         onClose={chat.closePanel}
         onStartNewSession={handleStartNewSession}
+        onToggleHistory={handleToggleHistory}
+        view={view}
+        persistHistory={session.persistHistory}
         usageBadge={
           <LiaUsageBadge
             messagesUsed={usage.messagesUsed}
@@ -164,23 +185,36 @@ export function LiaContainer() {
             isLoading={usage.isLoading}
           />
         }
+        historyView={
+          <LiaHistoryPanel
+            sessions={history.sessions}
+            isLoading={history.isLoading}
+            currentSessionId={session.sessionId}
+            onSelectSession={handleLoadSession}
+            onReload={history.reload}
+          />
+        }
         chatWindow={
           <LiaChatWindow
             messages={chat.messages}
             isStreaming={chat.isStreaming}
           >
-            {chat.messages.map((message, index) => (
-              <div key={message.id}>
-                <LiaMessageBubble message={message} />
-                {/* Quick-action chips after greeting bubble for Starter */}
-                {showChips && index === 0 && (
-                  <QuickActionChips
-                    chips={routeConfig.chips}
-                    onChipClick={chat.sendMessage}
-                  />
-                )}
-              </div>
-            ))}
+            {chat.messages.map((message, index) => {
+              // Skip the empty streaming placeholder — TypingIndicator handles this waiting state
+              if (message.isStreaming && !message.content) return null;
+              return (
+                <div key={message.id}>
+                  <LiaMessageBubble message={message} />
+                  {/* Quick-action chips after greeting bubble for Starter */}
+                  {showChips && index === 0 && (
+                    <QuickActionChips
+                      chips={routeConfig.chips}
+                      onChipClick={chat.sendMessage}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </LiaChatWindow>
         }
         inputBar={

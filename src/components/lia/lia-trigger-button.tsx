@@ -26,8 +26,11 @@ export function LiaTriggerButton({
         "flex items-center justify-center",
         "w-[52px] h-[52px] rounded-full",
         "bg-primary text-primary-foreground shadow-lg",
-        "hover:scale-105 transition-transform duration-200 ease-in-out",
+        "transition-all duration-300 ease-in-out",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        isOpen
+          ? "opacity-0 scale-75 pointer-events-none"
+          : "opacity-100 scale-100 hover:scale-105",
       )}
     >
       {/* Notification dot */}
