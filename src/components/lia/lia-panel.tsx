@@ -41,7 +41,7 @@ export function LiaPanel({
       aria-label="Assistente Lia"
       aria-hidden={!isOpen}
       className={cn(
-        "fixed inset-y-0 right-0 z-40",
+        "fixed top-16 bottom-0 right-0 z-40",
         "w-[420px] flex flex-col",
         "bg-card border-l border-border shadow-xl",
         "transition-transform duration-300 ease-in-out",

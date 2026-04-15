@@ -33,8 +33,8 @@ export function LiaMessageBubble({ message }: LiaMessageBubbleProps) {
         className={cn(
           "max-w-[85%] rounded-2xl px-3 py-2 text-sm",
           isUser
-            ? "self-end rounded-tr-sm bg-card border border-border text-foreground"
-            : "self-start rounded-tl-sm bg-muted text-foreground leading-relaxed",
+            ? "rounded-tr-sm bg-card border border-border text-foreground"
+            : "rounded-tl-sm bg-muted text-foreground leading-relaxed",
         )}
       >
         {/* Message content */}
