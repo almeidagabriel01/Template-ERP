@@ -27,7 +27,8 @@
     "test:e2e:debug": "npx playwright test --debug",
     "test:performance": "npx playwright test --config=playwright.perf.config.ts",
     "test:security": "npx tsx e2e/security/run-security-scan.ts",
-    "test:rules": "jest --config jest.config.js"
+    "test:rules": "jest --config jest.config.js",
+    "test:functions": "npm --prefix functions test"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
