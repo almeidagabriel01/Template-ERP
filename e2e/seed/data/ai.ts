@@ -32,6 +32,16 @@ export const TENANT_AI_FREE: SeedTenant = {
   createdAt: new Date("2024-01-01T00:00:00Z").toISOString(),
 };
 
+/** Dedicated tenant for quota-bypass tests — never shared with other specs */
+export const TENANT_AI_QUOTA: SeedTenant = {
+  id: "ai-quota",
+  tenantId: "ai-quota",
+  name: "AI Quota Corp",
+  niche: "automacao_residencial",
+  primaryColor: "#10B981",
+  createdAt: new Date("2024-01-01T00:00:00Z").toISOString(),
+};
+
 // ─── User Constants ───────────────────────────────────────────────────────────
 
 export const USER_AI_ADMIN: SeedUser = {
@@ -72,6 +82,17 @@ export const USER_AI_FREE: SeedUser = {
   tenantId: "ai-free",
   role: "admin",
   masterId: "ai-free-uid",
+};
+
+/** Dedicated pro user for quota-bypass tests — never shared with other specs */
+export const USER_AI_QUOTA: SeedUser = {
+  uid: "ai-quota-uid",
+  email: "ai-quota@test.com",
+  password: "TestPass123!",
+  name: "AI Quota Admin",
+  tenantId: "ai-quota",
+  role: "admin",
+  masterId: "ai-quota-uid",
 };
 
 // USER_AI_FREE_ROLE: user with role: "free" in custom claims.
@@ -115,6 +136,12 @@ const AI_TENANT_PLANS: Record<
     subscriptionStatus: "canceled",
     whatsappEnabled: false,
   },
+  "ai-quota": {
+    plan: "pro",
+    planId: "pro",
+    subscriptionStatus: "active",
+    whatsappEnabled: false,
+  },
 };
 
 // ─── Seed Function ────────────────────────────────────────────────────────────
@@ -124,7 +151,7 @@ const AI_TENANT_PLANS: Record<
  * Called from seedAll() in seed-factory.ts after seedUsers().
  */
 export async function seedAiTenants(auth: Auth, db: Firestore): Promise<void> {
-  const tenants = [TENANT_AI_TEST, TENANT_AI_STARTER, TENANT_AI_FREE];
+  const tenants = [TENANT_AI_TEST, TENANT_AI_STARTER, TENANT_AI_FREE, TENANT_AI_QUOTA];
 
   // Seed tenants with plan metadata
   const batch = db.batch();
@@ -138,7 +165,7 @@ export async function seedAiTenants(auth: Auth, db: Firestore): Promise<void> {
   await batch.commit();
 
   // Seed users (SeedUser-typed)
-  const standardUsers: SeedUser[] = [USER_AI_ADMIN, USER_AI_MEMBER, USER_AI_STARTER, USER_AI_FREE];
+  const standardUsers: SeedUser[] = [USER_AI_ADMIN, USER_AI_MEMBER, USER_AI_STARTER, USER_AI_FREE, USER_AI_QUOTA];
 
   for (const user of standardUsers) {
     try {
