@@ -33,7 +33,11 @@ class MockChatSession implements AiChatSession {
           calls: [
             {
               name: "request_confirmation",
-              args: { action: "delete_contact", message: "Confirmar exclusão?" },
+              args: {
+                action: "delete_contact",
+                affectedRecords: ["Mock Contact"],
+                severity: "high",
+              },
             },
           ],
         };
