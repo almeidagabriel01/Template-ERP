@@ -143,7 +143,7 @@ const DD_MM_YYYY = /^\d{2}\/\d{2}\/\d{4}$/;
 export const CreateTransactionArgsSchema = z.object({
   type: z.enum(["income", "expense"]),
   description: z.string().min(1, "Descrição é obrigatória.").max(500).trim(),
-  amount: z.number().positive("Valor deve ser maior que zero."),
+  amount: z.number().positive("Valor deve ser maior que zero.").max(10_000_000, "Valor máximo por lançamento: R$ 10.000.000."),
   walletId: z.string().min(1, "walletId é obrigatório."),
   date: z
     .string()
@@ -156,7 +156,7 @@ export const CreateTransactionArgsSchema = z.object({
 export const TransferWalletsArgsSchema = z.object({
   fromWalletId: z.string().min(1, "fromWalletId é obrigatório."),
   toWalletId: z.string().min(1, "toWalletId é obrigatório."),
-  amount: z.number().positive("Valor deve ser maior que zero."),
+  amount: z.number().positive("Valor deve ser maior que zero.").max(10_000_000, "Valor máximo por transferência: R$ 10.000.000."),
   description: z.string().max(500).trim().optional(),
 });
 

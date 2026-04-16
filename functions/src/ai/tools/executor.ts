@@ -446,6 +446,12 @@ const HANDLERS: Record<string, ToolHandler> = {
   },
 
   create_transaction: async (args, ctx) => {
+    if (ctx.confirmed !== true) {
+      return {
+        success: false,
+        error: "Confirmação obrigatória para criação de lançamentos financeiros. Use request_confirmation antes.",
+      };
+    }
     const date = parseBrDate(args.date as string);
     const result = await createTransactionForAi(
       {
@@ -498,6 +504,12 @@ const HANDLERS: Record<string, ToolHandler> = {
   },
 
   transfer_between_wallets: async (args, ctx) => {
+    if (ctx.confirmed !== true) {
+      return {
+        success: false,
+        error: "Confirmação obrigatória para transferências entre carteiras. Use request_confirmation antes.",
+      };
+    }
     const result = await walletsService.transferBetweenWallets(
       {
         fromWalletId: args.fromWalletId as string,
@@ -511,6 +523,12 @@ const HANDLERS: Record<string, ToolHandler> = {
   },
 
   pay_installment: async (args, ctx) => {
+    if (ctx.confirmed !== true) {
+      return {
+        success: false,
+        error: "Confirmação obrigatória para pagamento de parcelas. Use request_confirmation antes.",
+      };
+    }
     const paidAt = args.paidAt ? parseBrDate(args.paidAt as string) : undefined;
     const result = await payInstallmentForAi(
       args.transactionId as string,

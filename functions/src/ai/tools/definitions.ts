@@ -38,7 +38,7 @@ export const TOOL_DEFINITIONS: Record<string, FunctionDeclaration> = {
   request_confirmation: {
     name: "request_confirmation",
     description:
-      "OBRIGATÓRIO antes de qualquer ação destrutiva (DELETE) ou edição em massa (>10 registros). Envia um pedido de confirmação para o usuário via frontend. Só prossiga com a ação após receber confirmed=true no próximo turno. NUNCA execute delete sem chamar esta tool primeiro.",
+      "OBRIGATÓRIO antes de qualquer ação financeira (create_transaction, transfer_between_wallets, pay_installment), ação destrutiva (DELETE) ou edição em massa (>10 registros). Envia um pedido de confirmação para o usuário via frontend. Só prossiga com a ação após receber confirmed=true no próximo turno. NUNCA execute operações financeiras ou delete sem chamar esta tool primeiro.",
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
