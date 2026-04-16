@@ -447,8 +447,8 @@ router.post("/chat", async (req: Request, res: Response): Promise<void> => {
       error: errorMessage,
     });
 
-    // Detect AI provider rate limit (Groq/Gemini return errors starting with "429")
-    const isProviderRateLimit = typeof errorMessage === "string" && errorMessage.startsWith("429");
+    // Detect AI provider rate limit — Groq errors start with "429", Gemini wraps it as "[GoogleGenerativeAI Error]: ... [429 Too Many Requests]"
+    const isProviderRateLimit = typeof errorMessage === "string" && errorMessage.includes("429");
     const clientMessage = isProviderRateLimit
       ? "Serviço de IA temporariamente sobrecarregado. Tente novamente em alguns instantes."
       : "Erro ao processar resposta da IA.";
