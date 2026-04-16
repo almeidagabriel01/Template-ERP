@@ -6,7 +6,7 @@ import { getTenantPlanProfile, evaluateSubscriptionStatusAccess } from "../lib/t
 import { sanitizeText } from "../utils/sanitize";
 import { logger } from "../lib/logger";
 import { selectModel } from "./model-router";
-import { checkAiLimit, incrementAiUsage, getAiUsage } from "./usage-tracker";
+import { checkAiLimit, reserveAiMessage, finalizeTokenUsage, refundAiMessage, getAiUsage } from "./usage-tracker";
 import { loadConversation, saveConversation } from "./conversation-store";
 import { buildSystemPrompt } from "./context-builder";
 import { buildAvailableTools } from "./tools/index";
@@ -82,6 +82,18 @@ router.post("/chat", async (req: Request, res: Response): Promise<void> => {
       messagesLimit: limitCheck.messagesLimit,
       resetAt: limitCheck.resetAt,
     });
+    return;
+  }
+
+  // 4b. Pre-debit: reserve 1 message slot before streaming begins.
+  // If the stream errors, is canceled, or returns a confirmation request,
+  // the slot is refunded in the finally block below.
+  let messageReserved = false;
+  try {
+    await reserveAiMessage(user.tenantId);
+    messageReserved = true;
+  } catch {
+    res.status(500).json({ message: "Erro interno ao processar solicitação." });
     return;
   }
 
@@ -357,8 +369,9 @@ router.post("/chat", async (req: Request, res: Response): Promise<void> => {
         totalTokens,
         responseLength: fullResponseText.length,
       });
-      // 11. Increment usage atomically
-      await incrementAiUsage(user.tenantId, totalTokens);
+      // 11. Finalize token usage (message was pre-debited before stream started)
+      await finalizeTokenUsage(user.tenantId, totalTokens);
+      messageReserved = false; // Pre-debit consumed — no refund needed
 
       // 12. Save conversation (Pro/Enterprise only — starter is no-op in saveConversation)
       const now = Timestamp.now();
@@ -410,6 +423,19 @@ router.post("/chat", async (req: Request, res: Response): Promise<void> => {
     res.write(`data: ${JSON.stringify(errorChunk)}\n\n`);
     res.write("data: [DONE]\n\n");
     res.end();
+  } finally {
+    // Refund the pre-debited message slot when the stream did not complete successfully:
+    // - stream error (catch path)
+    // - confirmation pending (skipIncrement=true — counter re-reserved on the confirmed request)
+    // - client disconnect (write failure)
+    if (messageReserved) {
+      refundAiMessage(user.tenantId).catch((err) => {
+        logger.warn("Failed to refund pre-debited AI message", {
+          tenantId: user.tenantId,
+          error: err instanceof Error ? err.message : "unknown",
+        });
+      });
+    }
   }
 });
 

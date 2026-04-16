@@ -73,6 +73,61 @@ export async function incrementAiUsage(
 }
 
 /**
+ * Pre-debit: atomically reserve 1 message slot before the stream begins.
+ * Call refundAiMessage() in a finally block if the stream does not complete.
+ */
+export async function reserveAiMessage(tenantId: string): Promise<void> {
+  const monthKey = buildMonthlyPeriodKeyUtc();
+  const docRef = getUsageDocRef(tenantId, monthKey);
+  await docRef.set(
+    {
+      tenantId,
+      month: monthKey,
+      messagesUsed: FieldValue.increment(1),
+      lastUpdatedAt: Timestamp.now(),
+    },
+    { merge: true },
+  );
+}
+
+/**
+ * Finalize token usage after a successful stream.
+ * Message counter was already incremented by reserveAiMessage — only tokens are added here.
+ */
+export async function finalizeTokenUsage(tenantId: string, tokensUsed: number): Promise<void> {
+  const monthKey = buildMonthlyPeriodKeyUtc();
+  const docRef = getUsageDocRef(tenantId, monthKey);
+  await docRef.set(
+    {
+      tenantId,
+      month: monthKey,
+      totalTokensUsed: FieldValue.increment(tokensUsed),
+      lastUpdatedAt: Timestamp.now(),
+    },
+    { merge: true },
+  );
+}
+
+/**
+ * Refund a pre-debited message slot.
+ * Called when the stream errored, was canceled, or returned a confirmation request
+ * (confirmation not yet acted upon — the counter will be re-reserved on the next request).
+ */
+export async function refundAiMessage(tenantId: string): Promise<void> {
+  const monthKey = buildMonthlyPeriodKeyUtc();
+  const docRef = getUsageDocRef(tenantId, monthKey);
+  await docRef.set(
+    {
+      tenantId,
+      month: monthKey,
+      messagesUsed: FieldValue.increment(-1),
+      lastUpdatedAt: Timestamp.now(),
+    },
+    { merge: true },
+  );
+}
+
+/**
  * Read the current AI usage for a tenant in the current month.
  * Returns null if no usage document exists yet.
  */
