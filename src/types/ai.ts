@@ -8,7 +8,8 @@ export interface AiChatRequest {
   message: string;
   sessionId?: string;
   currentPath?: string;
-  confirmed?: boolean;
+  confirmationToken?: string; // HMAC nonce from a prior requiresConfirmation tool_result
+  confirmed?: boolean;        // DEPRECATED — prefer confirmationToken
 }
 
 /** SSE chunk received from the streaming chat endpoint */
@@ -23,6 +24,7 @@ export interface AiChatChunk {
     name: string;
     result: unknown;
     requiresConfirmation?: boolean;
+    confirmationToken?: string; // HMAC nonce — echo back as confirmationToken on confirm
     confirmationData?: {
       action: string;
       affectedRecords: string[];

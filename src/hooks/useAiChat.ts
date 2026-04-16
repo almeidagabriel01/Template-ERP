@@ -8,6 +8,8 @@ import type { LiaMessage, AiChatChunk, AiUsageData } from "@/types/ai";
 export interface PendingConfirmation {
   originalMessage: string;
   sessionId: string;
+  /** HMAC nonce issued by the backend — echoed back to authorize the destructive action */
+  confirmationToken?: string;
   confirmationData: {
     action: string;
     affectedRecords: string[];
@@ -126,7 +128,7 @@ export function useAiChat(): UseAiChatReturn {
   }, []);
 
   const doSend = useCallback(
-    async (text: string, currentSessionId: string, confirmed?: boolean) => {
+    async (text: string, currentSessionId: string, confirmed?: boolean, confirmationToken?: string) => {
       if (sendingRef.current) return;
       sendingRef.current = true;
 
@@ -152,7 +154,7 @@ export function useAiChat(): UseAiChatReturn {
             message: text,
             sessionId: currentSessionId,
             currentPath: pathname ?? undefined,
-            ...(confirmed ? { confirmed: true } : {}),
+            ...(confirmationToken ? { confirmationToken } : confirmed ? { confirmed: true } : {}),
           },
           {
             onChunk: (chunk: AiChatChunk) => {
@@ -198,6 +200,7 @@ export function useAiChat(): UseAiChatReturn {
                       setPendingConfirmation({
                         originalMessage: text,
                         sessionId: currentSessionId,
+                        confirmationToken: chunk.toolResult.confirmationToken,
                         confirmationData: chunk.toolResult.confirmationData,
                       });
                     }
@@ -307,9 +310,14 @@ export function useAiChat(): UseAiChatReturn {
 
   const confirmAction = useCallback(async () => {
     if (!pendingConfirmation) return;
-    const { originalMessage, sessionId: pendingSessionId } = pendingConfirmation;
+    const { originalMessage, sessionId: pendingSessionId, confirmationToken } = pendingConfirmation;
     setPendingConfirmation(null);
-    await doSend(originalMessage, pendingSessionId, true);
+    if (confirmationToken) {
+      await doSend(originalMessage, pendingSessionId, undefined, confirmationToken);
+    } else {
+      // Fallback: no token issued (e.g. CONFIRMATION_SECRET not configured in dev)
+      await doSend(originalMessage, pendingSessionId, true);
+    }
   }, [pendingConfirmation, doSend]);
 
   const cancelAction = useCallback(() => {

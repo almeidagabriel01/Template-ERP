@@ -74,9 +74,10 @@ export interface AiConversationDocument {
  */
 export interface AiChatRequest {
   message: string;
-  sessionId?: string;          // optional — for conversation continuity (Pro/Enterprise)
-  currentPath?: string;        // optional — current frontend route for contextual suggestions
-  confirmed?: boolean;         // optional — confirmation handshake for destructive actions
+  sessionId?: string;           // optional — for conversation continuity (Pro/Enterprise)
+  currentPath?: string;         // optional — current frontend route for contextual suggestions
+  confirmationToken?: string;   // HMAC nonce from a prior requiresConfirmation tool_result
+  confirmed?: boolean;          // DEPRECATED — accepted for 1 release; prefer confirmationToken
 }
 
 /**
@@ -93,6 +94,7 @@ export interface AiChatChunk {
     name: string;
     result: unknown;
     requiresConfirmation?: boolean;
+    confirmationToken?: string;   // HMAC nonce — send back as confirmationToken on the next request
     confirmationData?: {
       action: string;
       affectedRecords: string[];

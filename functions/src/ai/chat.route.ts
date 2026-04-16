@@ -12,6 +12,7 @@ import { buildSystemPrompt } from "./context-builder";
 import { buildAvailableTools } from "./tools/index";
 import { executeToolCall, type ToolCallContext } from "./tools/executor";
 import { createAiProvider, createGroqFallbackProvider, type ToolFeedback } from "./providers/index";
+import { validateConfirmationToken } from "./security/confirmation-token";
 import type { AiChatRequest, AiChatChunk, AiConversationMessage } from "./ai.types";
 
 const router = Router();
@@ -38,6 +39,8 @@ router.post("/chat", async (req: Request, res: Response): Promise<void> => {
   const message = sanitizeText(rawMessage);
   const sessionId = typeof body.sessionId === "string" ? body.sessionId.trim() : "";
   const currentPath = typeof body.currentPath === "string" ? body.currentPath : undefined;
+  const confirmationToken =
+    typeof body.confirmationToken === "string" ? body.confirmationToken.trim() : undefined;
 
   // 2. Resolve plan tier
   let planProfile;
@@ -151,13 +154,30 @@ router.post("/chat", async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
+  // Resolve confirmation: token takes priority over deprecated boolean flag.
+  // Token is validated against sessionId to prevent cross-session replay.
+  let isConfirmed = false;
+  if (confirmationToken && sessionId) {
+    isConfirmed = validateConfirmationToken(confirmationToken, sessionId);
+    if (!isConfirmed) {
+      logger.warn("Invalid or expired confirmation token", {
+        tenantId: user.tenantId,
+        uid: user.uid,
+      });
+    }
+  } else if (body.confirmed === true) {
+    // DEPRECATED — kept for backward compatibility, remove after next release
+    isConfirmed = true;
+  }
+
   // Build tool call context — all fields from auth context, never from request body
   const toolCtx: ToolCallContext = {
     tenantId: user.tenantId,
     uid: user.uid,
     role: user.role || "member",
     planTier,
-    confirmed: body.confirmed,
+    confirmed: isConfirmed,
+    sessionId: sessionId || undefined,
   };
 
   try {
@@ -247,6 +267,7 @@ router.post("/chat", async (req: Request, res: Response): Promise<void> => {
               name: tc.name,
               result: result.data,
               requiresConfirmation: result.requiresConfirmation,
+              confirmationToken: result.confirmationToken,
               confirmationData: result.confirmationData,
             },
           };

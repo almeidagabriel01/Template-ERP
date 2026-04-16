@@ -2,6 +2,7 @@ import { db } from "../../init";
 import { logger } from "../../lib/logger";
 import { TOOL_REGISTRY } from "./index";
 import { ToolSchemas } from "./schemas";
+import { generateConfirmationToken } from "../security/confirmation-token";
 import type { TenantPlanTier } from "../../lib/tenant-plan-policy";
 
 // Service imports — per user decision: tools call extracted service functions
@@ -44,8 +45,10 @@ export interface ToolCallContext {
   uid: string;
   role: string;
   planTier: Exclude<TenantPlanTier, "free">;
-  /** From AiChatRequest.confirmed (request body), NOT from tool args */
+  /** true when a valid confirmationToken (or deprecated confirmed boolean) was provided */
   confirmed?: boolean;
+  /** AI session ID — used to bind confirmation tokens to the current session */
+  sessionId?: string;
 }
 
 export interface ToolCallResult {
@@ -53,6 +56,8 @@ export interface ToolCallResult {
   data?: unknown;
   error?: string;
   requiresConfirmation?: boolean;
+  /** HMAC nonce bound to (sessionId, action). Client echoes this back as confirmationToken. */
+  confirmationToken?: string;
   confirmationData?: {
     action: string;
     affectedRecords: string[];
@@ -145,12 +150,17 @@ async function resolveProposalItems(
 const HANDLERS: Record<string, ToolHandler> = {
   // ─── Utilities ──────────────────────────────────────────────────────────────
 
-  request_confirmation: async (args) => {
+  request_confirmation: async (args, ctx) => {
+    const action = args.action as string;
+    const token = ctx.sessionId
+      ? generateConfirmationToken(ctx.sessionId, action)
+      : undefined;
     return {
       success: true,
       requiresConfirmation: true,
+      confirmationToken: token,
       confirmationData: {
-        action: args.action as string,
+        action,
         affectedRecords: args.affectedRecords as string[],
         severity: args.severity as "low" | "high",
       },
