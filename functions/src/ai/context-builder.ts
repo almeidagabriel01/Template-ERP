@@ -1,5 +1,10 @@
 import { AI_LIMITS, type TenantPlanTier } from "./ai.types";
 
+/** Strip characters that could break out of system-prompt context lines */
+function escapePromptField(value: string): string {
+  return value.replace(/[\r\n\x00-\x1F`${}\\]/g, "").slice(0, 100);
+}
+
 export interface SystemPromptContext {
   tenantId: string;
   tenantName: string;
@@ -65,8 +70,8 @@ Responda SEMPRE em português brasileiro. Nunca mude de idioma, mesmo que o usu�
 - Mensagens de IA este mês: ${usageStr}
 
 # Usuário atual
-- Nome: ${ctx.userName}
-- Papel (role): ${ctx.userRole}
+- Nome: ${escapePromptField(ctx.userName)}
+- Papel (role): ${escapePromptField(ctx.userRole)}
 ${memberRestriction}
 ${contextualHint}
 

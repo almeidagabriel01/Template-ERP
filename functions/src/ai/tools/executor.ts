@@ -4,6 +4,7 @@ import { TOOL_REGISTRY } from "./index";
 import { ToolSchemas } from "./schemas";
 import { generateConfirmationToken } from "../security/confirmation-token";
 import { sanitizeText } from "../../utils/sanitize";
+import { logSecurityEvent } from "../../lib/security-observability";
 import type { TenantPlanTier } from "../../lib/tenant-plan-policy";
 
 // Service imports — per user decision: tools call extracted service functions
@@ -591,6 +592,11 @@ export async function executeToolCall(
 
   // 2. Double-validate plan tier
   if (PLAN_RANK[entry.minPlan] > PLAN_RANK[ctx.planTier]) {
+    logSecurityEvent("ai_tool_plan_denied", {
+      tenantId: ctx.tenantId,
+      uid: ctx.uid,
+      reason: `tool=${toolName} requiredPlan=${entry.minPlan} actualPlan=${ctx.planTier}`,
+    });
     return {
       success: false,
       error: `Tool ${toolName} requer plano ${entry.minPlan} ou superior. Seu plano: ${ctx.planTier}.`,
@@ -600,6 +606,11 @@ export async function executeToolCall(
   // 3. Double-validate role
   const isAdmin = ADMIN_ROLES.has(ctx.role.toUpperCase());
   if (entry.minRole === "admin" && !isAdmin) {
+    logSecurityEvent("ai_tool_role_denied", {
+      tenantId: ctx.tenantId,
+      uid: ctx.uid,
+      reason: `tool=${toolName} requiredRole=admin actualRole=${ctx.role}`,
+    });
     return {
       success: false,
       error: `Tool ${toolName} requer permissao de administrador.`,
