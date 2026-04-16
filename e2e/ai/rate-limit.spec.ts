@@ -9,7 +9,7 @@
 
 import { test, expect } from "@playwright/test";
 import { signInWithEmailPassword } from "../helpers/firebase-auth-api";
-import { USER_AI_ADMIN } from "../seed/data/ai";
+import { USER_AI_STARTER } from "../seed/data/ai";
 
 const FUNCTIONS_BASE =
   "http://127.0.0.1:5001/demo-proops-test/southamerica-east1/api";
@@ -19,8 +19,8 @@ test.describe.configure({ mode: "serial" });
 test.describe("AI-13: LIA rate-limit — 20 req/min per user", () => {
   test("21st request in the same minute returns 429 AI_RATE_LIMIT_EXCEEDED", async () => {
     const { idToken } = await signInWithEmailPassword(
-      USER_AI_ADMIN.email,
-      USER_AI_ADMIN.password,
+      USER_AI_STARTER.email,
+      USER_AI_STARTER.password,
     );
 
     const postChat = (sessionId: string) =>

@@ -19,7 +19,7 @@ export interface AiLimitConfig {
  */
 export const AI_LIMITS: Record<Exclude<TenantPlanTier, "free">, AiLimitConfig> = {
   starter:    { model: "gemini-2.0-flash",              messagesPerMonth: 80,   persistHistory: false },
-  pro:        { model: "gemini-2.0-flash", messagesPerMonth: 300,  persistHistory: true  },
+  pro:        { model: "gemini-2.0-flash", messagesPerMonth: 400,  persistHistory: true  },
   enterprise: { model: "gemini-2.5-flash", messagesPerMonth: 2000, persistHistory: true  },
 } as const;
 
