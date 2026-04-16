@@ -57,11 +57,11 @@ export interface UseLiaUsageReturn {
  */
 export function useLiaUsage(): UseLiaUsageReturn {
   const { tenant } = useTenant();
-  const { planTier } = usePlanLimits();
+  const { planTier, isLoading: isPlanLoading } = usePlanLimits();
 
   const tenantId = tenant?.id ?? null;
   const tierConfig = AI_TIER_LIMITS[planTier ?? "starter"];
-  const messagesLimit = tierConfig?.messagesPerMonth ?? 80;
+  const messagesLimit = tierConfig?.messagesPerMonth ?? AI_TIER_LIMITS.starter.messagesPerMonth;
 
   const [usage, setUsage] = useState<UsageState>(INITIAL_USAGE);
 
@@ -97,8 +97,11 @@ export function useLiaUsage(): UseLiaUsageReturn {
     return () => unsubscribe();
   }, [tenantId, yearMonth]);
 
-  // isLoading is true when tenantId exists but state hasn't been populated for this subscription yet
-  const isLoading = !!tenantId && usage.subscriptionKey !== subscriptionKey;
+  // isLoading is true while the plan tier is resolving OR usage hasn't been populated yet.
+  // isPlanLoading prevents the badge from briefly showing the "starter" default limit (80)
+  // before the real plan (e.g. pro=400) is fetched from Firestore.
+  const isLoading =
+    isPlanLoading || (!!tenantId && usage.subscriptionKey !== subscriptionKey);
 
   const isNearLimit = usage.messagesUsed >= Math.floor(messagesLimit * 0.8);
   const isAtLimit = usage.messagesUsed >= messagesLimit;

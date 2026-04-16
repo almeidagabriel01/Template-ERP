@@ -22,7 +22,7 @@
     "security:audit:runtime": "npm audit --omit=dev --audit-level=critical",
     "security:audit:functions": "npm --prefix functions run security:audit:runtime",
     "security:scan": "npm run security:audit:runtime && npm run security:audit:functions",
-    "test:e2e": "npx playwright test",
+    "test:e2e": "npx playwright test --fail-on-flaky-tests",
     "test:e2e:ui": "npx playwright test --ui",
     "test:e2e:debug": "npx playwright test --debug",
     "test:performance": "npx playwright test --config=playwright.perf.config.ts",

@@ -47,6 +47,12 @@ test.describe("AI-13: LIA rate-limit — 20 req/min per user", () => {
           break;
         }
         // AI_LIMIT_EXCEEDED or similar — unexpected, keep going
+      } else {
+        // Cancel the SSE stream so res.on("close") fires on the server and the
+        // tenantSseCount slot is released before the next iteration. Without this,
+        // the 6th+ request hits MAX_SSE_PER_TENANT (5), the limiter rolls back the
+        // RPM count, and we never accumulate 20 requests to trigger RATE_LIMIT_EXCEEDED.
+        await r.body?.cancel().catch(() => {});
       }
     }
 

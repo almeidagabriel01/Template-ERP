@@ -4,6 +4,7 @@
     "CLAUDE_CODE_USE_POWERSHELL_TOOL": "1"
   },
   "permissions": {
+     "defaultMode": "bypassPermissions",
     "allow": [
       "Read(**)",
       "Write(.claude/**)",
