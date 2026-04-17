@@ -16,6 +16,7 @@ import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { TenantProvider } from "@/providers/tenant-provider";
 import { AuthProvider } from "@/providers/auth-provider";
 import { PermissionsProvider } from "@/providers/permissions-provider";
+import { PlanProvider } from "@/providers/plan-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -119,7 +120,9 @@ export default function RootLayout({
               ) : (
                 <PermissionsProvider>
                   <TenantProvider>
-                    <ProtectedRoute>{children}</ProtectedRoute>
+                    <PlanProvider>
+                      <ProtectedRoute>{children}</ProtectedRoute>
+                    </PlanProvider>
                   </TenantProvider>
                 </PermissionsProvider>
               )}

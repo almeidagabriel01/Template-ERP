@@ -53,9 +53,18 @@ router.post("/chat", async (req: Request, res: Response): Promise<void> => {
 
   // 3. Block free tier with 403
   if (planProfile.tier === "free") {
+    logger.warn("AI chat blocked: free tier", {
+      tenantId: user.tenantId,
+      uid: user.uid,
+      tier: planProfile.tier,
+      subscriptionStatus: planProfile.subscriptionStatus,
+      source: planProfile.source,
+    });
     res.status(403).json({
       message: "Plano Free não tem acesso à Lia. Faça upgrade para Starter ou superior.",
       code: "AI_FREE_TIER_BLOCKED",
+      tier: planProfile.tier,
+      source: planProfile.source,
     });
     return;
   }
@@ -66,9 +75,19 @@ router.post("/chat", async (req: Request, res: Response): Promise<void> => {
     pastDueSince: planProfile.pastDueSince,
   });
   if (!subscriptionAccess.allowWrite) {
+    logger.warn("AI chat blocked: subscription inactive", {
+      tenantId: user.tenantId,
+      uid: user.uid,
+      tier: planProfile.tier,
+      subscriptionStatus: planProfile.subscriptionStatus,
+      reasonCode: subscriptionAccess.reasonCode,
+      source: planProfile.source,
+    });
     res.status(403).json({
       message: "Assinatura inativa. Regularize seu plano para usar a Lia.",
       code: "AI_SUBSCRIPTION_INACTIVE",
+      reasonCode: subscriptionAccess.reasonCode,
+      subscriptionStatus: planProfile.subscriptionStatus,
     });
     return;
   }

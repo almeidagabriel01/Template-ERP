@@ -47,10 +47,10 @@ export function LiaPanel({
         "fixed bottom-6 right-6 z-40",
         "w-[380px] h-[600px] flex flex-col",
         "bg-card border border-border rounded-2xl shadow-2xl overflow-hidden",
-        "transition-all duration-300 ease-in-out",
+        "transition-all duration-300 ease-in-out origin-bottom-right",
         isOpen
           ? "opacity-100 scale-100 pointer-events-auto"
-          : "opacity-0 scale-95 pointer-events-none",
+          : "opacity-0 scale-0 pointer-events-none",
       )}
     >
       {/* Header */}

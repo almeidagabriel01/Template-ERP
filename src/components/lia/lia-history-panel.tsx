@@ -96,7 +96,7 @@ export function LiaHistoryPanel({
           type="button"
           onClick={onReload}
           aria-label="Recarregar histórico"
-          className="p-1 rounded hover:bg-muted transition-colors"
+          className="p-1 rounded hover:bg-muted transition-colors cursor-pointer"
         >
           <RefreshCw className="w-3 h-3 text-muted-foreground" />
         </button>
@@ -109,7 +109,7 @@ export function LiaHistoryPanel({
               type="button"
               onClick={() => onSelectSession(session.sessionId)}
               className={cn(
-                "w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors",
+                "w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors cursor-pointer",
                 session.sessionId === currentSessionId && "bg-muted/60",
               )}
             >

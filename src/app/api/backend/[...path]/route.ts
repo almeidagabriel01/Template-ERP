@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveFunctionsApiUpstream } from "@/lib/server-api-upstream";
 
 const REQUEST_TIMEOUT_MS = 30_000;
-const SSE_TIMEOUT_MS = 60_000;
+const SSE_TIMEOUT_MS = 300_000;
 const BODYLESS_METHODS = new Set(["GET", "HEAD"]);
 const BODYLESS_RESPONSE_STATUSES = new Set([204, 205, 304]);
 const HOP_BY_HOP_HEADERS = new Set([

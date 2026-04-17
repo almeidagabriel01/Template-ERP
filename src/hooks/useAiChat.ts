@@ -258,13 +258,20 @@ export function useAiChat(): UseAiChatReturn {
             },
 
             onError: (error: Error) => {
-              const errorMessage =
-                error instanceof AiApiError && error.status === 429
-                  ? "Limite de mensagens atingido. Renova no início do mês."
-                  : error instanceof AiApiError && error.status === 403
-                    ? "Acesso ao assistente não disponível no seu plano."
-                    : "Resposta interrompida — tente enviar novamente.";
-
+              let errorMessage = "Resposta interrompida — tente enviar novamente.";
+              if (error instanceof AiApiError) {
+                if (error.status === 429) {
+                  errorMessage = "Limite de mensagens atingido. Renova no início do mês.";
+                } else if (error.status === 403) {
+                  if (error.code === "AI_FREE_TIER_BLOCKED") {
+                    errorMessage = "Plano Free não tem acesso à Lia. Faça upgrade para Starter ou superior.";
+                  } else if (error.code === "AI_SUBSCRIPTION_INACTIVE") {
+                    errorMessage = "Assinatura inativa. Regularize o pagamento para usar a Lia.";
+                  } else {
+                    errorMessage = "Acesso ao assistente não disponível no seu plano.";
+                  }
+                }
+              }
               setMessages((prev) =>
                 prev.map((m) =>
                   m.id === liaMessageId

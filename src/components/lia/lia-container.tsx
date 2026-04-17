@@ -114,7 +114,7 @@ export function LiaContainer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.sessionId]);
 
-  // Inject greeting bubble when panel opens with empty session
+  // Inject greeting bubble when panel opens or messages are cleared (new session)
   useEffect(() => {
     if (
       chat.isOpen &&
@@ -132,9 +132,9 @@ export function LiaContainer() {
         },
       ]);
     }
-    // Only react when panel opens or session clears
+    // chat.messages.length triggers re-check when resetChat() empties the array
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chat.isOpen, session.isLoadingHistory]);
+  }, [chat.isOpen, session.isLoadingHistory, chat.messages.length]);
 
   const handleStartNewSession = useCallback(() => {
     session.startNewSession();
@@ -166,10 +166,8 @@ export function LiaContainer() {
   const showChips =
     chat.isOpen &&
     !session.isLoadingHistory &&
-    !session.isPlanLoading &&
     chat.messages.length === 1 && // Only the greeting bubble
-    chat.messages[0]?.role === "model" &&
-    !session.persistHistory; // Starter only per UI-SPEC
+    chat.messages[0]?.role === "model";
 
   return (
     <>
