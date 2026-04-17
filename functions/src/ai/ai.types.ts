@@ -18,24 +18,10 @@ export interface AiLimitConfig {
  * Tool gating uses this — NOT a modules[] field (which does not exist on tenant docs).
  */
 export const AI_LIMITS: Record<Exclude<TenantPlanTier, "free">, AiLimitConfig> = {
-  starter:    { model: "gemini-2.0-flash",              messagesPerMonth: 80,   persistHistory: false },
-  pro:        { model: "gemini-2.0-flash", messagesPerMonth: 400,  persistHistory: true  },
-  enterprise: { model: "gemini-2.5-flash", messagesPerMonth: 2000, persistHistory: true  },
+  starter:    { model: "gemini-2.5-flash-lite",    messagesPerMonth: 80,   persistHistory: false },
+  pro:        { model: "gemini-2.5-flash",          messagesPerMonth: 400,  persistHistory: true  },
+  enterprise: { model: "gemini-3-flash-preview",    messagesPerMonth: 1200, persistHistory: true  },
 } as const;
-
-/**
- * Keywords that trigger the more capable model for Enterprise tier.
- * ~20% of Enterprise requests route to gemini-2.5-pro.
- */
-export const ENTERPRISE_PRO_KEYWORDS: readonly string[] = [
-  "relatorio analitico", "relatório analítico",
-  "comparar meses", "analisar tendencia", "analisar tendência",
-  "whatsapp em massa", "exportar todos", "historico completo", "histórico completo",
-  "projecao", "projeção", "evolucao ao longo", "evolução ao longo",
-  "comparativo", "consolidado",
-] as const;
-
-export const ENTERPRISE_PRO_MODEL = "gemini-2.5-pro";
 
 /**
  * Firestore: tenants/{tenantId}/aiUsage/{YYYY-MM}

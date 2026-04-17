@@ -166,6 +166,7 @@ export function LiaContainer() {
   const showChips =
     chat.isOpen &&
     !session.isLoadingHistory &&
+    !session.isPlanLoading &&
     chat.messages.length === 1 && // Only the greeting bubble
     chat.messages[0]?.role === "model" &&
     !session.persistHistory; // Starter only per UI-SPEC

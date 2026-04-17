@@ -51,6 +51,8 @@ export interface UseLiaSessionReturn {
   historyMessages: LiaMessage[];
   /** Whether history is loading */
   isLoadingHistory: boolean;
+  /** Whether the plan tier is still being resolved */
+  isPlanLoading: boolean;
   /** Start a new session: clears localStorage and generates fresh sessionId */
   startNewSession: () => void;
   /** Resume a specific past session by ID (Pro/Enterprise only) */
@@ -69,7 +71,7 @@ export interface UseLiaSessionReturn {
 export function useLiaSession(): UseLiaSessionReturn {
   const { user } = useAuth();
   const { tenant } = useTenant();
-  const { planTier } = usePlanLimits();
+  const { planTier, isLoading: isPlanLoading } = usePlanLimits();
 
   const tenantId = tenant?.id ?? null;
   const tierConfig = AI_TIER_LIMITS[planTier ?? "starter"];
@@ -174,6 +176,7 @@ export function useLiaSession(): UseLiaSessionReturn {
     sessionId,
     historyMessages,
     isLoadingHistory,
+    isPlanLoading,
     startNewSession,
     loadSession,
     persistHistory,

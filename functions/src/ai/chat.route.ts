@@ -101,7 +101,7 @@ router.post("/chat", async (req: Request, res: Response): Promise<void> => {
   }
 
   // 5. Select model (used for Gemini only; Groq uses llama-3.3-70b-versatile)
-  const modelSelection = selectModel(planTier, message);
+  const modelSelection = selectModel(planTier);
 
   // 6. Load conversation history
   const history = await loadConversation(user.tenantId, sessionId, planTier, user.uid);
