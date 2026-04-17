@@ -287,9 +287,9 @@ router.post("/chat", async (req: Request, res: Response): Promise<void> => {
             break;
           }
 
-          const responseObj: object = result.success
-            ? ((result.data as object) ?? { status: "ok" })
-            : { error: result.error ?? "unknown error" };
+          const rawData = result.success ? (result.data ?? { status: "ok" }) : { error: result.error ?? "unknown error" };
+          // Gemini's function_response.response uses google.protobuf.Struct which only accepts JSON objects, not arrays
+          const responseObj: object = Array.isArray(rawData) ? { items: rawData } : (rawData as object);
 
           toolFeedbacks.push({ name: tc.name, response: responseObj });
         }
@@ -374,9 +374,9 @@ router.post("/chat", async (req: Request, res: Response): Promise<void> => {
               break;
             }
 
-            const responseObj: object = result.success
-              ? ((result.data as object) ?? { status: "ok" })
-              : { error: result.error ?? "unknown error" };
+            const rawData = result.success ? (result.data ?? { status: "ok" }) : { error: result.error ?? "unknown error" };
+            // Gemini's function_response.response uses google.protobuf.Struct which only accepts JSON objects, not arrays
+            const responseObj: object = Array.isArray(rawData) ? { items: rawData } : (rawData as object);
 
             toolFeedbacks.push({ name: tc.name, response: responseObj });
           }
