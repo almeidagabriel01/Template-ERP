@@ -1,87 +1,87 @@
-import {
-  GoogleGenerativeAI,
-  type FunctionDeclarationsTool,
-  type FunctionResponsePart,
-  type ChatSession,
-  type GenerateContentStreamResult,
-} from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
+import type { Chat, FunctionCall, GenerateContentResponse, Part } from "@google/genai";
+import type { FunctionDeclarationsTool } from "@google/generative-ai";
 import type { AiConversationMessage } from "../ai.types";
 import type { AiChatSession, AiProvider, ProviderEvent, ToolFeedback } from "./provider.interface";
 
-/**
- * Gemini chat session. Defers the first sendMessageStream until the caller
- * provides the user message via streamTurn(), keeping a uniform interface
- * with subsequent tool-result turns.
- */
 class GeminiDeferredSession implements AiChatSession {
-  private chat: ChatSession;
-  private started: boolean = false;
+  private chat: Chat;
+  private started = false;
+  // Maps function name → call id from the last tool_calls turn.
+  // Gemini 3+ requires echoing back the call id when sending function responses.
+  private lastCallIds = new Map<string, string>();
 
-  constructor(chat: ChatSession) {
+  constructor(chat: Chat) {
     this.chat = chat;
   }
 
   async *streamTurn(input: string | ToolFeedback[]): AsyncGenerator<ProviderEvent> {
-    let streamResult: GenerateContentStreamResult;
+    let message: string | Part[];
 
     if (!this.started) {
       this.started = true;
-      const userMessage = typeof input === "string" ? input : "";
-      streamResult = await this.chat.sendMessageStream(userMessage);
+      message = typeof input === "string" ? input : "";
     } else if (Array.isArray(input)) {
-      // Tool-result turn: convert ToolFeedback[] → FunctionResponsePart[]
-      const parts: FunctionResponsePart[] = (input as ToolFeedback[]).map((fb) => ({
+      // Tool-result turn: send functionResponse parts with role "user" (handled by SDK).
+      message = (input as ToolFeedback[]).map((fb) => ({
         functionResponse: {
+          id: this.lastCallIds.get(fb.name) ?? fb.name,
           name: fb.name,
-          response: fb.response,
+          response: fb.response as Record<string, unknown>,
         },
       }));
-      streamResult = await this.chat.sendMessageStream(parts);
     } else {
-      streamResult = await this.chat.sendMessageStream(input as string);
+      message = input as string;
     }
 
-    const pendingToolCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
+    this.lastCallIds.clear();
 
-    for await (const chunk of streamResult.stream) {
-      const text = chunk.text();
-      if (text) {
-        yield { type: "text", content: text };
+    const stream: AsyncGenerator<GenerateContentResponse> = await this.chat.sendMessageStream({ message });
+
+    let lastChunk: GenerateContentResponse | undefined;
+    let totalTokens = 0;
+
+    for await (const chunk of stream) {
+      lastChunk = chunk;
+
+      if (chunk.text) {
+        yield { type: "text", content: chunk.text };
       }
 
-      const candidates = chunk.candidates;
-      if (candidates) {
-        for (const candidate of candidates) {
-          const parts = candidate.content?.parts;
-          if (parts) {
-            for (const part of parts) {
-              if ("functionCall" in part && part.functionCall) {
-                pendingToolCalls.push({
-                  name: part.functionCall.name,
-                  args: (part.functionCall.args as Record<string, unknown>) || {},
-                });
-              }
-            }
-          }
+      if (chunk.usageMetadata?.totalTokenCount) {
+        totalTokens = chunk.usageMetadata.totalTokenCount;
+      }
+    }
+
+    // Function calls are aggregated by the SDK and available on the final chunk.
+    const functionCalls = lastChunk?.functionCalls;
+    if (functionCalls && functionCalls.length > 0) {
+      for (const call of functionCalls) {
+        if (call.name) {
+          this.lastCallIds.set(call.name, call.id ?? call.name);
         }
       }
+      const validCalls = functionCalls.filter((call): call is FunctionCall & { name: string } => !!call.name);
+      if (validCalls.length > 0) {
+        yield {
+          type: "tool_calls",
+          calls: validCalls.map((call) => ({
+            name: call.name,
+            args: (call.args ?? {}) as Record<string, unknown>,
+          })),
+        };
+      }
     }
 
-    if (pendingToolCalls.length > 0) {
-      yield { type: "tool_calls", calls: pendingToolCalls };
-    }
-
-    const response = await streamResult.response;
-    const totalTokens = response.usageMetadata?.totalTokenCount ?? 0;
     yield { type: "done", totalTokens };
   }
 }
 
 export class GeminiProvider implements AiProvider {
-  private genAI: GoogleGenerativeAI;
+  private ai: GoogleGenAI;
 
   constructor(apiKey: string) {
-    this.genAI = new GoogleGenerativeAI(apiKey);
+    this.ai = new GoogleGenAI({ apiKey });
   }
 
   createSession(opts: {
@@ -90,18 +90,34 @@ export class GeminiProvider implements AiProvider {
     tools: FunctionDeclarationsTool[];
     modelName: string;
   }): AiChatSession {
-    const model = this.genAI.getGenerativeModel({
-      model: opts.modelName,
-      systemInstruction: opts.systemPrompt,
-      tools: opts.tools.length > 0 ? opts.tools : undefined,
-    });
+    // Convert @google/generative-ai tool format to @google/genai format.
+    // Old field: "parameters" (with SchemaType enum). New field: "parametersJsonSchema" (plain JSON Schema).
+    // Values are identical at runtime — SchemaType enum values are lowercase strings ("object", "string", etc.).
+    const tools =
+      opts.tools.length > 0
+        ? opts.tools.map((tool) => ({
+            functionDeclarations: (tool.functionDeclarations ?? []).map((decl) => ({
+              name: decl.name,
+              description: decl.description,
+              parametersJsonSchema: decl.parameters as unknown as Record<string, unknown>,
+            })),
+          }))
+        : undefined;
 
-    const geminiHistory = opts.history.map((msg) => ({
+    const history = opts.history.map((msg) => ({
       role: msg.role === "model" ? ("model" as const) : ("user" as const),
       parts: [{ text: msg.content }],
     }));
 
-    const chat = model.startChat({ history: geminiHistory });
+    const chat = this.ai.chats.create({
+      model: opts.modelName,
+      config: {
+        systemInstruction: opts.systemPrompt,
+        tools,
+      },
+      history,
+    });
+
     return new GeminiDeferredSession(chat);
   }
 }
