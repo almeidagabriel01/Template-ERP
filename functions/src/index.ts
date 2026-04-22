@@ -29,5 +29,6 @@ export { cleanupStorageAndSharedLinks } from "./cleanupStorageAndSharedLinks";
 
 // 3. Webhooks
 export { stripeWebhook } from "./stripe/stripeWebhook";
+export { mercadopagoWebhook } from "./mercadopagoWebhook";
 
 // NOTE: All other individual functions have been consolidated into the 'api' monolith.

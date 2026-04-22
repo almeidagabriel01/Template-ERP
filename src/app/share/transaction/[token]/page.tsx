@@ -10,7 +10,9 @@ import {
   ZoomIn,
   ZoomOut,
   CalendarOff,
+  CreditCard,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { SharedTransactionService } from "@/services/shared-transaction-service";
@@ -20,6 +22,7 @@ import { TransactionPdfViewer } from "@/components/pdf/transaction-pdf-viewer";
 import Image from "next/image";
 import { downloadSharedTransactionPdf } from "@/services/pdf/download-shared-transaction-pdf";
 import { computePrimaryForeground } from "@/utils/color-utils";
+import { PaymentModal } from "./_components/payment-modal";
 
 export default function SharedTransactionPage() {
   const params = useParams();
@@ -40,6 +43,7 @@ export default function SharedTransactionPage() {
   const contentRef = React.useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = React.useState(0);
   const [isGenerating, setIsGenerating] = React.useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = React.useState(false);
 
   const handleDownloadPdf = React.useCallback(async () => {
     if (!token) return;
@@ -98,6 +102,10 @@ export default function SharedTransactionPage() {
         setTransaction(data.transaction);
         setRelatedTransactions(data.relatedTransactions || []);
         setTenant(data.tenant as Tenant);
+
+        if (searchParams.get("payment_success") === "1") {
+          toast.success("Pagamento realizado com sucesso!");
+        }
       } catch (err: unknown) {
         console.error("Error loading shared transaction:", err);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -120,7 +128,7 @@ export default function SharedTransactionPage() {
     };
 
     loadSharedTransaction();
-  }, [token]);
+  }, [token, searchParams]);
 
   if (isLoading) {
     return (
@@ -350,6 +358,47 @@ export default function SharedTransactionPage() {
           </div>
         </div>
       </main>
+
+      {(tenant as Tenant & { mercadoPagoEnabled?: boolean })?.mercadoPagoEnabled &&
+        (transaction.status === "pending" || transaction.status === "overdue") && (
+          <div className="container mx-auto px-4 py-4 flex justify-center">
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-md text-sm font-bold transition-all shadow-md cursor-pointer hover:brightness-110 active:scale-95"
+              style={{
+                backgroundColor: tenant?.primaryColor || "hsl(var(--primary))",
+                color: "#ffffff",
+              }}
+              onClick={() => setPaymentModalOpen(true)}
+            >
+              <CreditCard className="w-4 h-4" aria-hidden="true" />
+              Pagar{" "}
+              {new Intl.NumberFormat("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+              }).format(transaction.amount || 0)}
+            </button>
+          </div>
+        )}
+
+      {(tenant as Tenant & { mercadoPagoEnabled?: boolean })?.mercadoPagoEnabled && (
+        <PaymentModal
+          open={paymentModalOpen}
+          onOpenChange={setPaymentModalOpen}
+          token={token}
+          transaction={{
+            id: transaction.id!,
+            amount: transaction.amount || 0,
+            description: transaction.description,
+            status: transaction.status || "pending",
+          }}
+          primaryColor={tenant?.primaryColor}
+          onPaymentSuccess={() => {
+            setPaymentModalOpen(false);
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -20,6 +20,7 @@ import { kanbanRoutes } from "./routes/kanban.routes";
 import { validationRoutes } from "./routes/validation.routes";
 import { calendarPublicRoutes, calendarRoutes } from "./routes/calendar.routes";
 import { mercadoPagoRoutes } from "./routes/mercadopago.routes";
+import { paymentPublicRoutes } from "./routes/payment-public.routes";
 import { aiRouter } from "../ai";
 import { aiRateLimiter } from "../ai/rate-limiter";
 import {
@@ -369,6 +370,7 @@ app.use("/v1", publicGeneralLimiter, calendarPublicRoutes);
 // Public shared links
 app.use("/v1", publicShareLimiter, sharedProposalsRoutes);
 app.use("/v1", publicShareLimiter, sharedTransactionsRoutes);
+app.use("/v1", publicShareLimiter, paymentPublicRoutes);
 
 // Protected routes - everything below requires authentication
 app.use(validateFirebaseIdToken);

@@ -233,6 +233,7 @@ export const getSharedTransaction = async (req: Request, res: Response) => {
             name: tenantData.name,
             logoUrl: tenantData.logoUrl,
             primaryColor: tenantData.primaryColor,
+            mercadoPagoEnabled: tenantData.mercadoPagoEnabled ?? false,
           }
         : null,
     });

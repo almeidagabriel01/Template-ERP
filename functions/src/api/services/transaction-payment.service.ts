@@ -1,0 +1,312 @@
+import axios from "axios";
+import { db } from "../../init";
+import { FieldValue } from "firebase-admin/firestore";
+import { logger } from "../../lib/logger";
+import { MercadoPagoService } from "./mercadopago.service";
+
+export type PaymentMethod = "pix" | "credit_card" | "debit_card" | "boleto";
+
+export interface CreatePaymentRequest {
+  token: string;
+  method: PaymentMethod;
+  installments?: number;
+  backUrl?: string;
+}
+
+export interface PixPaymentResult {
+  method: "pix";
+  paymentId: string;
+  qrCode: string;
+  qrCodeBase64: string;
+  expiresAt: string;
+  amount: number;
+}
+
+export interface CheckoutProResult {
+  method: "credit_card" | "debit_card" | "boleto";
+  paymentId: string;
+  initPoint: string;
+  amount: number;
+}
+
+export interface PaymentStatusResult {
+  paymentId: string;
+  status: "awaiting" | "pending" | "approved" | "rejected" | "refunded" | "cancelled";
+  amount: number;
+  paidAt?: string;
+}
+
+export type PaymentResult = PixPaymentResult | CheckoutProResult;
+
+const SHARED_TRANSACTIONS_COLLECTION = "shared_transactions";
+const PAYMENT_ATTEMPTS_COLLECTION = "payment_attempts";
+const MP_API_BASE = "https://api.mercadopago.com";
+
+function mapMpStatus(
+  mpStatus: string,
+): "awaiting" | "pending" | "approved" | "rejected" | "refunded" | "cancelled" {
+  switch (mpStatus) {
+    case "approved":
+      return "approved";
+    case "pending":
+      return "pending";
+    case "in_process":
+      return "pending";
+    case "rejected":
+      return "rejected";
+    case "refunded":
+      return "refunded";
+    case "cancelled":
+      return "cancelled";
+    default:
+      return "awaiting";
+  }
+}
+
+async function resolveSharedLink(token: string): Promise<{
+  id: string;
+  transactionId: string;
+  tenantId: string;
+  expiresAt: string | null;
+}> {
+  const snapshot = await db
+    .collection(SHARED_TRANSACTIONS_COLLECTION)
+    .where("token", "==", token)
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) {
+    throw new Error("EXPIRED_LINK");
+  }
+
+  const doc = snapshot.docs[0];
+  const data = doc.data() as {
+    transactionId: string;
+    tenantId: string;
+    expiresAt: string | null;
+  };
+
+  if (data.expiresAt !== null && new Date(data.expiresAt) < new Date()) {
+    throw new Error("EXPIRED_LINK");
+  }
+
+  return {
+    id: doc.id,
+    transactionId: data.transactionId,
+    tenantId: data.tenantId,
+    expiresAt: data.expiresAt,
+  };
+}
+
+export class TransactionPaymentService {
+  static async createPayment(req: CreatePaymentRequest): Promise<PaymentResult> {
+    const sharedLink = await resolveSharedLink(req.token);
+    const { transactionId, tenantId } = sharedLink;
+
+    const transactionRef = db.collection("transactions").doc(transactionId);
+    const transactionSnap = await transactionRef.get();
+
+    if (!transactionSnap.exists) {
+      throw new Error("EXPIRED_LINK");
+    }
+
+    const txData = transactionSnap.data() as Record<string, unknown>;
+
+    if (txData.status !== "pending" && txData.status !== "overdue") {
+      throw new Error("ALREADY_PAID");
+    }
+
+    const mpData = await MercadoPagoService.getMercadoPagoData(tenantId);
+    if (!mpData) {
+      throw new Error("MP_NOT_CONFIGURED");
+    }
+
+    const { accessToken } = mpData;
+    const attemptId = crypto.randomUUID();
+    const attemptRef = db.collection(PAYMENT_ATTEMPTS_COLLECTION).doc(attemptId);
+    const now = new Date().toISOString();
+
+    await attemptRef.set({
+      tenantId,
+      transactionId,
+      token: req.token,
+      method: req.method,
+      status: "initiated",
+      createdAt: now,
+      ipAnon: null,
+    });
+
+    try {
+      if (req.method === "pix") {
+        const pixResponse = await axios.post<{
+          id: number;
+          point_of_interaction: {
+            transaction_data: {
+              qr_code: string;
+              qr_code_base64: string;
+            };
+          };
+          date_of_expiration: string;
+          transaction_amount: number;
+        }>(
+          `${MP_API_BASE}/v1/payments`,
+          {
+            transaction_amount: txData.amount as number,
+            payment_method_id: "pix",
+            payer: { email: "cliente@pagamento.proops.com.br" },
+            description: (txData.description as string) || "Pagamento via ProOps",
+            installments: 1,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+          },
+        );
+
+        const mpPaymentId = String(pixResponse.data.id);
+
+        await attemptRef.update({
+          mpPaymentId,
+          status: "created",
+        });
+
+        await transactionRef.update({
+          "payment.mpPaymentId": mpPaymentId,
+          "payment.method": "pix",
+          "payment.status": "pending",
+          "payment.createdAt": now,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+
+        logger.info("PIX payment created", { tenantId, transactionId, mpPaymentId });
+
+        return {
+          method: "pix",
+          paymentId: mpPaymentId,
+          qrCode: pixResponse.data.point_of_interaction.transaction_data.qr_code,
+          qrCodeBase64: pixResponse.data.point_of_interaction.transaction_data.qr_code_base64,
+          expiresAt: pixResponse.data.date_of_expiration,
+          amount: pixResponse.data.transaction_amount,
+        };
+      }
+
+      // credit_card | debit_card | boleto → Checkout Pro preference
+      const preferenceResponse = await axios.post<{
+        id: string;
+        init_point: string;
+      }>(
+        `${MP_API_BASE}/checkout/preferences`,
+        {
+          items: [
+            {
+              title: (txData.description as string) || "Pagamento",
+              quantity: 1,
+              unit_price: txData.amount as number,
+              currency_id: "BRL",
+            },
+          ],
+          back_urls: {
+            success: req.backUrl || "",
+            failure: req.backUrl || "",
+            pending: req.backUrl || "",
+          },
+          auto_return: "approved",
+          installments: req.method === "boleto" ? 1 : (req.installments || 1),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      const preferenceId = preferenceResponse.data.id;
+
+      await attemptRef.update({
+        mpPaymentId: preferenceId,
+        status: "created",
+      });
+
+      await transactionRef.update({
+        "payment.mpPreferenceId": preferenceId,
+        "payment.method": req.method,
+        "payment.status": "pending",
+        "payment.createdAt": now,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      logger.info("Checkout Pro preference created", {
+        tenantId,
+        transactionId,
+        preferenceId,
+        method: req.method,
+      });
+
+      return {
+        method: req.method as "credit_card" | "debit_card" | "boleto",
+        paymentId: preferenceId,
+        initPoint: preferenceResponse.data.init_point,
+        amount: txData.amount as number,
+      };
+    } catch (error) {
+      await attemptRef.update({ status: "failed" }).catch(() => {
+        // best-effort
+      });
+
+      logger.error("Error creating MP payment", {
+        tenantId,
+        transactionId,
+        method: req.method,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      throw error;
+    }
+  }
+
+  static async getPaymentStatus(
+    token: string,
+    paymentId: string,
+  ): Promise<PaymentStatusResult> {
+    const sharedLink = await resolveSharedLink(token);
+    const { transactionId, tenantId } = sharedLink;
+
+    const attemptsSnap = await db
+      .collection(PAYMENT_ATTEMPTS_COLLECTION)
+      .where("mpPaymentId", "==", paymentId)
+      .where("transactionId", "==", transactionId)
+      .limit(1)
+      .get();
+
+    if (attemptsSnap.empty) {
+      throw new Error("PAYMENT_NOT_FOUND");
+    }
+
+    const mpData = await MercadoPagoService.getMercadoPagoData(tenantId);
+    if (!mpData) {
+      throw new Error("MP_NOT_CONFIGURED");
+    }
+
+    const mpResponse = await axios.get<{
+      id: number;
+      status: string;
+      transaction_amount: number;
+      date_approved?: string;
+    }>(`${MP_API_BASE}/v1/payments/${paymentId}`, {
+      headers: { Authorization: `Bearer ${mpData.accessToken}` },
+    });
+
+    const mpPayment = mpResponse.data;
+    const status = mapMpStatus(mpPayment.status);
+
+    return {
+      paymentId,
+      status,
+      amount: mpPayment.transaction_amount,
+      paidAt: mpPayment.date_approved || undefined,
+    };
+  }
+}
