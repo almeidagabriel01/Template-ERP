@@ -62,7 +62,7 @@ export function buildOAuthUrl(tenantId: string): string {
   const stateSecret = requireEnv("MERCADOPAGO_STATE_SECRET");
 
   const payload: OAuthStatePayload = { tenantId, nonce: uuidv4() };
-  const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString("base64");
+  const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
   const signature = computeHmacSignature(payloadBase64, stateSecret);
   const state = `${payloadBase64}.${signature}`;
 
@@ -103,7 +103,7 @@ export function verifyAndExtractState(state: string): OAuthStatePayload {
 
   try {
     const parsed = JSON.parse(
-      Buffer.from(payloadBase64, "base64").toString("utf8"),
+      Buffer.from(payloadBase64, "base64url").toString("utf8"),
     ) as OAuthStatePayload;
     if (!parsed.tenantId || !parsed.nonce) {
       throw new Error("INVALID_STATE");

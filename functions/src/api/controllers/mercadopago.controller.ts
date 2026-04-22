@@ -57,7 +57,18 @@ export const callbackOAuth = async (req: Request, res: Response): Promise<void> 
     }
 
     // Verifica assinatura HMAC do state e extrai o tenantId
-    const statePayload = verifyAndExtractState(state);
+    let statePayload;
+    try {
+      statePayload = verifyAndExtractState(state);
+    } catch {
+      logger.warn("State inválido no callback MP — possível CSRF ou encoding corrompido", {
+        uid: req.user?.uid,
+        stateLength: state.length,
+        statePrefix: state.substring(0, 20),
+      });
+      res.status(400).json({ message: "INVALID_STATE" });
+      return;
+    }
 
     // Confirma que o tenantId do state corresponde ao do usuário autenticado
     const { tenantId } = await resolveUserAndTenant(req.user!.uid, req.user);
