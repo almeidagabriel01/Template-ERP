@@ -84,9 +84,12 @@ export const callbackOAuth = async (req: Request, res: Response): Promise<void> 
     res.status(200).json({ success: true });
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mpResponseData = (error as any)?.response?.data;
     logger.error("Erro no callback OAuth MercadoPago", {
       uid: req.user?.uid,
       error: err.message,
+      mpError: mpResponseData ?? null,
     });
     const status = mapMercadoPagoErrorStatus(err);
     res.status(status).json({ message: err.message });
