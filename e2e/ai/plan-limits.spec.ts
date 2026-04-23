@@ -181,12 +181,31 @@ uiTest.describe("AI-08: At-limit disabled input with reset date", () => {
       // Aguarda o estado at-limit propagar no client (textarea fica disabled de verdade)
       await expect(lia.messageInput).toBeDisabled({ timeout: 10000 });
 
-      // Botão usa aria-disabled (não disabled HTML), então hover funciona normalmente
       const sendButton = page.getByRole("button", { name: "Enviar mensagem" });
-      await sendButton.hover();
+
+      // Aguarda o wrapper <Tooltip> (span.inline-flex) ser montado pelo React antes de interagir.
+      // O Tooltip é condicional (só existe quando isAtLimit=true) — sem essa espera há race
+      // entre o commit do React e o dispatch do mousemove pelo Playwright.
+      const tooltipTrigger = sendButton.locator(
+        "xpath=ancestor::span[contains(@class, 'inline-flex')][1]",
+      );
+      await expect(tooltipTrigger).toBeVisible({ timeout: 5000 });
+
+      // Retry hover + contagem do tooltip para sobreviver a race conditions residuais.
+      // Chrome não re-dispatcha pointer events, então re-hovering é necessário caso
+      // o primeiro mousemove chegue antes dos listeners do span estarem attached.
+      await expect
+        .poll(
+          async () => {
+            await sendButton.hover();
+            return await page.getByRole("tooltip").count();
+          },
+          { timeout: 10000, intervals: [300, 500, 1000, 1500] },
+        )
+        .toBeGreaterThan(0);
 
       const tooltip = page.getByRole("tooltip");
-      await expect(tooltip).toBeVisible({ timeout: 5000 });
+      await expect(tooltip).toBeVisible();
       await expect(tooltip).toContainText("Renova em");
     },
   );

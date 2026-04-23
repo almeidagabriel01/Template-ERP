@@ -224,8 +224,10 @@ export default function SharedTransactionPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <style>{`@media print { [data-pdf-ui="true"] { display: none !important; } }`}</style>
+
       {/* Header simplificado com branding do tenant */}
-      <header className="border-b bg-card sticky top-0 z-50 shadow-sm">
+      <header data-pdf-ui="true" className="border-b bg-card sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-6">
           <div className="flex items-center justify-between w-full md:w-auto gap-3">
             <div className="flex items-center gap-3 overflow-hidden">
@@ -315,7 +317,7 @@ export default function SharedTransactionPage() {
       {/* PDF View Area */}
       <main className="flex-1 w-full bg-muted/20 overflow-hidden flex flex-col relative">
         <div className="container mx-auto px-4 py-4 w-full flex justify-center">
-          <div className="w-full max-w-[794px] flex items-center justify-between bg-card border rounded-lg p-2 shadow-sm z-10">
+          <div data-pdf-ui="true" className="w-full max-w-[794px] flex items-center justify-between bg-card border rounded-lg p-2 shadow-sm z-10">
             <span className="text-sm font-medium text-muted-foreground px-2">
               Visualização do Recibo
             </span>
@@ -366,30 +368,30 @@ export default function SharedTransactionPage() {
         </div>
       </main>
 
-      {(tenant as Tenant & { mercadoPagoEnabled?: boolean })?.mercadoPagoEnabled &&
-        payableTransaction && (
-          <div className="container mx-auto px-4 py-4 flex justify-center">
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-md text-sm font-bold transition-all shadow-md cursor-pointer hover:brightness-110 active:scale-95"
-              style={{
-                backgroundColor: tenant?.primaryColor || "hsl(var(--primary))",
-                color: "#ffffff",
-              }}
-              onClick={() => setPaymentModalOpen(true)}
-            >
-              <CreditCard className="w-4 h-4" aria-hidden="true" />
-              Pagar{" "}
+      {tenant?.mercadoPagoEnabled && payableTransaction && (
+        <>
+          <button
+            data-pdf-ui="true"
+            type="button"
+            onClick={() => setPaymentModalOpen(true)}
+            aria-label={`Pagar parcela pendente de ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(payableTransaction.amount || 0)}`}
+            className="fixed bottom-6 right-6 z-50 inline-flex items-center gap-2 px-5 py-3 rounded-full text-sm font-bold shadow-lg transition-all cursor-pointer hover:brightness-110 hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+            style={{
+              backgroundColor: tenant.primaryColor || "hsl(var(--primary))",
+              color: "#ffffff",
+              paddingBottom: "max(0.75rem, env(safe-area-inset-bottom, 0.75rem))",
+            }}
+          >
+            <CreditCard className="w-4 h-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Pagar</span>
+            <span>
               {new Intl.NumberFormat("pt-BR", {
                 style: "currency",
                 currency: "BRL",
               }).format(payableTransaction.amount || 0)}
-            </button>
-          </div>
-        )}
+            </span>
+          </button>
 
-      {(tenant as Tenant & { mercadoPagoEnabled?: boolean })?.mercadoPagoEnabled &&
-        payableTransaction && (
           <PaymentModal
             open={paymentModalOpen}
             onOpenChange={setPaymentModalOpen}
@@ -406,7 +408,8 @@ export default function SharedTransactionPage() {
               window.location.reload();
             }}
           />
-        )}
+        </>
+      )}
     </div>
   );
 }

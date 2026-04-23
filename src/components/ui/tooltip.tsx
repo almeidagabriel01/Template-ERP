@@ -144,6 +144,7 @@ export function Tooltip({
       <span
         ref={triggerRef}
         className="inline-flex"
+        data-state={open ? "open" : "closed"}
         onPointerEnter={show}
         onPointerLeave={hide}
         onPointerMove={() => {

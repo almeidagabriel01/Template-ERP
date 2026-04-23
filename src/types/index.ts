@@ -29,6 +29,7 @@ export type Tenant = {
   trialReservedAt?: string | null;
   trialEndsAt?: string;
   trialPlanTier?: string;
+  mercadoPagoEnabled?: boolean;
 };
 
 export type UserOnboardingStatus = "active" | "completed" | "skipped";
