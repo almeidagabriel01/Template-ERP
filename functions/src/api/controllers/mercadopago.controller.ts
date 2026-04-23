@@ -8,6 +8,7 @@ function mapMercadoPagoErrorStatus(error: Error): number {
   if (error.message === "INVALID_STATE") return 400;
   if (error.message === "TENANT_NOT_FOUND") return 404;
   if (error.message === "CONCURRENT_CALLBACK_IN_PROGRESS") return 409;
+  if (error.message === "MP_CODE_ALREADY_PROCESSED") return 409;
   if (
     error.message === "FORBIDDEN_TENANT_MISMATCH" ||
     error.message.startsWith("FORBIDDEN_") ||

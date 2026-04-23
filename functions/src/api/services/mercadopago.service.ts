@@ -59,10 +59,10 @@ export class MercadoPagoService {
     let isAlreadyConnected = false;
 
     // Atomic lock: prevents the same one-time code from reaching MP twice.
-    // pending  → another request is mid-flight (409)
-    // completed → idempotent success (return early)
-    // failed   → previous attempt failed, allow retry
-    // absent   → first attempt, create lock
+    // pending   → another request is mid-flight → 409
+    // completed → idempotent success → return early
+    // failed    → MP code already consumed (retry unsafe) → 409
+    // absent    → first attempt → create lock and proceed
     await db.runTransaction(async (txn) => {
       const lockSnap = await txn.get(lockRef);
       if (lockSnap.exists) {
@@ -71,18 +71,10 @@ export class MercadoPagoService {
           isAlreadyConnected = true;
           return;
         }
-        if (lockData.status === "pending") {
-          throw new Error("CONCURRENT_CALLBACK_IN_PROGRESS");
-        }
-        // status === "failed" — reset for retry
-        txn.update(lockRef, {
-          status: "pending",
-          createdAt: Timestamp.now(),
-          expireAt: Timestamp.fromMillis(Date.now() + 10 * 60 * 1000),
-          completedAt: FieldValue.delete(),
-          failureReason: FieldValue.delete(),
-        });
-        return;
+        // Both "pending" and "failed" block the same code from being reused.
+        // "failed" does NOT retry: the MP code may already be consumed. The caller
+        // must start a new OAuth flow to get a fresh code.
+        throw new Error("MP_CODE_ALREADY_PROCESSED");
       }
       txn.create(lockRef, {
         tenantId,
@@ -132,11 +124,21 @@ export class MercadoPagoService {
       liveMode: inferLiveMode(tokens.accessToken),
     };
 
-    await tenantRef.update({
-      mercadoPago: mpData,
-      mercadoPagoEnabled: true,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+    try {
+      await tenantRef.update({
+        mercadoPago: mpData,
+        mercadoPagoEnabled: true,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    } catch (err) {
+      await lockRef
+        .update({
+          status: "failed",
+          failureReason: err instanceof Error ? err.message : String(err),
+        })
+        .catch(() => {});
+      throw err;
+    }
 
     await lockRef
       .update({ status: "completed", completedAt: Timestamp.now() })

@@ -41,16 +41,25 @@ export function MercadoPagoConnectCard() {
       if (processedCodeRef.current === code) return;
       processedCodeRef.current = code;
 
+      // Clean params from URL immediately so remounts can't resubmit the same code.
+      // Using replaceState (not router.replace) to avoid triggering useEffect again.
+      window.history.replaceState({}, "", "/profile");
+
       setIsProcessingCallback(true);
       MercadoPagoService.processCallback(code, state)
         .then(() => {
           toast.success("Mercado Pago conectado com sucesso!");
-          router.replace("/profile");
           loadStatus();
         })
-        .catch(() => {
+        .catch((err: unknown) => {
+          // 409 means the code was already processed (concurrent or prior attempt).
+          // Treat as success: load status to reflect current connection state.
+          const status = err instanceof Error && "status" in err ? (err as { status: number }).status : 0;
+          if (status === 409) {
+            loadStatus();
+            return;
+          }
           toast.error("Erro ao conectar Mercado Pago. Tente novamente.");
-          router.replace("/profile");
         })
         .finally(() => {
           setIsProcessingCallback(false);
