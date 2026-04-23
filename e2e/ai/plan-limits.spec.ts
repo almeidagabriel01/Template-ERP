@@ -192,12 +192,13 @@ uiTest.describe("AI-08: At-limit disabled input with reset date", () => {
       await expect(tooltipTrigger).toBeVisible({ timeout: 5000 });
 
       // Retry hover + contagem do tooltip para sobreviver a race conditions residuais.
-      // Chrome não re-dispatcha pointer events, então re-hovering é necessário caso
-      // o primeiro mousemove chegue antes dos listeners do span estarem attached.
+      // Hover no tooltipTrigger (o span com onPointerEnter) é mais confiável que hover
+      // no sendButton filho — a propagação pointerenter pode falhar em CI antes dos
+      // listeners do span estarem attached ao synthetic event system do React.
       await expect
         .poll(
           async () => {
-            await sendButton.hover();
+            await tooltipTrigger.hover();
             return await page.getByRole("tooltip").count();
           },
           { timeout: 10000, intervals: [300, 500, 1000, 1500] },
