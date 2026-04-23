@@ -181,12 +181,9 @@ uiTest.describe("AI-08: At-limit disabled input with reset date", () => {
       // Aguarda o botão aparecer e estabilizar sem depender de networkidle
       const sendButton = page.getByRole("button", { name: "Enviar mensagem" });
       await sendButton.waitFor({ state: "attached", timeout: 10000 });
-      await page.waitForTimeout(500); // aguarda re-render do uso
 
-      // Re-localiza após estabilização para evitar detach
-      await page
-        .getByRole("button", { name: "Enviar mensagem" })
-        .hover({ force: true });
+      // Focus triggers Radix Tooltip deterministically (hover+force skips pointer events)
+      await sendButton.focus();
 
       // Tooltip deve aparecer
       const tooltip = page.getByRole("tooltip");

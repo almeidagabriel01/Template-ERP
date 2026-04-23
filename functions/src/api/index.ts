@@ -102,6 +102,13 @@ function createRateLimiter(options: {
   keyResolver?: (req: express.Request) => string;
 }): express.RequestHandler {
   const windowMs = options.windowMs || DEFAULT_PUBLIC_WINDOW_MS;
+  // In the Firebase emulator (FIRESTORE_EMULATOR_HOST is always injected by the
+  // emulator process), raise every limiter to a harmless ceiling so the full
+  // E2E suite can accumulate requests across specs without hitting fixed-window
+  // counters that never reset between specs. This var is NEVER set in Cloud Run.
+  const effectiveMax = process.env.FIRESTORE_EMULATOR_HOST
+    ? 1_000_000
+    : options.maxRequests;
 
   return async (req, res, next) => {
     const route = sanitizeLoggedPath(req.path);
@@ -113,7 +120,7 @@ function createRateLimiter(options: {
     try {
       const decision = await rateLimitStore.consume(
         rateKey,
-        options.maxRequests,
+        effectiveMax,
         windowMs,
       );
 
