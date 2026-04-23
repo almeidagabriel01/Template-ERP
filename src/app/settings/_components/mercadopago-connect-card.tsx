@@ -18,6 +18,7 @@ export function MercadoPagoConnectCard() {
   const [isConnecting, setIsConnecting] = React.useState(false);
   const [isDisconnecting, setIsDisconnecting] = React.useState(false);
   const [isProcessingCallback, setIsProcessingCallback] = React.useState(false);
+  const processedCodeRef = React.useRef<string | null>(null);
 
   const loadStatus = React.useCallback(async () => {
     try {
@@ -37,6 +38,9 @@ export function MercadoPagoConnectCard() {
     const error = searchParams.get("mp_error");
 
     if (code && state) {
+      if (processedCodeRef.current === code) return;
+      processedCodeRef.current = code;
+
       setIsProcessingCallback(true);
       MercadoPagoService.processCallback(code, state)
         .then(() => {
