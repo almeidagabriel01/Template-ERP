@@ -2,6 +2,8 @@ import axios from "axios";
 import { createHmac, timingSafeEqual } from "crypto";
 import { v4 as uuidv4 } from "uuid";
 
+export type MercadoPagoEnvironment = "sandbox" | "production";
+
 export interface MercadoPagoTokens {
   accessToken: string;
   refreshToken: string;
@@ -10,6 +12,7 @@ export interface MercadoPagoTokens {
   scope: string;
   expiresAt: string; // ISO — quando o access_token expira
   liveMode: boolean; // false = conta de teste, true = conta de produção
+  environment: MercadoPagoEnvironment;
 }
 
 interface MercadoPagoOAuthResponse {
@@ -25,6 +28,15 @@ interface MercadoPagoOAuthResponse {
 interface OAuthStatePayload {
   tenantId: string;
   nonce: string;
+}
+
+export function deriveEnvironment(
+  accessToken: string,
+  liveMode: boolean,
+): MercadoPagoEnvironment {
+  if (accessToken.startsWith("TEST-")) return "sandbox";
+  if (!liveMode) return "sandbox";
+  return "production";
 }
 
 function requireEnv(name: string): string {
@@ -52,6 +64,7 @@ function parseTokenResponse(data: MercadoPagoOAuthResponse): MercadoPagoTokens {
     scope: data.scope,
     expiresAt: buildExpiresAt(data.expires_in),
     liveMode: data.live_mode,
+    environment: deriveEnvironment(data.access_token, data.live_mode),
   };
 }
 
@@ -74,6 +87,7 @@ export function buildOAuthUrl(tenantId: string): string {
   url.searchParams.set("client_id", appId);
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("state", state);
+  url.searchParams.set("scope", "offline_access read write");
 
   return url.toString();
 }

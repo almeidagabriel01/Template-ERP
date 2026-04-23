@@ -5,6 +5,7 @@ export interface MercadoPagoStatus {
   userId?: string;
   connectedAt?: string;
   liveMode?: boolean;
+  environment?: "sandbox" | "production";
 }
 
 export const MercadoPagoService = {

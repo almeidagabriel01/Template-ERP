@@ -170,8 +170,8 @@ export function MercadoPagoConnectCard() {
                 )}
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Ambiente</span>
-                  <Badge variant={status.liveMode ? "default" : "warning"}>
-                    {status.liveMode ? "Produção" : "Sandbox"}
+                  <Badge variant={(status.environment ?? (status.liveMode ? "production" : "sandbox")) === "production" ? "default" : "warning"}>
+                    {(status.environment ?? (status.liveMode ? "production" : "sandbox")) === "production" ? "Produção" : "Sandbox"}
                   </Badge>
                 </div>
               </div>

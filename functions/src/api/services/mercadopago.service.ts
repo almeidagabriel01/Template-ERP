@@ -6,6 +6,7 @@ import {
   exchangeCodeForTokens,
   refreshAccessToken,
   revokeToken,
+  type MercadoPagoEnvironment,
 } from "../../lib/mercadopago-client";
 
 /** Dados do Mercado Pago armazenados no documento do tenant. */
@@ -18,6 +19,7 @@ export interface TenantMercadoPagoData {
   scope: string;
   connectedAt: string; // ISO
   liveMode: boolean;
+  environment: MercadoPagoEnvironment;
 }
 
 /** Dados seguros para expor ao frontend (sem tokens). */
@@ -26,6 +28,7 @@ export interface MercadoPagoPublicStatus {
   userId?: string;
   connectedAt?: string;
   liveMode?: boolean;
+  environment?: MercadoPagoEnvironment;
 }
 
 const REFRESH_AHEAD_SECONDS = 10 * 60; // 10 minutos
@@ -118,6 +121,7 @@ export class MercadoPagoService {
       scope: tokens.scope,
       connectedAt: new Date().toISOString(),
       liveMode: tokens.liveMode,
+      environment: tokens.environment,
     };
 
     try {
@@ -220,8 +224,17 @@ export class MercadoPagoService {
           refreshToken: refreshed.refreshToken,
           publicKey: refreshed.publicKey,
           expiresAt: refreshed.expiresAt,
-          liveMode: refreshed.liveMode,
+          // liveMode e environment deliberadamente preservados do connect original
         };
+
+        if (refreshed.environment !== mpData.environment) {
+          logger.warn("MP environment drift detected on token refresh (keeping pinned value)", {
+            tenantId,
+            pinned: mpData.environment,
+            reportedByMp: refreshed.environment,
+            userId: mpData.userId,
+          });
+        }
 
         await tenantRef.update({
           mercadoPago: updated,
@@ -261,6 +274,7 @@ export class MercadoPagoService {
       userId: mpData.userId,
       connectedAt: mpData.connectedAt,
       liveMode: mpData.liveMode,
+      environment: mpData.environment ?? (mpData.liveMode ? "production" : "sandbox"),
     };
   }
 }

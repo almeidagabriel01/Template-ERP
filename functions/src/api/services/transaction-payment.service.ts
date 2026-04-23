@@ -204,7 +204,7 @@ export class TransactionPaymentService {
       throw new Error("MP_NOT_CONFIGURED");
     }
 
-    const { accessToken, liveMode } = mpData;
+    const { accessToken, environment } = mpData;
     const attemptId = crypto.randomUUID();
     const attemptRef = db.collection(PAYMENT_ATTEMPTS_COLLECTION).doc(attemptId);
     const now = new Date().toISOString();
@@ -387,12 +387,13 @@ export class TransactionPaymentService {
         transactionId,
         preferenceId,
         method: req.method,
+        environment,
       });
 
       return {
         method: req.method as "credit_card" | "debit_card" | "boleto",
         paymentId: preferenceId,
-        initPoint: liveMode ? preferenceResponse.data.init_point : preferenceResponse.data.sandbox_init_point,
+        initPoint: preferenceResponse.data.init_point,
         amount: txData.amount as number,
       };
     } catch (error) {
