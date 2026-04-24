@@ -237,6 +237,14 @@ export function PaymentModal({
                     Preencha os dados do cartão com segurança.
                   </p>
                 </div>
+                <Button
+                  className="w-full"
+                  onClick={handleCardTabSelect}
+                  style={primaryColor ? { backgroundColor: primaryColor, color: "#ffffff" } : undefined}
+                >
+                  <CreditCard className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Carregar formulário de pagamento
+                </Button>
               </div>
             )}
 
