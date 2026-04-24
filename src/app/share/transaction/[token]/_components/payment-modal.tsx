@@ -172,7 +172,7 @@ export function PaymentModal({
           )}
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={(val) => { setActiveTab(val); if (val === "card") handleCardTabSelect(); }}>
           <TabsList className="w-full">
             <TabsTrigger value="pix" className="flex-1">
               <QrCode className="mr-1.5 h-4 w-4" aria-hidden="true" />
@@ -229,24 +229,15 @@ export function PaymentModal({
           </TabsContent>
 
           <TabsContent value="card" className="mt-4">
-            {cardStep === "idle" && (
-              <div className="flex flex-col items-center gap-4 py-4 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                  <CreditCard className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
-                </div>
+            {cardStep === "idle" && cardError && (
+              <div className="flex flex-col items-center gap-4 py-6 text-center">
+                <XCircle className="h-10 w-10 text-destructive" aria-hidden="true" />
                 <div>
-                  <p className="font-medium">Pague com Cartão</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Preencha os dados do cartão com segurança.
-                  </p>
+                  <p className="font-medium">Erro ao carregar formulário</p>
+                  <p className="text-sm text-muted-foreground mt-1">{cardError}</p>
                 </div>
-                <Button
-                  className="w-full"
-                  onClick={handleCardTabSelect}
-                  style={primaryColor ? { backgroundColor: primaryColor, color: "#ffffff" } : undefined}
-                >
-                  <CreditCard className="mr-2 h-4 w-4" aria-hidden="true" />
-                  Carregar formulário de pagamento
+                <Button variant="outline" onClick={() => { setCardError(null); handleCardTabSelect(); }}>
+                  Tentar novamente
                 </Button>
               </div>
             )}
@@ -301,7 +292,7 @@ export function PaymentModal({
               </div>
             )}
 
-            {cardError && cardStep !== "rejected" && (
+            {cardError && cardStep !== "rejected" && cardStep !== "idle" && (
               <p className="text-sm text-destructive text-center mt-2">{cardError}</p>
             )}
           </TabsContent>
