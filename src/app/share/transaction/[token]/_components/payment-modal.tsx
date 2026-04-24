@@ -57,6 +57,8 @@ export function PaymentModal({
   const [cardResult, setCardResult] = React.useState<CardPaymentResult | null>(null);
   const [cardError, setCardError] = React.useState<string | null>(null);
 
+  const [activeTab, setActiveTab] = React.useState("pix");
+
   const resetState = () => {
     setPixData(null);
     setIsGeneratingPix(false);
@@ -65,6 +67,7 @@ export function PaymentModal({
     setMpConfig(null);
     setCardResult(null);
     setCardError(null);
+    setActiveTab("pix");
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -169,7 +172,7 @@ export function PaymentModal({
           )}
         </DialogHeader>
 
-        <Tabs defaultValue="pix" onValueChange={(val) => { if (val === "card") handleCardTabSelect(); }}>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="w-full">
             <TabsTrigger value="pix" className="flex-1">
               <QrCode className="mr-1.5 h-4 w-4" aria-hidden="true" />
