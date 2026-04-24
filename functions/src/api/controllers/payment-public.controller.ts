@@ -189,10 +189,15 @@ export const processCardPayment = async (req: Request, res: Response): Promise<v
       const mpStatusCode =
         error.mpStatus === 401 || error.mpStatus >= 500 ? 502 : error.mpStatus === 429 ? 429 : 400;
       const code = error.mpStatus === 401 ? "MP_AUTH_FAILED" : "MP_REJECTED";
+      const isInvalidUsers =
+        error.mpMessage?.toLowerCase().includes("invalid users") ||
+        error.mpCause?.some((c) => String(c.code) === "106" || c.description?.toLowerCase().includes("invalid users"));
       const message =
         error.mpStatus === 401
           ? "Integração Mercado Pago precisa ser reconectada"
-          : error.mpMessage || "Pagamento recusado pelo Mercado Pago";
+          : isInvalidUsers
+            ? "E-mail do pagador inválido. Em ambiente de teste, use o e-mail de um usuário comprador diferente do vendedor."
+            : error.mpMessage || "Pagamento recusado pelo Mercado Pago";
       res.status(mpStatusCode).json({
         code,
         message,
