@@ -17,6 +17,9 @@ interface CardPaymentBrickProps {
   onError?: (error: unknown) => void;
 }
 
+const formatBRL = (value: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+
 export function CardPaymentBrick({
   publicKey,
   amount,
@@ -37,7 +40,7 @@ export function CardPaymentBrick({
       initialization={{ amount }}
       customization={{
         paymentMethods: { maxInstallments: 12, minInstallments: 1 },
-        visual: { style: { theme: "default" } },
+        visual: { style: { theme: "default" }, texts: { formSubmit: `Pagar ${formatBRL(amount)}` } },
       }}
       onSubmit={async (sdkFormData) => {
         await onSubmit(sdkFormData as unknown as CardPaymentFormData);

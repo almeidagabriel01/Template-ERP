@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { CreditCard, QrCode, FileText, Loader2, ExternalLink, CheckCircle2, XCircle } from "lucide-react";
+import { CreditCard, QrCode, FileText, Loader2, ExternalLink, CheckCircle2, XCircle, Info, AlertCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   PublicPaymentService,
   type PixPaymentResult,
@@ -250,11 +251,17 @@ export function PaymentModal({
             )}
 
             {(cardStep === "ready" || cardStep === "processing") && mpConfig && (
-              <div className={cardStep === "processing" ? "pointer-events-none opacity-60" : undefined}>
-                {cardStep === "processing" && (
-                  <div className="flex justify-center mb-3">
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-hidden="true" />
-                  </div>
+              <div>
+                {mpConfig.environment === "sandbox" && (
+                  <Alert className="mb-3">
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Ambiente de teste ativo</AlertTitle>
+                    <AlertDescription>
+                      Use o e-mail do comprador de teste (disponível no painel Mercado Pago → Contas de teste → clicar
+                      no comprador). Cartão de teste: <code className="font-mono text-xs">5031 4332 1540 6351</code>{" "}
+                      (MASTER, qualquer vencimento, CVV <code className="font-mono text-xs">123</code>).
+                    </AlertDescription>
+                  </Alert>
                 )}
                 <CardPaymentBrick
                   publicKey={mpConfig.publicKey}
@@ -266,6 +273,11 @@ export function PaymentModal({
                     console.error("CardPaymentBrick error", e);
                   }}
                 />
+                {cardStep === "processing" && (
+                  <p className="text-xs text-muted-foreground text-center mt-2">
+                    Processando pagamento — não feche esta janela.
+                  </p>
+                )}
               </div>
             )}
 
@@ -293,7 +305,11 @@ export function PaymentModal({
             )}
 
             {cardError && cardStep !== "rejected" && cardStep !== "idle" && (
-              <p className="text-sm text-destructive text-center mt-2">{cardError}</p>
+              <Alert variant="destructive" className="mt-3">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Não foi possível processar</AlertTitle>
+                <AlertDescription>{cardError}</AlertDescription>
+              </Alert>
             )}
           </TabsContent>
 
