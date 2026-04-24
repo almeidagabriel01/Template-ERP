@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { CreditCard, QrCode, FileText, Loader2, ExternalLink } from "lucide-react";
+import { CreditCard, QrCode, FileText, Loader2, ExternalLink, CheckCircle2, XCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,8 +15,12 @@ import { Button } from "@/components/ui/button";
 import {
   PublicPaymentService,
   type PixPaymentResult,
+  type MpPublicConfig,
+  type CardPaymentFormData,
+  type CardPaymentResult,
 } from "@/services/mercadopago-service";
 import { PixQrCodeView } from "./pix-qrcode-view";
+import { CardPaymentBrick } from "./card-payment-brick";
 
 interface PaymentModalProps {
   open: boolean;
@@ -45,14 +49,22 @@ export function PaymentModal({
 }: PaymentModalProps) {
   const [pixData, setPixData] = React.useState<PixPaymentResult | null>(null);
   const [isGeneratingPix, setIsGeneratingPix] = React.useState(false);
-  const [isRedirectingCard, setIsRedirectingCard] = React.useState(false);
   const [isRedirectingBoleto, setIsRedirectingBoleto] = React.useState(false);
+
+  type CardStep = "idle" | "loading-config" | "ready" | "processing" | "done" | "rejected";
+  const [cardStep, setCardStep] = React.useState<CardStep>("idle");
+  const [mpConfig, setMpConfig] = React.useState<MpPublicConfig | null>(null);
+  const [cardResult, setCardResult] = React.useState<CardPaymentResult | null>(null);
+  const [cardError, setCardError] = React.useState<string | null>(null);
 
   const resetState = () => {
     setPixData(null);
     setIsGeneratingPix(false);
-    setIsRedirectingCard(false);
     setIsRedirectingBoleto(false);
+    setCardStep("idle");
+    setMpConfig(null);
+    setCardResult(null);
+    setCardError(null);
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -76,20 +88,57 @@ export function PaymentModal({
     }
   };
 
-  const handlePayCard = async () => {
+  const handleCardTabSelect = async () => {
+    if (mpConfig || cardStep !== "idle") return;
+    setCardStep("loading-config");
     try {
-      setIsRedirectingCard(true);
-      const result = await PublicPaymentService.createPayment(token, "credit_card", {
-        backUrl: `${window.location.href}?payment_success=1`,
+      const config = await PublicPaymentService.getMpConfig(token);
+      setMpConfig(config);
+      setCardStep("ready");
+    } catch {
+      setCardError("Não foi possível carregar o formulário de pagamento. Tente novamente.");
+      setCardStep("idle");
+    }
+  };
+
+  const handleCardSubmit = async (formData: CardPaymentFormData) => {
+    setCardStep("processing");
+    setCardError(null);
+    try {
+      const result = await PublicPaymentService.processCardPayment(token, {
+        cardToken: formData.token,
+        paymentMethodId: formData.payment_method_id,
+        issuerId: formData.issuer_id,
+        installments: formData.installments,
+        payerEmail: formData.payer.email,
+        payerIdentification:
+          formData.payer.identification &&
+          (formData.payer.identification.type === "CPF" ||
+            formData.payer.identification.type === "CNPJ")
+            ? {
+                type: formData.payer.identification.type,
+                number: formData.payer.identification.number,
+              }
+            : undefined,
         transactionId: transaction.id,
       });
-      if ("initPoint" in result && result.initPoint) {
-        window.location.href = result.initPoint;
+      setCardResult(result);
+      if (result.status === "approved") {
+        setCardStep("done");
+        onPaymentSuccess();
+      } else if (result.status === "rejected") {
+        setCardStep("rejected");
+      } else {
+        // pending/in_process — webhook vai finalizar
+        setCardStep("done");
+        onPaymentSuccess();
       }
-    } catch (err) {
-      const detail = (err as { data?: { message?: string } }).data?.message;
-      toast.error("Erro ao iniciar pagamento com cartão.", { description: detail ?? "Tente novamente." });
-      setIsRedirectingCard(false);
+    } catch (err: unknown) {
+      const msg =
+        (err as { data?: { message?: string } })?.data?.message ??
+        (err instanceof Error ? err.message : "Erro ao processar pagamento.");
+      setCardError(msg);
+      setCardStep("ready");
     }
   };
 
@@ -112,7 +161,7 @@ export function PaymentModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Pagar {formatCurrency(transaction.amount)}</DialogTitle>
           {transaction.description && (
@@ -120,7 +169,7 @@ export function PaymentModal({
           )}
         </DialogHeader>
 
-        <Tabs defaultValue="pix">
+        <Tabs defaultValue="pix" onValueChange={(val) => { if (val === "card") handleCardTabSelect(); }}>
           <TabsList className="w-full">
             <TabsTrigger value="pix" className="flex-1">
               <QrCode className="mr-1.5 h-4 w-4" aria-hidden="true" />
@@ -177,30 +226,73 @@ export function PaymentModal({
           </TabsContent>
 
           <TabsContent value="card" className="mt-4">
-            <div className="flex flex-col items-center gap-4 py-4 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                <CreditCard className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+            {cardStep === "idle" && (
+              <div className="flex flex-col items-center gap-4 py-4 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                  <CreditCard className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+                </div>
+                <div>
+                  <p className="font-medium">Pague com Cartão</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Preencha os dados do cartão com segurança.
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="font-medium">Pague com Cartão</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Você será redirecionado para o checkout seguro do Mercado Pago.
-                </p>
+            )}
+
+            {cardStep === "loading-config" && (
+              <div className="flex flex-col items-center gap-4 py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden="true" />
+                <p className="text-sm text-muted-foreground">Carregando formulário...</p>
               </div>
-              <Button
-                onClick={handlePayCard}
-                disabled={isRedirectingCard}
-                className="w-full"
-                style={primaryColor ? { backgroundColor: primaryColor, color: "#ffffff" } : undefined}
-              >
-                {isRedirectingCard ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                ) : (
-                  <ExternalLink className="mr-2 h-4 w-4" aria-hidden="true" />
+            )}
+
+            {(cardStep === "ready" || cardStep === "processing") && mpConfig && (
+              <div className={cardStep === "processing" ? "pointer-events-none opacity-60" : undefined}>
+                {cardStep === "processing" && (
+                  <div className="flex justify-center mb-3">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-hidden="true" />
+                  </div>
                 )}
-                {isRedirectingCard ? "Redirecionando..." : "Pagar com Cartão"}
-              </Button>
-            </div>
+                <CardPaymentBrick
+                  publicKey={mpConfig.publicKey}
+                  amount={transaction.amount}
+                  onSubmit={handleCardSubmit}
+                  onError={(e) => {
+                    setCardError("Erro no formulário de pagamento.");
+                    setCardStep("idle");
+                    console.error("CardPaymentBrick error", e);
+                  }}
+                />
+              </div>
+            )}
+
+            {cardStep === "done" && (
+              <div className="flex flex-col items-center gap-4 py-8 text-center">
+                <CheckCircle2 className="h-12 w-12 text-green-500" aria-hidden="true" />
+                <p className="font-medium">Pagamento processado!</p>
+                <p className="text-sm text-muted-foreground">Aguarde a confirmação em breve.</p>
+              </div>
+            )}
+
+            {cardStep === "rejected" && (
+              <div className="flex flex-col items-center gap-4 py-6 text-center">
+                <XCircle className="h-12 w-12 text-destructive" aria-hidden="true" />
+                <div>
+                  <p className="font-medium">Pagamento recusado</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {cardResult?.statusDetail ?? "Verifique os dados do cartão e tente novamente."}
+                  </p>
+                </div>
+                <Button variant="outline" onClick={() => { setCardStep("ready"); setCardError(null); }}>
+                  Tentar novamente
+                </Button>
+              </div>
+            )}
+
+            {cardError && cardStep !== "rejected" && (
+              <p className="text-sm text-destructive text-center mt-2">{cardError}</p>
+            )}
           </TabsContent>
 
           <TabsContent value="boleto" className="mt-4">

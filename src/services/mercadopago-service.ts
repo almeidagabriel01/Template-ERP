@@ -49,6 +49,40 @@ export interface PaymentStatusResult {
   paidAt?: string;
 }
 
+export interface MpPublicConfig {
+  publicKey: string;
+  environment: "sandbox" | "production";
+}
+
+export interface CardPaymentFormData {
+  token: string;
+  payment_method_id: string;
+  issuer_id?: string;
+  installments: number;
+  transaction_amount: number;
+  payer: {
+    email: string;
+    identification?: { type: string; number: string };
+  };
+}
+
+export interface ProcessCardInput {
+  cardToken: string;
+  paymentMethodId: string;
+  issuerId?: string;
+  installments: number;
+  payerEmail: string;
+  payerIdentification?: { type: string; number: string };
+  transactionId?: string;
+}
+
+export interface CardPaymentResult {
+  paymentId: string;
+  status: "approved" | "rejected" | "pending" | "in_process";
+  statusDetail?: string;
+  amount: number;
+}
+
 export const PublicPaymentService = {
   createPayment: (
     token: string,
@@ -64,5 +98,15 @@ export const PublicPaymentService = {
     callPublicApi<PaymentStatusResult>(
       `/v1/share/transaction/${token}/payment/${paymentId}/status`,
       "GET",
+    ),
+
+  getMpConfig: (token: string): Promise<MpPublicConfig> =>
+    callPublicApi<MpPublicConfig>(`/v1/share/transaction/${token}/mp-config`, "GET"),
+
+  processCardPayment: (token: string, input: ProcessCardInput): Promise<CardPaymentResult> =>
+    callPublicApi<CardPaymentResult>(
+      `/v1/share/transaction/${token}/process-card`,
+      "POST",
+      input,
     ),
 };

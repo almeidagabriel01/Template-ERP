@@ -52,6 +52,24 @@ export interface PaymentStatusResult {
 
 export type PaymentResult = PixPaymentResult | CheckoutProResult;
 
+export interface ProcessCardPaymentRequest {
+  token: string;
+  transactionId?: string;
+  cardToken: string;
+  paymentMethodId: string;
+  issuerId?: string;
+  installments: number;
+  payerEmail: string;
+  payerIdentification?: { type: "CPF" | "CNPJ"; number: string };
+}
+
+export interface CardDirectPaymentResult {
+  paymentId: string;
+  status: string;
+  statusDetail?: string;
+  amount: number;
+}
+
 const SHARED_TRANSACTIONS_COLLECTION = "shared_transactions";
 const PAYMENT_ATTEMPTS_COLLECTION = "payment_attempts";
 const MP_API_BASE = "https://api.mercadopago.com";
@@ -204,7 +222,8 @@ export class TransactionPaymentService {
       throw new Error("MP_NOT_CONFIGURED");
     }
 
-    const { accessToken, environment } = mpData;
+    const { accessToken, environment, liveMode } = mpData;
+    const effectiveEnvironment = environment ?? (liveMode ? "production" : "sandbox");
     const attemptId = crypto.randomUUID();
     const attemptRef = db.collection(PAYMENT_ATTEMPTS_COLLECTION).doc(attemptId);
     const now = new Date().toISOString();
@@ -221,6 +240,9 @@ export class TransactionPaymentService {
 
     try {
       if (req.method === "pix") {
+        if (effectiveEnvironment === "sandbox") {
+          throw new Error("PIX_NOT_AVAILABLE_IN_SANDBOX");
+        }
         const rawAmount = Number(txData.amount);
         if (!Number.isFinite(rawAmount) || rawAmount <= 0) {
           throw new Error("INVALID_AMOUNT");
@@ -369,19 +391,20 @@ export class TransactionPaymentService {
       );
 
       const preferenceId = preferenceResponse.data.id;
-      const preferenceIsLive = preferenceResponse.data.live_mode;
-      const resolvedEnvironment = preferenceIsLive ? "production" : "sandbox";
-
-      // Correct stored environment if MP's preference live_mode disagrees (happens with OAuth test users)
-      if (resolvedEnvironment !== environment) {
-        logger.warn("MP preference live_mode disagrees with stored environment — correcting", {
-          tenantId, stored: environment, fromPreference: resolvedEnvironment,
-        });
-        await db.collection("tenants").doc(tenantId).update({
-          "mercadoPago.environment": resolvedEnvironment,
-          "mercadoPago.liveMode": preferenceIsLive,
-          updatedAt: FieldValue.serverTimestamp(),
-        });
+      // live_mode may not be present in all MP preference creation responses; guard against undefined
+      const preferenceIsLive: boolean | undefined = preferenceResponse.data.live_mode;
+      if (preferenceIsLive !== undefined) {
+        const resolvedEnvironment = preferenceIsLive ? "production" : "sandbox";
+        // Correct stored environment if MP's preference live_mode disagrees (happens with OAuth test users)
+        if (resolvedEnvironment !== effectiveEnvironment) {
+          logger.warn("MP preference live_mode disagrees with stored environment — correcting", {
+            tenantId, stored: effectiveEnvironment, fromPreference: resolvedEnvironment,
+          });
+          await db.collection("tenants").doc(tenantId).update({
+            "mercadoPago.environment": resolvedEnvironment,
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        }
       }
 
       await attemptRef.update({
@@ -402,13 +425,17 @@ export class TransactionPaymentService {
         transactionId,
         preferenceId,
         method: req.method,
-        environment,
+        environment: effectiveEnvironment,
       });
+
+      const initPoint = effectiveEnvironment === "sandbox"
+        ? preferenceResponse.data.sandbox_init_point
+        : preferenceResponse.data.init_point;
 
       return {
         method: req.method as "credit_card" | "debit_card" | "boleto",
         paymentId: preferenceId,
-        initPoint: preferenceResponse.data.init_point,
+        initPoint,
         amount: txData.amount as number,
       };
     } catch (error) {
@@ -441,6 +468,183 @@ export class TransactionPaymentService {
         errorMessage: error instanceof Error ? error.message : String(error),
       });
 
+      throw error;
+    }
+  }
+
+  static async processCardPayment(
+    req: ProcessCardPaymentRequest,
+  ): Promise<CardDirectPaymentResult> {
+    const sharedLink = await resolveSharedLink(req.token);
+    const { tenantId } = sharedLink;
+    let transactionId = sharedLink.transactionId;
+
+    if (req.transactionId && req.transactionId !== sharedLink.transactionId) {
+      const [originSnap, candidateSnap] = await Promise.all([
+        db.collection("transactions").doc(sharedLink.transactionId).get(),
+        db.collection("transactions").doc(req.transactionId).get(),
+      ]);
+      if (!originSnap.exists || !candidateSnap.exists) {
+        throw new Error("TRANSACTION_NOT_FOUND");
+      }
+      const originData = originSnap.data() as Record<string, unknown>;
+      const candidateData = candidateSnap.data() as Record<string, unknown>;
+      if (candidateData.tenantId !== tenantId) {
+        throw new Error("FORBIDDEN_TENANT_MISMATCH");
+      }
+
+      const sameInstallmentGroup =
+        originData.installmentGroupId &&
+        originData.installmentGroupId === candidateData.installmentGroupId;
+      const sameProposalGroup =
+        originData.proposalGroupId &&
+        originData.proposalGroupId === candidateData.proposalGroupId;
+      const sameProposalId =
+        originData.proposalId &&
+        originData.proposalId === candidateData.proposalId;
+
+      if (!sameInstallmentGroup && !sameProposalGroup && !sameProposalId) {
+        logger.warn("Cross-transaction card payment rejected: not in same group", {
+          tenantId,
+          originTxId: sharedLink.transactionId,
+          candidateTxId: req.transactionId,
+        });
+        throw new Error("FORBIDDEN_CROSS_GROUP");
+      }
+      transactionId = req.transactionId;
+    }
+
+    const transactionRef = db.collection("transactions").doc(transactionId);
+    const transactionSnap = await transactionRef.get();
+    if (!transactionSnap.exists) throw new Error("TRANSACTION_NOT_FOUND");
+
+    const txData = transactionSnap.data() as Record<string, unknown>;
+    if (txData.status !== "pending" && txData.status !== "overdue") {
+      throw new Error("ALREADY_PAID");
+    }
+
+    const rawAmount = Number(txData.amount);
+    if (!Number.isFinite(rawAmount) || rawAmount <= 0) throw new Error("INVALID_AMOUNT");
+    const roundedAmount = Math.round(rawAmount * 100) / 100;
+
+    const [mpData, tenantSnap] = await Promise.all([
+      MercadoPagoService.getMercadoPagoData(tenantId),
+      db.collection("tenants").doc(tenantId).get(),
+    ]);
+    if (!mpData) throw new Error("MP_NOT_CONFIGURED");
+    const { accessToken } = mpData;
+    const statementDescriptor = ((tenantSnap.data()?.name as string) || "ProOps").slice(0, 22);
+
+    const attemptId = crypto.randomUUID();
+    const attemptRef = db.collection(PAYMENT_ATTEMPTS_COLLECTION).doc(attemptId);
+    const now = new Date().toISOString();
+
+    await attemptRef.set({
+      tenantId,
+      transactionId,
+      token: req.token,
+      method: "credit_card",
+      status: "initiated",
+      createdAt: now,
+      ipAnon: null,
+    });
+
+    try {
+      const payerBlock: Record<string, unknown> = {
+        email: req.payerEmail,
+      };
+      if (req.payerIdentification) {
+        payerBlock.identification = {
+          type: req.payerIdentification.type,
+          number: req.payerIdentification.number,
+        };
+      }
+
+      const paymentResponse = await axios.post<{
+        id: number;
+        status: string;
+        status_detail?: string;
+        transaction_amount: number;
+      }>(
+        `${MP_API_BASE}/v1/payments`,
+        {
+          token: req.cardToken,
+          transaction_amount: roundedAmount,
+          installments: req.installments,
+          payment_method_id: req.paymentMethodId,
+          ...(req.issuerId && { issuer_id: req.issuerId }),
+          payer: payerBlock,
+          description: (txData.description as string) || "Pagamento via ProOps",
+          external_reference: `${transactionId}:${attemptId}`,
+          notification_url: resolveMercadoPagoWebhookUrl(),
+          statement_descriptor: statementDescriptor,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+            "X-Idempotency-Key": attemptId,
+          },
+        },
+      );
+
+      const mpPaymentId = String(paymentResponse.data.id);
+      const mpStatus = paymentResponse.data.status;
+      const mpStatusDetail = paymentResponse.data.status_detail;
+
+      await attemptRef.update({
+        mpPaymentId,
+        status: mapMpStatus(mpStatus),
+      });
+
+      await transactionRef.update({
+        "payment.mpPaymentId": mpPaymentId,
+        "payment.method": "credit_card",
+        "payment.status": mpStatus,
+        "payment.statusDetail": mpStatusDetail ?? null,
+        "payment.createdAt": now,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      logger.info("Card direct payment created", {
+        tenantId,
+        transactionId,
+        mpPaymentId,
+        status: mpStatus,
+        statusDetail: mpStatusDetail,
+      });
+
+      return {
+        paymentId: mpPaymentId,
+        status: mapMpStatus(mpStatus),
+        statusDetail: mpStatusDetail,
+        amount: roundedAmount,
+      };
+    } catch (error) {
+      await attemptRef.update({ status: "failed" }).catch(() => {});
+
+      if (axios.isAxiosError(error)) {
+        const data = error.response?.data as Record<string, unknown> | undefined;
+        const mpStatus = error.response?.status ?? 0;
+        const mpMessage = typeof data?.message === "string" ? data.message : error.message;
+        const mpCause = Array.isArray(data?.cause)
+          ? (data.cause as Array<{ code: string; description: string }>)
+          : [];
+        logger.error("Error processing card payment", {
+          tenantId,
+          transactionId,
+          mpStatus,
+          mpMessage,
+          mpCause,
+        });
+        throw new MercadoPagoApiError(mpStatus, mpMessage, mpCause);
+      }
+
+      logger.error("Error processing card payment (non-MP error)", {
+        tenantId,
+        transactionId,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   }

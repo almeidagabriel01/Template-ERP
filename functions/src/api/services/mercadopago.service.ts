@@ -31,6 +31,11 @@ export interface MercadoPagoPublicStatus {
   environment?: MercadoPagoEnvironment;
 }
 
+export interface TenantMpPublicConfig {
+  publicKey: string;
+  environment: MercadoPagoEnvironment;
+}
+
 const REFRESH_AHEAD_SECONDS = 10 * 60; // 10 minutos
 
 function isTokenExpiringSoon(expiresAt: string): boolean {
@@ -274,6 +279,19 @@ export class MercadoPagoService {
       userId: mpData.userId,
       connectedAt: mpData.connectedAt,
       liveMode: mpData.liveMode,
+      environment: mpData.environment ?? (mpData.liveMode ? "production" : "sandbox"),
+    };
+  }
+
+  /**
+   * Retorna a public key e environment do tenant para uso no Payment Brick do frontend.
+   * A public key é análoga à publishable key do Stripe — seguro expor via share token.
+   */
+  static async getPublicConfig(tenantId: string): Promise<TenantMpPublicConfig> {
+    const mpData = await this.getMercadoPagoData(tenantId);
+    if (!mpData) throw new Error("MP_NOT_CONFIGURED");
+    return {
+      publicKey: mpData.publicKey,
       environment: mpData.environment ?? (mpData.liveMode ? "production" : "sandbox"),
     };
   }
