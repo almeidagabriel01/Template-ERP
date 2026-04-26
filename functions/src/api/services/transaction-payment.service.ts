@@ -532,9 +532,20 @@ export class TransactionPaymentService {
       db.collection("tenants").doc(tenantId).get(),
     ]);
     if (!mpData) throw new Error("MP_NOT_CONFIGURED");
-    const { accessToken } = mpData;
     const effectiveEnvironment: string =
       mpData.environment ?? (mpData.liveMode ? "production" : "sandbox");
+
+    // In sandbox, use the integrator's TEST access token (aggregator model) so that
+    // the card token (created with the integrator's public key) is valid for the payment.
+    // collector.id routes the payment to the seller's account.
+    const sandboxAccessToken = process.env.MERCADOPAGO_SANDBOX_ACCESS_TOKEN;
+    const accessToken =
+      effectiveEnvironment === "sandbox" && sandboxAccessToken
+        ? sandboxAccessToken
+        : mpData.accessToken;
+    const usingSandboxAggregator =
+      effectiveEnvironment === "sandbox" && !!sandboxAccessToken;
+
     const statementDescriptor = ((tenantSnap.data()?.name as string) || "ProOps").slice(0, 22);
 
     const attemptId = crypto.randomUUID();
@@ -580,9 +591,10 @@ export class TransactionPaymentService {
           external_reference: `${transactionId}:${attemptId}`,
           notification_url: resolveMercadoPagoWebhookUrl(),
           statement_descriptor: statementDescriptor,
-          // In sandbox, the card token is created with the integrator's TEST public key
-          // while the payment uses the seller's access token (gateway model).
-          ...(effectiveEnvironment === "sandbox" && { processing_mode: "gateway" }),
+          // Aggregator model: integrator's token processes the payment, collector.id routes
+          // it to the seller. Required when the card token was created with the integrator's
+          // public key (sandbox only — production uses the seller's own credentials directly).
+          ...(usingSandboxAggregator && { collector: { id: Number(mpData.userId) } }),
         },
         {
           headers: {
