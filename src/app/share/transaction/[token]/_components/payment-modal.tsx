@@ -266,11 +266,10 @@ export function PaymentModal({
                         </p>
                       )}
                       <p>
-                        Use o e-mail de um comprador de teste diferente. Formato:{" "}
-                        <code className="bg-muted px-1 rounded">
-                          test_user_&lt;número_do_nickname&gt;@testuser.com
-                        </code>
-                        . O nickname completo fica visível ao entrar na conta do comprador em mercadopago.com.br.
+                        Use qualquer e-mail comum (ex:{" "}
+                        <code className="bg-muted px-1 rounded">comprador.teste@gmail.com</code>),{" "}
+                        diferente do e-mail do vendedor acima.{" "}
+                        <strong>Não use e-mails @testuser.com</strong> — o Mercado Pago rejeita esse formato no formulário de cartão.
                       </p>
                       <p>
                         Cartão de teste:{" "}

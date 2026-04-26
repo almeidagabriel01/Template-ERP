@@ -155,10 +155,11 @@ export const processCardPayment = async (req: Request, res: Response): Promise<v
       return;
     }
     const installments = typeof body.installments === "number" ? body.installments : 1;
-    const payerEmail =
-      typeof body.payerEmail === "string" && body.payerEmail.includes("@")
-        ? body.payerEmail
-        : `pagamento+${Date.now()}@proops.com.br`;
+    if (typeof body.payerEmail !== "string" || !body.payerEmail.includes("@")) {
+      res.status(400).json({ code: "PAYER_EMAIL_REQUIRED", message: "E-mail do pagador é obrigatório." });
+      return;
+    }
+    const payerEmail = body.payerEmail.trim().toLowerCase();
 
     let payerIdentification: ProcessCardPaymentRequest["payerIdentification"];
     if (
@@ -196,7 +197,7 @@ export const processCardPayment = async (req: Request, res: Response): Promise<v
         error.mpStatus === 401
           ? "Integração Mercado Pago precisa ser reconectada"
           : isInvalidUsers
-            ? "E-mail do pagador inválido. Em ambiente de teste, use o e-mail de um usuário comprador diferente do vendedor."
+            ? "E-mail do pagador inválido. Em ambiente de teste, use qualquer e-mail comum (gmail/hotmail/etc.), diferente do e-mail do vendedor. Não use e-mails @testuser.com."
             : error.mpMessage || "Pagamento recusado pelo Mercado Pago";
       res.status(mpStatusCode).json({
         code,
