@@ -546,6 +546,15 @@ export class TransactionPaymentService {
     const usingSandboxAggregator =
       effectiveEnvironment === "sandbox" && !!sandboxAccessToken;
 
+    logger.info("processCardPayment: sandbox diagnostics", {
+      tenantId,
+      effectiveEnvironment,
+      hasSandboxAccessToken: !!sandboxAccessToken,
+      usingSandboxAggregator,
+      sellerUserId: mpData.userId,
+      accessTokenPrefix: accessToken.slice(0, 12),
+    });
+
     const statementDescriptor = ((tenantSnap.data()?.name as string) || "ProOps").slice(0, 22);
 
     const attemptId = crypto.randomUUID();
