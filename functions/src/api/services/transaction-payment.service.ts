@@ -533,6 +533,8 @@ export class TransactionPaymentService {
     ]);
     if (!mpData) throw new Error("MP_NOT_CONFIGURED");
     const { accessToken } = mpData;
+    const effectiveEnvironment: string =
+      mpData.environment ?? (mpData.liveMode ? "production" : "sandbox");
     const statementDescriptor = ((tenantSnap.data()?.name as string) || "ProOps").slice(0, 22);
 
     const attemptId = crypto.randomUUID();
@@ -578,6 +580,9 @@ export class TransactionPaymentService {
           external_reference: `${transactionId}:${attemptId}`,
           notification_url: resolveMercadoPagoWebhookUrl(),
           statement_descriptor: statementDescriptor,
+          // In sandbox, the card token is created with the integrator's TEST public key
+          // while the payment uses the seller's access token (gateway model).
+          ...(effectiveEnvironment === "sandbox" && { processing_mode: "gateway" }),
         },
         {
           headers: {
