@@ -6,6 +6,7 @@ import { logger } from "../../lib/logger";
 import { MercadoPagoService } from "./mercadopago.service";
 import { resolveWalletRef } from "../../lib/finance-helpers";
 import { resolveFrontendAppOrigin, resolveMercadoPagoWebhookUrl } from "../../lib/frontend-app-url";
+import { cpf, cnpj } from "cpf-cnpj-validator";
 
 export class MercadoPagoApiError extends Error {
   constructor(
@@ -360,7 +361,6 @@ export class TransactionPaymentService {
 
         // Validate identification format before making the MP request.
         if (merged.identificationNumber) {
-          const { cpf, cnpj } = await import("cpf-cnpj-validator");
           const digits = merged.identificationNumber.replace(/\D/g, "");
           const isValidId = digits.length === 11
             ? cpf.isValid(digits)
