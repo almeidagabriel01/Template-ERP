@@ -21,7 +21,19 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    let parsedPayerOverride: { identification?: { type: "CPF" | "CNPJ"; number: string }; firstName?: string; lastName?: string } | undefined;
+    let parsedPayerOverride: {
+      identification?: { type: "CPF" | "CNPJ"; number: string };
+      firstName?: string;
+      lastName?: string;
+      address?: {
+        zipCode: string;
+        streetName: string;
+        streetNumber: string;
+        neighborhood: string;
+        city: string;
+        federalUnit: string;
+      };
+    } | undefined;
     if (rawPayerOverride && typeof rawPayerOverride === "object") {
       const po = rawPayerOverride as Record<string, unknown>;
       const idObj = typeof po.identification === "object" && po.identification !== null
@@ -29,10 +41,28 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
         : undefined;
       const idType = idObj?.type === "CPF" || idObj?.type === "CNPJ" ? idObj.type : undefined;
       const idNumber = typeof idObj?.number === "string" ? idObj.number.replace(/\D/g, "").slice(0, 14) : undefined;
+
+      let parsedAddress: { zipCode: string; streetName: string; streetNumber: string; neighborhood: string; city: string; federalUnit: string } | undefined;
+      const addrRaw = typeof po.address === "object" && po.address !== null
+        ? (po.address as Record<string, unknown>)
+        : undefined;
+      if (addrRaw) {
+        const zipCode = typeof addrRaw.zipCode === "string" ? addrRaw.zipCode.replace(/\D/g, "").slice(0, 8) : "";
+        const streetName = typeof addrRaw.streetName === "string" ? addrRaw.streetName.trim().slice(0, 120) : "";
+        const streetNumber = typeof addrRaw.streetNumber === "string" ? addrRaw.streetNumber.trim().slice(0, 20) : "";
+        const neighborhood = typeof addrRaw.neighborhood === "string" ? addrRaw.neighborhood.trim().slice(0, 80) : "";
+        const city = typeof addrRaw.city === "string" ? addrRaw.city.trim().slice(0, 80) : "";
+        const federalUnit = typeof addrRaw.federalUnit === "string" ? addrRaw.federalUnit.trim().toUpperCase().slice(0, 2) : "";
+        if (zipCode && streetName && streetNumber && neighborhood && city && federalUnit) {
+          parsedAddress = { zipCode, streetName, streetNumber, neighborhood, city, federalUnit };
+        }
+      }
+
       parsedPayerOverride = {
         identification: idType && idNumber ? { type: idType, number: idNumber } : undefined,
         firstName: typeof po.firstName === "string" ? po.firstName.trim().slice(0, 60) : undefined,
         lastName: typeof po.lastName === "string" ? po.lastName.trim().slice(0, 60) : undefined,
+        address: parsedAddress,
       };
     }
 
@@ -98,6 +128,10 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
     }
     if (err.message === "BOLETO_MISSING_IDENTIFICATION") {
       res.status(422).json({ code: "BOLETO_MISSING_IDENTIFICATION", message: "Para gerar boleto, o cliente precisa ter CPF ou CNPJ cadastrado." });
+      return;
+    }
+    if (err.message === "BOLETO_MISSING_ADDRESS") {
+      res.status(422).json({ code: "BOLETO_MISSING_ADDRESS", message: "Endereço completo é obrigatório para gerar boleto." });
       return;
     }
     logger.error("Unexpected error in createPayment", { errorMessage: err.message });

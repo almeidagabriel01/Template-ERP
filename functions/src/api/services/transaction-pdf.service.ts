@@ -7,7 +7,7 @@ import { renderPageToPdfBuffer, resolveAppBaseUrl } from "./core-pdf.service";
 
 // Incrementar esta constante quando o template de recibo mudar estruturalmente,
 // forçando regeneração de todos os PDFs em cache.
-const PDF_TEMPLATE_VERSION = "receipt-pdf-v4-playwright";
+const PDF_TEMPLATE_VERSION = "receipt-pdf-v5-playwright";
 
 // ---------------------------------------------------------------------------
 // Tipos internos
@@ -222,6 +222,10 @@ async function resolveTransactionPdf(options: {
 
   // Cache miss → gera via Playwright
   const buffer = await renderTransactionFromUrl(renderUrl);
+
+  if (!buffer || buffer.length < 1024) {
+    throw new Error("EMPTY_PDF_BUFFER");
+  }
 
   // Persiste em background (sem bloquear a resposta ao cliente em caso de falha)
   Promise.all([
