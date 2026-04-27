@@ -7,11 +7,12 @@ import { logger } from "../../lib/logger";
 export const createPayment = async (req: Request, res: Response): Promise<void> => {
   try {
     const { token } = req.params;
-    const { method, installments, backUrl, transactionId } = req.body as {
+    const { method, installments, backUrl, transactionId, payerOverride: rawPayerOverride } = req.body as {
       method?: unknown;
       installments?: unknown;
       backUrl?: unknown;
       transactionId?: unknown;
+      payerOverride?: unknown;
     };
 
     const validMethods = ["pix", "credit_card", "debit_card", "boleto"];
@@ -20,12 +21,28 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
+    let parsedPayerOverride: { identification?: { type: "CPF" | "CNPJ"; number: string }; firstName?: string; lastName?: string } | undefined;
+    if (rawPayerOverride && typeof rawPayerOverride === "object") {
+      const po = rawPayerOverride as Record<string, unknown>;
+      const idObj = typeof po.identification === "object" && po.identification !== null
+        ? (po.identification as Record<string, unknown>)
+        : undefined;
+      const idType = idObj?.type === "CPF" || idObj?.type === "CNPJ" ? idObj.type : undefined;
+      const idNumber = typeof idObj?.number === "string" ? idObj.number.replace(/\D/g, "").slice(0, 14) : undefined;
+      parsedPayerOverride = {
+        identification: idType && idNumber ? { type: idType, number: idNumber } : undefined,
+        firstName: typeof po.firstName === "string" ? po.firstName.trim().slice(0, 60) : undefined,
+        lastName: typeof po.lastName === "string" ? po.lastName.trim().slice(0, 60) : undefined,
+      };
+    }
+
     const result = await TransactionPaymentService.createPayment({
       token,
       method: method as "pix" | "credit_card" | "debit_card" | "boleto",
       installments: typeof installments === "number" ? installments : undefined,
       backUrl: typeof backUrl === "string" ? backUrl : undefined,
       transactionId: typeof transactionId === "string" ? transactionId : undefined,
+      payerOverride: parsedPayerOverride,
     });
 
     res.status(200).json(result);
@@ -73,6 +90,14 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
     }
     if (err.message === "INVALID_AMOUNT") {
       res.status(400).json({ code: "INVALID_AMOUNT", message: "Valor do lançamento inválido" });
+      return;
+    }
+    if (err.message === "INVALID_IDENTIFICATION") {
+      res.status(400).json({ code: "INVALID_IDENTIFICATION", message: "CPF ou CNPJ inválido. Verifique os dados e tente novamente." });
+      return;
+    }
+    if (err.message === "BOLETO_MISSING_IDENTIFICATION") {
+      res.status(422).json({ code: "BOLETO_MISSING_IDENTIFICATION", message: "Para gerar boleto, o cliente precisa ter CPF ou CNPJ cadastrado." });
       return;
     }
     logger.error("Unexpected error in createPayment", { errorMessage: err.message });

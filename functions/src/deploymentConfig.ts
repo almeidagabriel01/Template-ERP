@@ -7,10 +7,10 @@ const IS_DEV = process.env.GCLOUD_PROJECT === "erp-softcode";
  * Dynamic configuration for Cloud Functions.
  *
  * DEV (erp-softcode):
- * - cpu: 0.083 (Minimum allowed — cheapest possible)
+ * - cpu: 0.5 (Enough for PDF generation in dev)
  * - maxInstances: 1 (No scaling in dev)
  * - concurrency: 1
- * - memory: 256MiB
+ * - memory: 1GiB
  *
  * PROD (erp-softcode-prod):
  * - cpu: 1 (Standard performance)
@@ -21,10 +21,11 @@ const IS_DEV = process.env.GCLOUD_PROJECT === "erp-softcode";
 export const CORS_OPTIONS: HttpsOptions = {
   cors: true,
   region: "southamerica-east1",
-  cpu: IS_DEV ? 0.083 : 1,
+  timeoutSeconds: 90,
+  cpu: IS_DEV ? 0.5 : 1,
   maxInstances: IS_DEV ? 1 : 10,
   concurrency: IS_DEV ? 1 : 80,
-  memory: IS_DEV ? "512MiB" : "1GiB",
+  memory: IS_DEV ? "1GiB" : "1GiB",
 };
 
 export const SCHEDULE_OPTIONS = {

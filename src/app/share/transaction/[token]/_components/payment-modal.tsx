@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   PublicPaymentService,
@@ -20,7 +22,10 @@ import {
   type MpPublicConfig,
   type CardPaymentFormData,
   type CardPaymentResult,
+  type PayerOverride,
 } from "@/services/mercadopago-service";
+import { cpf, cnpj } from "cpf-cnpj-validator";
+import { cn } from "@/lib/utils";
 import { PixQrCodeView } from "./pix-qrcode-view";
 import { BoletoView } from "./boleto-view";
 import { CardPaymentBrick } from "./card-payment-brick";
@@ -36,7 +41,150 @@ interface PaymentModalProps {
     status: string;
   };
   primaryColor?: string;
+  clientName?: string | null;
+  clientHasDocument?: boolean;
   onPaymentSuccess: () => void;
+}
+
+interface BoletoPaymentFormProps {
+  onSubmit: (payerOverride?: PayerOverride) => Promise<void>;
+  isLoading: boolean;
+  clientName?: string | null;
+  clientHasDocument?: boolean;
+  primaryColor?: string;
+}
+
+function formatDocumento(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 14);
+  if (digits.length <= 11) {
+    return digits
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  }
+  return digits
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1/$2")
+    .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+}
+
+function isDocumentoValid(digits: string): boolean {
+  if (digits.length === 11) return cpf.isValid(digits);
+  if (digits.length === 14) return cnpj.isValid(digits);
+  return false;
+}
+
+function BoletoPaymentForm({
+  onSubmit,
+  isLoading,
+  clientName,
+  clientHasDocument,
+  primaryColor,
+}: BoletoPaymentFormProps) {
+  const [documento, setDocumento] = React.useState("");
+  const [nome, setNome] = React.useState("");
+
+  const digits = documento.replace(/\D/g, "");
+  const docValid = isDocumentoValid(digits);
+
+  const canSubmit = docValid && (!!clientName || nome.trim().length > 0);
+
+  const handleDocumentoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDocumento(formatDocumento(e.target.value));
+  };
+
+  const handleSubmit = async () => {
+    const resolvedName = clientName ?? nome.trim();
+    const parts = resolvedName.split(" ");
+    const firstName = parts[0];
+    const lastName = parts.slice(1).join(" ") || "";
+    const type = digits.length === 11 ? "CPF" : "CNPJ";
+    await onSubmit({
+      identification: { type, number: digits },
+      firstName,
+      lastName,
+    });
+  };
+
+  if (clientHasDocument && clientName) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-4 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+          <FileText className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+        </div>
+        <div>
+          <p className="font-medium">Pague com Boleto</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Gere a linha digitável para pagar em qualquer banco.
+          </p>
+        </div>
+        <Button
+          onClick={() => onSubmit(undefined)}
+          disabled={isLoading}
+          className="w-full"
+          style={primaryColor ? { backgroundColor: primaryColor, color: "#ffffff" } : undefined}
+        >
+          {isLoading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <FileText className="mr-2 h-4 w-4" aria-hidden="true" />
+          )}
+          {isLoading ? "Gerando boleto..." : `Gerar Boleto para ${clientName}`}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4 py-4">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mx-auto">
+        <FileText className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+      </div>
+      <p className="text-sm text-muted-foreground text-center">
+        O CPF ou CNPJ é necessário para emitir o boleto bancário.
+      </p>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="boleto-documento">CPF / CNPJ</Label>
+        <Input
+          id="boleto-documento"
+          type="text"
+          inputMode="numeric"
+          placeholder="000.000.000-00 ou 00.000.000/0000-00"
+          value={documento}
+          onChange={handleDocumentoChange}
+          maxLength={18}
+          aria-label="CPF ou CNPJ do pagador"
+        />
+      </div>
+      {!clientName && (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="boleto-nome">Nome completo</Label>
+          <Input
+            id="boleto-nome"
+            type="text"
+            placeholder="Nome do pagador"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            aria-label="Nome completo do pagador"
+          />
+        </div>
+      )}
+      <Button
+        onClick={handleSubmit}
+        disabled={isLoading || !canSubmit}
+        className={cn("w-full")}
+        style={primaryColor ? { backgroundColor: primaryColor, color: "#ffffff" } : undefined}
+      >
+        {isLoading ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+        ) : (
+          <FileText className="mr-2 h-4 w-4" aria-hidden="true" />
+        )}
+        {isLoading ? "Gerando boleto..." : "Gerar Boleto"}
+      </Button>
+    </div>
+  );
 }
 
 const formatCurrency = (amount: number) =>
@@ -70,6 +218,8 @@ export function PaymentModal({
   token,
   transaction,
   primaryColor,
+  clientName,
+  clientHasDocument,
   onPaymentSuccess,
 }: PaymentModalProps) {
   const [pixData, setPixData] = React.useState<PixPaymentResult | null>(null);
@@ -188,18 +338,23 @@ export function PaymentModal({
     }
   };
 
-  const handlePayBoleto = async () => {
+  const handlePayBoleto = async (payerOverride?: PayerOverride) => {
     try {
       setIsGeneratingBoleto(true);
       const result = await PublicPaymentService.createPayment(token, "boleto", {
         transactionId: transaction.id,
+        payerOverride,
       });
       if (result.method === "boleto") {
         setBoletoData(result);
       }
     } catch (err) {
-      const detail = (err as { data?: { message?: string } }).data?.message;
-      toast.error("Erro ao gerar boleto.", { description: detail ?? "Tente novamente." });
+      const d = (err as { data?: { message?: string; code?: string } }).data;
+      if (d?.code === "INVALID_IDENTIFICATION") {
+        toast.error("CPF ou CNPJ inválido.", { description: "Verifique os dados e tente novamente." });
+      } else {
+        toast.error("Erro ao gerar boleto.", { description: d?.message ?? "Tente novamente." });
+      }
     } finally {
       setIsGeneratingBoleto(false);
     }
@@ -376,30 +531,13 @@ export function PaymentModal({
                 primaryColor={primaryColor}
               />
             ) : (
-              <div className="flex flex-col items-center gap-4 py-4 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                  <FileText className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
-                </div>
-                <div>
-                  <p className="font-medium">Pague com Boleto</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Gere a linha digitável para pagar em qualquer banco.
-                  </p>
-                </div>
-                <Button
-                  onClick={handlePayBoleto}
-                  disabled={isGeneratingBoleto}
-                  className="w-full"
-                  style={primaryColor ? { backgroundColor: primaryColor, color: "#ffffff" } : undefined}
-                >
-                  {isGeneratingBoleto ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                  ) : (
-                    <FileText className="mr-2 h-4 w-4" aria-hidden="true" />
-                  )}
-                  {isGeneratingBoleto ? "Gerando boleto..." : "Gerar Boleto"}
-                </Button>
-              </div>
+              <BoletoPaymentForm
+                onSubmit={handlePayBoleto}
+                isLoading={isGeneratingBoleto}
+                clientName={clientName}
+                clientHasDocument={clientHasDocument}
+                primaryColor={primaryColor}
+              />
             )}
           </TabsContent>
         </Tabs>

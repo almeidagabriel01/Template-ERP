@@ -93,11 +93,17 @@ export interface CardPaymentResult {
   amount: number;
 }
 
+export interface PayerOverride {
+  identification?: { type: "CPF" | "CNPJ"; number: string };
+  firstName?: string;
+  lastName?: string;
+}
+
 export const PublicPaymentService = {
   createPayment: (
     token: string,
     method: PaymentMethod,
-    options?: { installments?: number; backUrl?: string; transactionId?: string },
+    options?: { installments?: number; backUrl?: string; transactionId?: string; payerOverride?: PayerOverride },
   ): Promise<PaymentResult> =>
     callPublicApi<PaymentResult>(`/v1/share/transaction/${token}/payment`, "POST", {
       method,

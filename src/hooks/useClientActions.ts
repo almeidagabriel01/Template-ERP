@@ -19,6 +19,7 @@ export interface CreateClientData {
   phone?: string;
   address?: string;
   notes?: string;
+  document?: string; // CPF (11 digits) or CNPJ (14 digits), stored without mask
   types?: ("cliente" | "fornecedor")[]; // Array to allow both
   source?: "manual" | "proposal" | "financial"; // default manual
   targetTenantId?: string; // For super admin to create for a specific tenant

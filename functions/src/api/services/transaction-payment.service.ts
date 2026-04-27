@@ -26,6 +26,12 @@ export interface CreatePaymentRequest {
   installments?: number;
   backUrl?: string;
   transactionId?: string;
+  payerOverride?: {
+    identification?: { type: "CPF" | "CNPJ"; number: string };
+    firstName?: string;
+    lastName?: string;
+    // email NOT exposed (security — email always comes from resolvePayerFromTransaction)
+  };
 }
 
 export interface PixPaymentResult {
@@ -341,17 +347,43 @@ export class TransactionPaymentService {
         const roundedAmount = Math.round(rawAmount * 100) / 100;
 
         const payer = await resolvePayerFromTransaction(tenantId, txData);
-        const payerPayload: Record<string, unknown> = {
-          email: payer.email || `payment+${attemptId}@proops.com.br`,
+
+        // Merge contact data with optional payerOverride from the request.
+        // email ALWAYS comes from the contact — never from the override (security).
+        const merged = {
+          email: payer.email,
+          firstName: payer.firstName ?? req.payerOverride?.firstName ?? null,
+          lastName: payer.lastName ?? req.payerOverride?.lastName ?? null,
+          identificationType: payer.identificationType ?? req.payerOverride?.identification?.type ?? null,
+          identificationNumber: payer.identificationNumber ?? req.payerOverride?.identification?.number ?? null,
         };
-        if (payer.firstName) payerPayload.first_name = payer.firstName;
-        if (payer.lastName) payerPayload.last_name = payer.lastName;
-        if (payer.identificationType && payer.identificationNumber) {
-          payerPayload.identification = {
-            type: payer.identificationType,
-            number: payer.identificationNumber,
-          };
+
+        // Validate identification format before making the MP request.
+        if (merged.identificationNumber) {
+          const { cpf, cnpj } = await import("cpf-cnpj-validator");
+          const digits = merged.identificationNumber.replace(/\D/g, "");
+          const isValidId = digits.length === 11
+            ? cpf.isValid(digits)
+            : digits.length === 14
+              ? cnpj.isValid(digits)
+              : false;
+          if (!isValidId) throw new Error("INVALID_IDENTIFICATION");
         }
+
+        // Boleto requires CPF/CNPJ — reject with a clear error if still missing after merge.
+        if (!merged.identificationType || !merged.identificationNumber) {
+          throw new Error("BOLETO_MISSING_IDENTIFICATION");
+        }
+
+        const payerPayload: Record<string, unknown> = {
+          email: merged.email || `payment+${attemptId}@proops.com.br`,
+          first_name: merged.firstName || "Cliente",
+          last_name: merged.lastName || "ProOps",
+          identification: {
+            type: merged.identificationType,
+            number: merged.identificationNumber,
+          },
+        };
 
         const boletoExpiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -401,6 +433,19 @@ export class TransactionPaymentService {
           "payment.createdAt": now,
           updatedAt: FieldValue.serverTimestamp(),
         });
+
+        // Persist CPF/CNPJ on the client document best-effort (if it was provided
+        // via payerOverride and the contact didn't have one yet).
+        const clientId = txData.clientId as string | undefined;
+        if (clientId && !payer.identificationNumber && merged.identificationNumber) {
+          db.collection("clients").doc(clientId).set(
+            { document: merged.identificationNumber },
+            { merge: true },
+          ).catch((persistErr) => logger.warn("Failed to persist client document after boleto", {
+            clientId,
+            error: persistErr instanceof Error ? persistErr.message : String(persistErr),
+          }));
+        }
 
         logger.info("Boleto payment created", { tenantId, transactionId, mpPaymentId });
 

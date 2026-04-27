@@ -221,6 +221,23 @@ export const getSharedTransaction = async (req: Request, res: Response) => {
       });
     }
 
+    // Lookup client info for boleto payment (name + hasDocument — never expose the document number)
+    let clientPayload: { name: string | null; hasDocument: boolean } = { name: null, hasDocument: false };
+    const clientId = (transactionData as Record<string, unknown>)?.clientId as string | undefined;
+    if (clientId) {
+      const clientSnap = await db.collection("clients").doc(clientId).get();
+      if (clientSnap.exists) {
+        const clientData = clientSnap.data() as Record<string, unknown>;
+        if (clientData.tenantId === sharedTransaction.tenantId) {
+          const docRaw = typeof clientData.document === "string" ? clientData.document.replace(/\D/g, "") : "";
+          clientPayload = {
+            name: typeof clientData.name === "string" ? clientData.name : null,
+            hasDocument: docRaw.length === 11 || docRaw.length === 14,
+          };
+        }
+      }
+    }
+
     return res.status(200).json({
       success: true,
       transaction: sanitizeSharedTransactionPayload(transactionSnap.id, transactionData),
@@ -236,6 +253,7 @@ export const getSharedTransaction = async (req: Request, res: Response) => {
             mercadoPagoEnabled: tenantData.mercadoPagoEnabled ?? false,
           }
         : null,
+      client: clientPayload,
     });
   } catch (error) {
     console.error("Error getting shared transaction:", error);

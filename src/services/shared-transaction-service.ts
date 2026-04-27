@@ -56,19 +56,21 @@ export const SharedTransactionService = {
    */
   getSharedTransaction: async (
     token: string,
-  ): Promise<{ transaction: Transaction; relatedTransactions: Transaction[]; tenant: unknown }> => {
+  ): Promise<{ transaction: Transaction; relatedTransactions: Transaction[]; tenant: unknown; client: { name: string | null; hasDocument: boolean } }> => {
     try {
       const response = await callPublicApi<{
         success: boolean;
         transaction: Transaction;
         relatedTransactions: Transaction[];
         tenant: unknown;
+        client: { name: string | null; hasDocument: boolean };
       }>(`/v1/share/transaction/${token}`, "GET");
 
       return {
         transaction: response.transaction,
         relatedTransactions: response.relatedTransactions,
         tenant: response.tenant,
+        client: response.client ?? { name: null, hasDocument: false },
       };
     } catch (error) {
       console.error("Error getting shared transaction:", error);

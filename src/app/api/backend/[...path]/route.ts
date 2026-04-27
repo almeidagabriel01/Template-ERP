@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveFunctionsApiUpstream } from "@/lib/server-api-upstream";
 
 const REQUEST_TIMEOUT_MS = 30_000;
+const PDF_TIMEOUT_MS = 80_000;
 const SSE_TIMEOUT_MS = 300_000;
 const BODYLESS_METHODS = new Set(["GET", "HEAD"]);
 const BODYLESS_RESPONSE_STATUSES = new Set([204, 205, 304]);
@@ -27,6 +28,7 @@ const SAFE_RESPONSE_HEADERS = new Set([
 ]);
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 90;
 
 function getRequestId(req: NextRequest): string {
   return req.headers.get("x-request-id") || crypto.randomUUID();
@@ -93,7 +95,8 @@ async function proxyRequest(
   const upstreamUrl = buildUpstreamUrl(req, path);
   const acceptHeader = req.headers.get("accept") ?? "";
   const isSSE = acceptHeader.includes("text/event-stream");
-  const timeoutMs = isSSE ? SSE_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
+  const isPdfRequest = path[path.length - 1] === "pdf";
+  const timeoutMs = isSSE ? SSE_TIMEOUT_MS : isPdfRequest ? PDF_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 

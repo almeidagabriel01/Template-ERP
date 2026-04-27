@@ -146,6 +146,7 @@ export function TransactionPdfViewer({
               {isPayable ? (
                 <button
                   type="button"
+                  data-pay-button
                   onClick={() => onPayInstallment(item.data)}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold shadow-sm transition-all cursor-pointer hover:brightness-110 hover:shadow-md active:scale-95"
                   style={{ backgroundColor: primaryColor, color: "#ffffff" }}
@@ -188,6 +189,7 @@ export function TransactionPdfViewer({
               {isPayable ? (
                 <button
                   type="button"
+                  data-pay-button
                   onClick={() => onPayInstallment(item.data)}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold shadow-sm transition-all cursor-pointer hover:brightness-110 hover:shadow-md active:scale-95"
                   style={{ backgroundColor: primaryColor, color: "#ffffff" }}
@@ -287,6 +289,7 @@ export function TransactionPdfViewer({
 
   return (
     <div className="pdf-container">
+      <style>{`@media print { [data-pay-button] { display: none !important; } }`}</style>
       {/* PAGE 1 */}
       <div data-page-index="1" className={pageClass} style={pageStyle}>
         <PdfPageHeader

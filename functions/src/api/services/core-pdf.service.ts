@@ -127,11 +127,13 @@ export async function renderPageToPdfBuffer(options: RenderPdfOptions): Promise<
   const executablePath = await chromiumPackage.executablePath();
   const pageErrors: string[] = [];
 
+  console.time("pdf:launch");
   const browser = await chromium.launch({
     executablePath,
     args: chromiumPackage.args,
     headless: true,
   });
+  console.timeEnd("pdf:launch");
 
   try {
     const context = await browser.newContext({
@@ -172,12 +174,15 @@ export async function renderPageToPdfBuffer(options: RenderPdfOptions): Promise<
       pageErrors.push(`${request.method()} ${request.url()} :: ${failure}`);
     });
 
+    console.time("pdf:goto");
     await page.goto(url, {
-      waitUntil: "networkidle",
+      waitUntil: "domcontentloaded",
       timeout: PDF_PAGE_READY_TIMEOUT_MS,
     });
+    console.timeEnd("pdf:goto");
 
     // Aguardar marcador de pronto + imagens.
+    console.time("pdf:ready");
     await page.waitForFunction(
       async (selector: string) => {
         try {
@@ -206,12 +211,14 @@ export async function renderPageToPdfBuffer(options: RenderPdfOptions): Promise<
       readySelector,
       { timeout: PDF_RENDER_ASSET_TIMEOUT_MS },
     );
+    console.timeEnd("pdf:ready");
 
     // Pequena pausa para garantir animações CSS.
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 150));
 
     await page.emulateMedia({ media: "print" });
 
+    console.time("pdf:generate");
     const pdf = await page.pdf({
       format: "A4",
       printBackground: true,
@@ -223,6 +230,7 @@ export async function renderPageToPdfBuffer(options: RenderPdfOptions): Promise<
         left: "0mm",
       },
     });
+    console.timeEnd("pdf:generate");
 
     return Buffer.from(pdf);
   } catch (error) {

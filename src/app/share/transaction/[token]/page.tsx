@@ -43,6 +43,7 @@ export default function SharedTransactionPage() {
   const [contentHeight, setContentHeight] = React.useState(0);
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [selectedTransaction, setSelectedTransaction] = React.useState<Transaction | null>(null);
+  const [clientInfo, setClientInfo] = React.useState<{ name: string | null; hasDocument: boolean }>({ name: null, hasDocument: false });
 
   const canPay = Boolean(tenant?.mercadoPagoEnabled);
   const handlePayInstallment = React.useCallback((tx: Transaction) => {
@@ -106,6 +107,7 @@ export default function SharedTransactionPage() {
         setTransaction(data.transaction);
         setRelatedTransactions(data.relatedTransactions || []);
         setTenant(data.tenant as Tenant);
+        setClientInfo(data.client);
 
         if (searchParams.get("payment_success") === "1") {
           toast.success("Pagamento realizado com sucesso!");
@@ -378,6 +380,8 @@ export default function SharedTransactionPage() {
             status: selectedTransaction.status || "pending",
           }}
           primaryColor={tenant?.primaryColor}
+          clientName={clientInfo.name}
+          clientHasDocument={clientInfo.hasDocument}
           onPaymentSuccess={() => {
             setSelectedTransaction(null);
             window.location.href = window.location.pathname + "?payment_success=1";

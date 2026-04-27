@@ -29,6 +29,7 @@ export type Client = {
   phone?: string;
   address?: string;
   notes?: string;
+  document?: string; // CPF (11 digits) or CNPJ (14 digits), stored without mask
   types: ClientType[]; // Array to allow both client and supplier
   source: ClientSource;
   sourceId?: string; // ID of the proposal or financial transaction that created this client

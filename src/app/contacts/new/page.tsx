@@ -32,7 +32,23 @@ import {
   CheckCircle,
   Users,
   Building2,
+  CreditCard,
 } from "lucide-react";
+
+function formatDocumento(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 14);
+  if (digits.length <= 11) {
+    return digits
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  }
+  return digits
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1/$2")
+    .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+}
 
 const customerSteps = [
   {
@@ -86,6 +102,7 @@ export default function NewCustomerPage() {
     phone: "",
     address: "",
     notes: "",
+    document: "",
     types: ["cliente"] as ("cliente" | "fornecedor")[],
   });
 
@@ -97,6 +114,14 @@ export default function NewCustomerPage() {
     // Clear error when user starts typing (exclude types since it's not in schema)
     if (name !== "types" && errors[name as keyof typeof errors]) {
       clearFieldError(name as Exclude<keyof typeof formData, "types">);
+    }
+  };
+
+  const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatDocumento(e.target.value);
+    setFormData((prev) => ({ ...prev, document: formatted }));
+    if (errors.document) {
+      clearFieldError("document");
     }
   };
 
@@ -156,6 +181,7 @@ export default function NewCustomerPage() {
         phone: formData.phone || undefined,
         address: formData.address || undefined,
         notes: formData.notes || undefined,
+        document: formData.document ? formData.document.replace(/\D/g, "") : undefined,
         types: formData.types,
         source: "manual",
         targetTenantId: tenant?.id, // Ensure correct tenant for super admin
@@ -361,6 +387,24 @@ export default function NewCustomerPage() {
                 />
               </FormItem>
             </FormGroup>
+
+            <FormItem
+              label="CPF ou CNPJ"
+              htmlFor="document"
+              hint="Necessário para gerar boleto bancário. Pode ser preenchido depois."
+              error={errors.document}
+            >
+              <Input
+                id="document"
+                name="document"
+                value={formData.document}
+                onChange={handleDocumentChange}
+                onBlur={(e) => validateField("document", e.target.value, formData)}
+                placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                icon={<CreditCard className="w-4 h-4" />}
+                className={errors.document ? "border-destructive" : ""}
+              />
+            </FormItem>
           </div>
           <StepNavigation onBeforeNext={validateStep1} />
         </FormStepCard>
@@ -446,6 +490,12 @@ export default function NewCustomerPage() {
                     {formData.address || "—"}
                   </p>
                 </div>
+                {formData.document && (
+                  <div>
+                    <span className="text-muted-foreground">CPF/CNPJ:</span>
+                    <p className="font-medium">{formData.document}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
