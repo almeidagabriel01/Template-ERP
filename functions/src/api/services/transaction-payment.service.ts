@@ -4,6 +4,7 @@ import { db } from "../../init";
 import { FieldValue } from "firebase-admin/firestore";
 import { logger } from "../../lib/logger";
 import { MercadoPagoService } from "./mercadopago.service";
+import { resolveWalletRef } from "../../lib/finance-helpers";
 import { resolveFrontendAppOrigin, resolveMercadoPagoWebhookUrl } from "../../lib/frontend-app-url";
 
 export class MercadoPagoApiError extends Error {
@@ -603,27 +604,93 @@ export class TransactionPaymentService {
       const mpPaymentId = String(paymentResponse.data.id);
       const mpStatus = paymentResponse.data.status;
       const mpStatusDetail = paymentResponse.data.status_detail;
+      const paidAt = new Date().toISOString();
 
       await attemptRef.update({
         mpPaymentId,
         status: mapMpStatus(mpStatus),
       });
 
-      await transactionRef.update({
-        "payment.mpPaymentId": mpPaymentId,
-        "payment.method": "credit_card",
-        "payment.status": mpStatus,
-        "payment.statusDetail": mpStatusDetail ?? null,
-        "payment.createdAt": now,
-        updatedAt: FieldValue.serverTimestamp(),
-      });
+      if (mpStatus === "approved") {
+        // Card payments are synchronous and final. Mark the transaction as paid
+        // immediately instead of waiting for the webhook, which may not fire in
+        // sandbox or on preview deployments.
+        await db.runTransaction(async (firestoreTxn) => {
+          const freshSnap = await firestoreTxn.get(transactionRef);
+          if (!freshSnap.exists) return;
+          const freshData = freshSnap.data() as Record<string, unknown>;
+          if (freshData.status === "paid") return; // idempotent
 
-      logger.info("Card direct payment created", {
+          const oldStatus = freshData.status as string;
+          const txType = typeof freshData.type === "string" ? freshData.type : null;
+          const walletSign = txType === "income" ? 1 : -1;
+          const txWallet = typeof freshData.wallet === "string" ? freshData.wallet : null;
+
+          const walletDeltas = new Map<string, number>();
+          if (txWallet) {
+            walletDeltas.set(txWallet, (walletDeltas.get(txWallet) ?? 0) + walletSign * roundedAmount);
+          }
+
+          const extraCosts = Array.isArray(freshData.extraCosts)
+            ? (freshData.extraCosts as Array<Record<string, unknown>>)
+            : [];
+          const syncedExtraCosts = extraCosts.map((ec) => {
+            if (ec.status === oldStatus) {
+              const ecWallet = typeof ec.wallet === "string" ? ec.wallet : txWallet;
+              const ecAmount = typeof ec.amount === "number" ? ec.amount : 0;
+              if (ecWallet && ecAmount > 0) {
+                walletDeltas.set(ecWallet, (walletDeltas.get(ecWallet) ?? 0) + walletSign * ecAmount);
+              }
+              return { ...ec, status: "paid" };
+            }
+            return ec;
+          });
+
+          for (const [walletId, delta] of walletDeltas) {
+            if (delta === 0) continue;
+            const walletResult = await resolveWalletRef(firestoreTxn, db, tenantId, walletId);
+            if (walletResult) {
+              firestoreTxn.update(walletResult.ref, {
+                balance: FieldValue.increment(delta),
+              });
+            } else {
+              logger.warn("Card payment: wallet not found for balance update", { tenantId, walletId });
+            }
+          }
+
+          const txUpdates: Record<string, unknown> = {
+            status: "paid",
+            paidAt,
+            "payment.mpPaymentId": mpPaymentId,
+            "payment.method": "credit_card",
+            "payment.status": mpStatus,
+            "payment.statusDetail": mpStatusDetail ?? null,
+            "payment.createdAt": now,
+            updatedAt: FieldValue.serverTimestamp(),
+          };
+          if (extraCosts.length > 0) {
+            txUpdates.extraCosts = syncedExtraCosts;
+          }
+          firestoreTxn.update(transactionRef, txUpdates);
+        });
+      } else {
+        await transactionRef.update({
+          "payment.mpPaymentId": mpPaymentId,
+          "payment.method": "credit_card",
+          "payment.status": mpStatus,
+          "payment.statusDetail": mpStatusDetail ?? null,
+          "payment.createdAt": now,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
+
+      logger.info("Card direct payment processed", {
         tenantId,
         transactionId,
         mpPaymentId,
         status: mpStatus,
         statusDetail: mpStatusDetail,
+        markedAsPaid: mpStatus === "approved",
       });
 
       return {
