@@ -349,11 +349,12 @@ export function PaymentModal({
         setBoletoData(result);
       }
     } catch (err) {
-      const d = (err as { data?: { message?: string; code?: string } }).data;
+      const d = (err as { data?: { message?: string; code?: string; mpError?: { message?: string; cause?: Array<{ description?: string }> } } }).data;
       if (d?.code === "INVALID_IDENTIFICATION") {
         toast.error("CPF ou CNPJ inválido.", { description: "Verifique os dados e tente novamente." });
       } else {
-        toast.error("Erro ao gerar boleto.", { description: d?.message ?? "Tente novamente." });
+        const detail = d?.mpError?.cause?.[0]?.description ?? d?.mpError?.message ?? d?.message;
+        toast.error("Erro ao gerar boleto.", { description: detail ?? "Tente novamente." });
       }
     } finally {
       setIsGeneratingBoleto(false);
