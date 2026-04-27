@@ -51,12 +51,21 @@ export default function SharedTransactionPage() {
   }, []);
 
   const handleDownloadPdf = React.useCallback(async () => {
-    if (!token) return;
+    if (!token) {
+      console.warn("[shared-transaction] Download PDF abortado: token ausente");
+      return;
+    }
+    console.log("[shared-transaction] Download PDF iniciado", {
+      tokenPreview: token.slice(0, 8),
+      hasTransaction: Boolean(transaction),
+      description: transaction?.description,
+    });
     setIsGenerating(true);
     try {
       await downloadSharedTransactionPdf(token, transaction?.description);
+      console.log("[shared-transaction] Download PDF concluído");
     } catch (error) {
-      console.error("Error downloading shared transaction PDF:", error);
+      console.error("[shared-transaction] Erro ao baixar PDF", error);
       toast.error("Erro ao baixar PDF. Tente novamente.");
     } finally {
       setIsGenerating(false);

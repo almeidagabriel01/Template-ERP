@@ -165,6 +165,10 @@ export async function renderPageToPdfBuffer(options: RenderPdfOptions): Promise<
     }
     await page.setExtraHTTPHeaders(extraHeaders);
 
+    console.log("[core-pdf] Headers configurados", {
+      hasVercelBypass: Boolean(vercelBypassSecret),
+    });
+
     page.on("pageerror", (error) => {
       pageErrors.push(error?.message || "unknown_page_error");
     });
@@ -231,6 +235,13 @@ export async function renderPageToPdfBuffer(options: RenderPdfOptions): Promise<
       },
     });
     console.timeEnd("pdf:generate");
+
+    if (pageErrors.length > 0) {
+      console.warn("[core-pdf] Render concluiu mas com pageErrors", {
+        pageErrors: pageErrors.slice(0, 8),
+      });
+    }
+    console.log("[core-pdf] PDF renderizado", { bufferSize: pdf.length });
 
     return Buffer.from(pdf);
   } catch (error) {

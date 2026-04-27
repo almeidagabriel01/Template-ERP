@@ -7,7 +7,7 @@ import { renderPageToPdfBuffer, resolveAppBaseUrl } from "./core-pdf.service";
 
 // Incrementar esta constante quando o template de recibo mudar estruturalmente,
 // forçando regeneração de todos os PDFs em cache.
-const PDF_TEMPLATE_VERSION = "receipt-pdf-v5-playwright";
+const PDF_TEMPLATE_VERSION = "receipt-pdf-v6-playwright";
 
 // ---------------------------------------------------------------------------
 // Tipos internos
@@ -126,6 +126,16 @@ async function getCachedPdfIfValid(options: {
   if (!exists) return null;
 
   const [buffer] = await file.download();
+  if (
+    buffer.subarray(0, 5).toString("ascii") !== "%PDF-" ||
+    buffer.length < 5_000
+  ) {
+    console.warn("[transaction-pdf] Cache inválido detectado, descartando", {
+      storagePath: expectedPath,
+      bufferSize: buffer.length,
+    });
+    return null;
+  }
   return buffer;
 }
 
@@ -201,8 +211,9 @@ async function resolveTransactionPdf(options: {
   tenantData: TenantDocData;
   /** URL completa da página de renderização (share link já resolvido) */
   renderUrl: string;
+  forceRefresh?: boolean;
 }): Promise<Buffer> {
-  const { tenantId, transactionId, transactionData, tenantData, renderUrl } =
+  const { tenantId, transactionId, transactionData, tenantData, renderUrl, forceRefresh } =
     options;
 
   const storagePath = buildTransactionPdfStoragePath(tenantId, transactionId);
@@ -212,20 +223,53 @@ async function resolveTransactionPdf(options: {
     tenantData,
   );
 
-  // Tenta servir do cache
-  const cached = await getCachedPdfIfValid({
-    metadata: transactionData.pdf,
-    expectedPath: storagePath,
-    expectedHash: versionHash,
+  console.log("[transaction-pdf] Iniciando resolução", {
+    transactionId,
+    storagePath,
+    versionHash: versionHash.slice(0, 12),
+    forceRefresh: Boolean(forceRefresh),
   });
-  if (cached) return cached;
+
+  // Tenta servir do cache
+  if (!forceRefresh) {
+    const cached = await getCachedPdfIfValid({
+      metadata: transactionData.pdf,
+      expectedPath: storagePath,
+      expectedHash: versionHash,
+    });
+    if (cached) {
+      console.log("[transaction-pdf] Cache HIT", { transactionId, bufferSize: cached.length });
+      return cached;
+    }
+  } else {
+    console.log("[transaction-pdf] forceRefresh=true, ignorando cache", { transactionId });
+  }
 
   // Cache miss → gera via Playwright
+  console.log("[transaction-pdf] Cache MISS, gerando via Playwright", { transactionId });
   const buffer = await renderTransactionFromUrl(renderUrl);
 
-  if (!buffer || buffer.length < 1024) {
-    throw new Error("EMPTY_PDF_BUFFER");
+  const isPdfHeader = buffer.subarray(0, 5).toString("ascii") === "%PDF-";
+  if (!isPdfHeader) {
+    console.error("[transaction-pdf] Buffer não é PDF válido", {
+      transactionId,
+      bufferSize: buffer.length,
+      firstBytes: buffer.subarray(0, 16).toString("hex"),
+    });
+    throw new Error("INVALID_PDF_HEADER");
   }
+  if (buffer.length < 5_000) {
+    console.error("[transaction-pdf] PDF suspeitamente pequeno", {
+      transactionId,
+      bufferSize: buffer.length,
+    });
+    throw new Error("PDF_SUSPICIOUSLY_SMALL");
+  }
+
+  console.log("[transaction-pdf] PDF gerado com sucesso", {
+    transactionId,
+    bufferSize: buffer.length,
+  });
 
   // Persiste em background (sem bloquear a resposta ao cliente em caso de falha)
   Promise.all([
@@ -324,7 +368,7 @@ export async function generateAuthenticatedTransactionPdf(
  * Gera o PDF de um lançamento via token público de compartilhamento.
  * Valida o token e usa o mesmo pipeline de cache do endpoint autenticado.
  */
-export async function generateSharedTransactionPdf(token: string): Promise<{
+export async function generateSharedTransactionPdf(token: string, forceRefresh = false): Promise<{
   buffer: Buffer;
   transactionDescription: string;
 }> {
@@ -364,6 +408,7 @@ export async function generateSharedTransactionPdf(token: string): Promise<{
     transactionData,
     tenantData,
     renderUrl,
+    forceRefresh,
   });
 
   return {
