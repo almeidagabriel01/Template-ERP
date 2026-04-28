@@ -113,15 +113,11 @@ export default function SharedProposalPage() {
         // });
       } catch (err: unknown) {
         console.error("Error loading shared proposal:", err);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const errorAny = err as any;
+        const errorAny = err as { status?: number; data?: { code?: string } };
 
-        if (
-          errorAny?.message?.includes("410") ||
-          errorAny?.response?.data?.code === "EXPIRED_LINK"
-        ) {
+        if (errorAny?.status === 410 || errorAny?.data?.code === "EXPIRED_LINK") {
           setError("Este link expirou. Solicite um novo link ao responsável.");
-        } else if (errorAny?.message?.includes("404")) {
+        } else if (errorAny?.status === 404) {
           setError("Link inválido ou proposta não encontrada.");
         } else {
           setError("Erro ao carregar proposta. Tente novamente mais tarde.");
@@ -133,6 +129,25 @@ export default function SharedProposalPage() {
 
     loadSharedProposal();
   }, [token]);
+
+  if (isPrintMode && proposal) {
+    return (
+      <div className="bg-white w-[794px] m-0 p-0">
+        <span data-pdf-products-ready="1" style={{ display: "none" }} />
+        <ProposalPdfViewer
+          proposal={proposal}
+          tenant={tenant}
+          template={template}
+          skipCatalogEnrichment
+          customSettings={
+            (proposal.pdfSettings as Parameters<
+              typeof ProposalPdfViewer
+            >[0]["customSettings"]) ?? undefined
+          }
+        />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -175,24 +190,6 @@ export default function SharedProposalPage() {
             </Alert>
           </CardContent>
         </Card>
-      </div>
-    );
-  }
-
-  if (isPrintMode) {
-    return (
-      <div className="bg-white w-[794px] m-0 p-0">
-        <ProposalPdfViewer
-          proposal={proposal}
-          tenant={tenant}
-          template={template}
-          skipCatalogEnrichment
-          customSettings={
-            (proposal.pdfSettings as Parameters<
-              typeof ProposalPdfViewer
-            >[0]["customSettings"]) ?? undefined
-          }
-        />
       </div>
     );
   }
