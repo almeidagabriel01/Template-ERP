@@ -146,6 +146,19 @@ export default function SharedTransactionPage() {
     loadSharedTransaction();
   }, [token, paymentSuccess]);
 
+  if (isPrintMode && transaction) {
+    return (
+      <div className="bg-white w-[794px] m-0 p-0">
+        <span data-pdf-transaction-ready="1" style={{ display: "none" }} />
+        <TransactionPdfViewer
+          transaction={transaction}
+          relatedTransactions={relatedTransactions}
+          tenant={tenant}
+        />
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -214,21 +227,6 @@ export default function SharedTransactionPage() {
             </Alert>
           </CardContent>
         </Card>
-      </div>
-    );
-  }
-
-  // Modo de captura para Playwright: só renderiza após dados garantidamente carregados.
-  // O marker é sempre "1" aqui porque isLoading=false e transaction!=null já foram verificados acima.
-  if (isPrintMode) {
-    return (
-      <div className="bg-white w-[794px] m-0 p-0">
-        <span data-pdf-transaction-ready="1" style={{ display: "none" }} />
-        <TransactionPdfViewer
-          transaction={transaction}
-          relatedTransactions={relatedTransactions}
-          tenant={tenant}
-        />
       </div>
     );
   }

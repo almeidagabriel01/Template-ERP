@@ -97,6 +97,13 @@ export function TransactionPdfViewer({
       type: "installment" as const,
       data: inst as Transaction,
     })),
+    // "Total" payments in a group: not an installment, not a down payment, but co-grouped
+    ...(uniqueTxs.length > 1
+      ? uniqueTxs
+          .filter((t) => !t.isInstallment && !t.isDownPayment)
+          .sort((a, b) => (a.installmentNumber || 0) - (b.installmentNumber || 0))
+          .map((tx) => ({ type: "single" as const, data: tx as Transaction }))
+      : []),
     ...extraCosts.map((ec) => ({
       type: "extracost" as const,
       data: ec as unknown as Transaction,
