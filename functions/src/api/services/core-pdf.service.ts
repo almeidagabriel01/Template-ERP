@@ -162,6 +162,7 @@ export async function renderPageToPdfBuffer(options: RenderPdfOptions): Promise<
     };
     if (vercelBypassSecret) {
       extraHeaders["x-vercel-protection-bypass"] = vercelBypassSecret;
+      extraHeaders["x-vercel-set-bypass-cookie"] = "samesitenone";
     }
     await page.setExtraHTTPHeaders(extraHeaders);
 
@@ -180,7 +181,7 @@ export async function renderPageToPdfBuffer(options: RenderPdfOptions): Promise<
 
     console.time("pdf:goto");
     await page.goto(url, {
-      waitUntil: "domcontentloaded",
+      waitUntil: "networkidle",
       timeout: PDF_PAGE_READY_TIMEOUT_MS,
     });
     console.timeEnd("pdf:goto");

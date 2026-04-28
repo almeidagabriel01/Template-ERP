@@ -176,26 +176,49 @@ export const getSharedTransaction = async (req: Request, res: Response) => {
     }
 
     let relatedTransactions: Array<Record<string, unknown>> = [];
-    if (transactionData?.proposalGroupId) {
-      const relatedSnap = await db
-        .collection("transactions")
-        .where("proposalGroupId", "==", transactionData.proposalGroupId)
-        .where("tenantId", "==", sharedTransaction.tenantId)
-        .get();
-      relatedTransactions = relatedSnap.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-      }));
-    } else if (transactionData?.installmentGroupId) {
-      const relatedSnap = await db
-        .collection("transactions")
-        .where("installmentGroupId", "==", transactionData.installmentGroupId)
-        .where("tenantId", "==", sharedTransaction.tenantId)
-        .get();
-      relatedTransactions = relatedSnap.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-      }));
+    try {
+      const tenantFilter = sharedTransaction.tenantId;
+      const txData = transactionData as Record<string, unknown>;
+
+      if (txData?.proposalGroupId) {
+        const snap = await db
+          .collection("transactions")
+          .where("proposalGroupId", "==", txData.proposalGroupId)
+          .where("tenantId", "==", tenantFilter)
+          .get();
+        relatedTransactions = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      } else if (txData?.installmentGroupId) {
+        const snap = await db
+          .collection("transactions")
+          .where("installmentGroupId", "==", txData.installmentGroupId)
+          .where("tenantId", "==", tenantFilter)
+          .get();
+        relatedTransactions = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      } else if (txData?.recurringGroupId) {
+        const snap = await db
+          .collection("transactions")
+          .where("recurringGroupId", "==", txData.recurringGroupId)
+          .where("tenantId", "==", tenantFilter)
+          .get();
+        relatedTransactions = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      } else if (txData?.parentTransactionId) {
+        const parentId = txData.parentTransactionId as string;
+        const [siblingsSnap, parentSnap] = await Promise.all([
+          db.collection("transactions")
+            .where("parentTransactionId", "==", parentId)
+            .where("tenantId", "==", tenantFilter)
+            .get(),
+          db.collection("transactions").doc(parentId).get(),
+        ]);
+        const siblings = siblingsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        if (parentSnap.exists && (parentSnap.data() as Record<string, unknown>)?.tenantId === tenantFilter) {
+          siblings.push({ id: parentSnap.id, ...parentSnap.data() });
+        }
+        relatedTransactions = siblings;
+      }
+    } catch (relatedErr) {
+      console.warn("[shared-transactions] Falha ao buscar relacionadas (nao critico):", relatedErr);
+      relatedTransactions = [];
     }
 
     const tenantRef = db.collection("tenants").doc(sharedTransaction.tenantId);

@@ -404,7 +404,9 @@ export class TransactionService {
           isRecurring: !!data.isRecurring,
           installmentCount: data.installmentCount || null,
           installmentNumber: data.isRecurring ? (data.installmentNumber || 1) : (data.installmentNumber || null),
-          installmentGroupId: data.isInstallment ? groupId : (data.installmentGroupId || null),
+          installmentGroupId: data.isInstallment
+            ? groupId
+            : (data.installmentGroupId || (data.downPayment ? groupId : null)),
           recurringGroupId: data.isRecurring ? groupId : (data.recurringGroupId || null),
           installmentInterval: data.installmentInterval || null,
           paymentMode: data.paymentMode || null,
@@ -593,7 +595,7 @@ export class TransactionService {
         Math.max(0, downPaymentAmountRaw),
       );
       const shouldHaveDownPayment =
-        wantInstallments && downPaymentEnabled && downPaymentAmount > 0;
+        downPaymentEnabled && downPaymentAmount > 0;
 
       // If converting single transaction to grouped structure, create a stable group id.
       if (

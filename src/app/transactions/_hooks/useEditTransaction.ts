@@ -38,8 +38,13 @@ const isLikelyOrphanDownPaymentForGroup = (
   anchor: Transaction,
 ): boolean => {
   if (!isDownPaymentLike(candidate)) return false;
-  if (candidate.installmentGroupId || candidate.proposalGroupId) return false;
   if (candidate.id === anchor.id) return false;
+
+  // Se ambos têm groupIds, eles deveriam estar ligados via fetch normal de grupo — ignorar aqui.
+  const anchorHasGroup = !!anchor.installmentGroupId || !!anchor.proposalGroupId;
+  const candidateHasGroup = !!candidate.installmentGroupId || !!candidate.proposalGroupId;
+  if (anchorHasGroup && candidateHasGroup) return false;
+
   if (
     (candidate.description || "").trim() !== (anchor.description || "").trim()
   )
