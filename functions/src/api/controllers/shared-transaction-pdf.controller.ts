@@ -49,9 +49,14 @@ export async function downloadSharedTransactionPdf(req: Request, res: Response) 
     ) {
       return res.status(404).json({ message: "Link nao encontrado ou invalido" });
     }
-    if (message === "INVALID_PDF_HEADER" || message === "PDF_SUSPICIOUSLY_SMALL") {
-      console.error("[shared-transaction-pdf] PDF inválido gerado", { message });
-      return res.status(500).json({ message: "PDF gerado está inválido. Tente novamente." });
+    if (message === "INVALID_PDF_HEADER" || message.startsWith("PDF_SUSPICIOUSLY_SMALL")) {
+      const bufSize = message.includes(":") ? Number(message.split(":")[1]) : undefined;
+      console.error("[shared-transaction-pdf] PDF inválido gerado", { message, bufSize });
+      return res.status(500).json({
+        message: "PDF gerado está inválido. Tente novamente.",
+        code: message.startsWith("PDF_SUSPICIOUSLY_SMALL") ? "PDF_SUSPICIOUSLY_SMALL" : "INVALID_PDF_HEADER",
+        debug: { bufferSize: bufSize },
+      });
     }
 
     console.error("downloadSharedTransactionPdf Error:", error);

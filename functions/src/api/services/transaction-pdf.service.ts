@@ -128,7 +128,7 @@ async function getCachedPdfIfValid(options: {
   const [buffer] = await file.download();
   if (
     buffer.subarray(0, 5).toString("ascii") !== "%PDF-" ||
-    buffer.length < 5_000
+    buffer.length < 2_000
   ) {
     console.warn("[transaction-pdf] Cache inválido detectado, descartando", {
       storagePath: expectedPath,
@@ -258,12 +258,12 @@ async function resolveTransactionPdf(options: {
     });
     throw new Error("INVALID_PDF_HEADER");
   }
-  if (buffer.length < 5_000) {
+  if (buffer.length < 2_000) {
     console.error("[transaction-pdf] PDF suspeitamente pequeno", {
       transactionId,
       bufferSize: buffer.length,
     });
-    throw new Error("PDF_SUSPICIOUSLY_SMALL");
+    throw new Error(`PDF_SUSPICIOUSLY_SMALL:${buffer.length}`);
   }
 
   console.log("[transaction-pdf] PDF gerado com sucesso", {
