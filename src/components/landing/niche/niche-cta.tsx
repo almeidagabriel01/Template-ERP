@@ -12,7 +12,13 @@ interface NicheCtaProps {
 
 export function NicheCta({ cta }: NicheCtaProps) {
   return (
-    <section className="border-t border-black/10 bg-white py-24 px-4 dark:border-white/10 dark:bg-neutral-950">
+    <motion.section
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.05 }}
+      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+      className="border-t border-black/10 bg-white py-24 px-4 dark:border-white/10 dark:bg-neutral-950"
+    >
       <div className="mx-auto max-w-2xl text-center">
         <motion.h2
           initial={{ opacity: 0, scale: 0.92, filter: "blur(8px)" }}
@@ -59,6 +65,6 @@ export function NicheCta({ cta }: NicheCtaProps) {
           </motion.div>
         </motion.div>
       </div>
-    </section>
+    </motion.section>
   );
 }

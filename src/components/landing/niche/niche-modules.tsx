@@ -4,6 +4,7 @@ import React, { useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
+import { motion } from "motion/react";
 import { CheckCircle2 } from "lucide-react";
 import type { NicheLandingConfig } from "./types";
 
@@ -44,34 +45,17 @@ export function NicheModules({ modules, sectionTitle, sectionSubtitle }: NicheMo
           },
         );
       });
-
-      section.querySelectorAll<HTMLElement>(".niche-module-card").forEach((el) => {
-        gsap.fromTo(
-          el,
-          { y: 32, opacity: 0, autoAlpha: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            autoAlpha: 1,
-            duration: 1.05,
-            ease: "power3.out",
-            scrollTrigger: {
-              trigger: el,
-              start: "top 94%",
-              end: "bottom 50%",
-              toggleActions: "play none none reverse",
-              invalidateOnRefresh: true,
-            },
-          },
-        );
-      });
     },
     { scope: containerRef },
   );
 
   return (
-    <section
+    <motion.section
       ref={containerRef}
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.05 }}
+      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
       className="border-y border-black/10 bg-white py-24 dark:border-white/10 dark:bg-neutral-950"
     >
       <div className="mx-auto max-w-7xl px-6">
@@ -88,14 +72,21 @@ export function NicheModules({ modules, sectionTitle, sectionSubtitle }: NicheMo
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          {modules.map(({ icon: Icon, title, description, bullets }) => (
-            <div key={title} className="niche-module-card relative rounded-2xl">
+          {modules.map(({ icon: Icon, title, description, bullets }, index) => (
+            <motion.div
+              key={title}
+              className="niche-module-card relative rounded-2xl h-full"
+              initial={{ opacity: 0, y: 28 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, amount: 0.15 }}
+              transition={{ duration: 0.55, delay: 0.2 + index * 0.09, ease: [0.22, 1, 0.36, 1] }}
+            >
               <div className="card-border-beam" aria-hidden />
             <div
-              className="card-shine-on-hover group relative rounded-2xl border border-black/10 bg-black/[0.015] p-8 transition-all duration-300 hover:-translate-y-1 hover:border-black/20 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-white/20 dark:hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)]"
+              className="card-shine-on-hover group relative rounded-2xl border border-black/10 bg-black/[0.015] p-7 h-full transition-all duration-300 hover:-translate-y-1 hover:border-black/20 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-white/20 dark:hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)]"
             >
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl border border-black/10 bg-white transition-transform duration-300 group-hover:scale-105 dark:border-white/10 dark:bg-neutral-900">
-                <Icon className="h-6 w-6 text-black dark:text-white" />
+              <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl border border-black/10 bg-white transition-transform duration-300 group-hover:scale-105 dark:border-white/10 dark:bg-neutral-900">
+                <Icon className="h-5 w-5 text-black dark:text-white" />
               </div>
               <h4 className="mb-3 text-xl font-bold text-black dark:text-white">
                 {title}
@@ -115,10 +106,10 @@ export function NicheModules({ modules, sectionTitle, sectionSubtitle }: NicheMo
                 ))}
               </ul>
             </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 }

@@ -25,15 +25,17 @@ export function NicheHero({ hero, currentUser, isAuthLoading }: NicheHeroProps) 
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(0,0,0,0.04)_0%,transparent_100%)] dark:bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(255,255,255,0.06)_0%,transparent_100%)]" />
 
       <div className="relative mx-auto max-w-4xl">
-        <motion.span
-          initial={{ opacity: 0, y: -12, scale: 0.85, filter: "blur(8px)" }}
-          whileInView={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-          viewport={{ once: false, amount: 0.3 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="card-border-beam mb-5 inline-flex items-center rounded-full border border-black/10 bg-black/[0.03] px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-black/60 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/60"
-        >
-          {hero.eyebrow}
-        </motion.span>
+        {hero.eyebrow && (
+          <motion.span
+            initial={{ opacity: 0, y: -12, scale: 0.85, filter: "blur(8px)" }}
+            whileInView={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+            viewport={{ once: false, amount: 0.3 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="mb-5 inline-flex items-center rounded-full border border-black/10 bg-black/[0.03] px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-black/60 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/60"
+          >
+            {hero.eyebrow}
+          </motion.span>
+        )}
 
         <motion.h1
           initial={{ opacity: 0, y: 20 }}

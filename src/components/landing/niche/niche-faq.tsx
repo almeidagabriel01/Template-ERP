@@ -58,7 +58,13 @@ interface NicheFaqProps {
 
 export function NicheFaq({ faq }: NicheFaqProps) {
   return (
-    <section className="border-t border-black/10 bg-black/[0.015] py-24 px-4 dark:border-white/10 dark:bg-white/[0.03]">
+    <motion.section
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.05 }}
+      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+      className="border-t border-black/10 bg-black/[0.015] py-24 px-4 dark:border-white/10 dark:bg-white/[0.03]"
+    >
       <div className="mx-auto max-w-3xl">
         <motion.div
           initial={{ opacity: 0, x: -40 }}
@@ -93,6 +99,6 @@ export function NicheFaq({ faq }: NicheFaqProps) {
           ))}
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 }

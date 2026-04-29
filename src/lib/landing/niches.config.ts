@@ -21,7 +21,7 @@ export const NICHE_LANDING_CONFIG: Record<
   automacao_residencial: {
     slug: "automacao_residencial",
     hero: {
-      eyebrow: "Para integradores",
+      eyebrow: "",
       title: "ERP para",
       titleHighlight: "Automação Residencial",
       subtitle:
@@ -150,7 +150,7 @@ export const NICHE_LANDING_CONFIG: Record<
   cortinas: {
     slug: "cortinas",
     hero: {
-      eyebrow: "Para lojas de decoração",
+      eyebrow: "",
       title: "ERP para",
       titleHighlight: "Lojas de Decoração",
       subtitle:
