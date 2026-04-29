@@ -14,7 +14,7 @@ This roadmap spans two milestones. **v1.0** built the full testing infrastructur
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Test Infrastructure** - Playwright, Firebase Emulators, seed data, CI pipeline
-- [x] **Phase 2: Auth & Multi-Tenant E2E** - Login, session, logout, claims, route guards, tenant isolation (completed 2026-04-29)
+- [x] **Phase 2: Auth & Multi-Tenant E2E** - Login, session, logout, claims, route guards, tenant isolation, AUTH-06 gap closure (completed 2026-04-28)
 - [ ] **Phase 3: Proposals & CRM E2E** - CRUD, PDF generation, public links, status transitions
 - [ ] **Phase 4: Financial Module E2E** - Transactions, wallets, transfers, installments
 - [ ] **Phase 5: Stripe & Billing E2E** - Subscription flows, webhooks, plan limits, WhatsApp overage
@@ -56,11 +56,12 @@ Decimal phases appear between their surrounding integers in numeric order.
 2. Test suite validates that session persists after page refresh via `__session` cookie and that logout clears the session
 3. Test suite validates that unauthenticated requests to protected routes are redirected to the login page
 4. Test suite validates that Tenant A cannot read, create, or modify any document belonging to Tenant B — CI blocks the PR if this test fails
-   **Plans:** 2 plans
+   **Plans:** 3 plans
    Plans:
 
 - [x] 02-01-PLAN.md -- Auth Flow E2E Tests (Login, Session, Logout, Custom Claims)
 - [x] 02-02-PLAN.md -- Route Guards + Tenant Isolation E2E Tests
+- [x] 02-03-PLAN.md -- AUTH-06 gap closure: tighten backend API isolation assertion to [403, 404]
 
 ### Phase 3: Proposals & CRM E2E
 
@@ -364,7 +365,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase                             | Plans Complete | Status      | Completed  |
 | --------------------------------- | -------------- | ----------- | ---------- |
 | 1. Test Infrastructure            | 3/3            | Complete    | 2026-04-06 |
-| 2. Auth & Multi-Tenant E2E        | 2/2            | Complete    | 2026-04-06 |
+| 2. Auth & Multi-Tenant E2E        | 3/3            | Complete    | 2026-04-28 |
 | 3. Proposals & CRM E2E            | 3/3            | Complete    | 2026-04-07 |
 | 4. Financial Module E2E           | 3/3            | Complete    | 2026-04-07 |
 | 5. Stripe & Billing E2E           | 3/3            | Complete    | 2026-04-08 |
