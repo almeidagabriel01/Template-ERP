@@ -24,7 +24,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { StripeService } from "@/services/stripe-service";
 import { toast } from '@/lib/toast';
-import { Loader2, PlayCircle, FlaskConical, RefreshCcw } from "lucide-react";
+import { PlayCircle, FlaskConical, RefreshCcw } from "lucide-react";
+import { Loader } from "@/components/ui/loader";
 
 type SyncTotals = {
   scanned: number;
@@ -157,7 +158,7 @@ export function SubscriptionSyncCard() {
               disabled={isRunning}
             >
               {isRunning && mode === "dry" ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader size="sm" className="mr-2" />
               ) : (
                 <FlaskConical className="w-4 h-4 mr-2" />
               )}
@@ -168,7 +169,7 @@ export function SubscriptionSyncCard() {
               <AlertDialogTrigger asChild>
                 <Button disabled={isRunning}>
                   {isRunning && mode === "live" ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader size="sm" className="mr-2" />
                   ) : (
                     <PlayCircle className="w-4 h-4 mr-2" />
                   )}

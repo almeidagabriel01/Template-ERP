@@ -17,7 +17,7 @@ import { Select } from "@/components/ui/select";
 import { TenantNiche, NICHE_LABELS } from "@/types";
 import { TenantBillingInfo } from "@/services/admin-service";
 import { ALLOWED_TYPES } from "@/services/storage-service";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/lib/toast";
@@ -27,6 +27,7 @@ import {
   parseLocalDate,
   toISODateString,
 } from "@/utils/date-utils";
+import { Loader } from "@/components/ui/loader";
 
 export interface TenantFormData {
   name: string;
@@ -619,7 +620,7 @@ export function TenantDialog({
               type="submit"
               disabled={isSaving || (isEditing && !hasChanges)}
             >
-              {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {isSaving && <Loader size="sm" className="mr-2" />}
               {isEditing ? "Salvar Alterações" : "Criar Empresa"}
             </Button>
           </DialogFooter>

@@ -6,20 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UpgradeRequired } from "@/components/ui/upgrade-required";
 import { ProposalPdfViewer } from "@/components/pdf/proposal-pdf-viewer";
-import {
-  ArrowLeft,
-  Save,
-  Loader2,
-  ZoomIn,
-  ZoomOut,
-  FileDown,
-} from "lucide-react";
+import { ArrowLeft, Save, ZoomIn, ZoomOut, FileDown } from "lucide-react";
 import { UpgradeModal } from "@/components/ui/upgrade-modal";
 import { useEditPdfPage } from "@/components/features/proposal/edit-pdf/use-edit-pdf-page";
 import { PdfEditorTabs } from "@/components/features/proposal/edit-pdf/pdf-editor-tabs";
 import { lightenColor } from "@/components/features/proposal/edit-pdf/pdf-theme-utils";
 import { SaveConfirmationModal } from "@/components/features/proposal/edit-pdf/save-confirmation-modal";
 import { UnsavedChangesModal } from "@/components/ui/unsaved-changes-modal";
+import { Loader } from "@/components/ui/loader";
 
 export default function EditPdfPage() {
   // Modal states
@@ -115,7 +109,7 @@ export default function EditPdfPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        <Loader size="lg" />
       </div>
     );
   }
@@ -154,7 +148,7 @@ export default function EditPdfPage() {
             className="gap-2"
           >
             {isGenerating ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader size="sm" />
             ) : (
               <FileDown className="w-4 h-4" />
             )}
@@ -167,7 +161,7 @@ export default function EditPdfPage() {
             className="gap-2"
           >
             {isSavingDefault ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader size="sm" />
             ) : (
               <Save className="w-4 h-4" />
             )}
@@ -180,7 +174,7 @@ export default function EditPdfPage() {
             className="gap-2"
           >
             {isSaving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader size="sm" />
             ) : (
               <Save className="w-4 h-4" />
             )}

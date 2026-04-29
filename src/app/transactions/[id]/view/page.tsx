@@ -13,20 +13,9 @@ import {
   TransactionStatus,
 } from "@/services/transaction-service";
 import { usePagePermission } from "@/hooks/usePagePermission";
-import {
-  ArrowLeft,
-  Loader2,
-  Edit,
-  Wallet,
-  ArrowUpCircle,
-  ArrowDownCircle,
-  Calendar,
-  User,
-  CreditCard,
-  FileText,
-  Clock,
-} from "lucide-react";
+import { ArrowLeft, Edit, Wallet, ArrowUpCircle, ArrowDownCircle, Calendar, User, CreditCard, FileText, Clock } from "lucide-react";
 import { formatDateBR, formatDateTimeBR } from "@/utils/date-format";
+import { Loader } from "@/components/ui/loader";
 
 const typeConfig: Record<
   TransactionType,
@@ -112,7 +101,7 @@ export default function ViewTransactionPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        <Loader size="lg" />
       </div>
     );
   }

@@ -3,11 +3,12 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/providers/auth-provider";
-import { Loader2, CreditCard, ArrowLeft } from "lucide-react";
+import { CreditCard, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { auth } from "@/lib/firebase";
 import { ApiError } from "@/lib/api-client";
+import { Loader } from "@/components/ui/loader";
 
 const PLAN_NAMES: Record<string, string> = {
   starter: "Starter",
@@ -185,7 +186,7 @@ function SubscribeContent() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <div className="bg-card border border-border rounded-2xl p-8 max-w-md w-full text-center">
-        <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+        <Loader size="lg" />
         <h1 className="text-xl font-bold text-foreground mb-2">
           {isAuthLoading
             ? "Verificando sua conta..."
@@ -219,7 +220,7 @@ export default function SubscribePage() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-background flex items-center justify-center">
-          <Loader2 className="w-10 h-10 animate-spin text-primary" />
+          <Loader size="lg" />
         </div>
       }
     >

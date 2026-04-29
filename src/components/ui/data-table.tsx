@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowUp, ArrowDown, ChevronsUpDown, Loader2 } from "lucide-react";
+import { ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
@@ -10,6 +10,7 @@ import {
 } from "@/hooks/useInfiniteScroll";
 import { QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
 import { PaginatedResult } from "@/services/client-service";
+import { Loader } from "@/components/ui/loader";
 
 export interface DataTableColumn<T> {
   /** Unique identifier for the column */
@@ -160,7 +161,7 @@ function AsyncDataTable<T>({
             ))}
           </div>
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            <Loader size="md" />
           </div>
         </div>
       </div>
@@ -241,7 +242,7 @@ function AsyncDataTable<T>({
             ref={sentinelRef}
             className="flex items-center justify-center py-4"
           >
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            <Loader size="md" />
           </div>
         )}
       </div>
@@ -389,7 +390,7 @@ function StaticDataTable<T>({
             ref={sentinelRef}
             className="flex items-center justify-center py-4"
           >
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            <Loader size="md" />
           </div>
         )}
       </div>

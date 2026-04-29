@@ -23,17 +23,8 @@ import {
   StepNavigation,
 } from "@/components/ui/step-wizard";
 import { FormStepCard } from "@/components/ui/form-step-card";
-import {
-  User,
-  Mail,
-  MapPin,
-  FileText,
-  Loader2,
-  CheckCircle,
-  Users,
-  Building2,
-  CreditCard,
-} from "lucide-react";
+import { User, Mail, MapPin, FileText, CheckCircle, Users, Building2, CreditCard } from "lucide-react";
+import { Loader } from "@/components/ui/loader";
 
 function formatDocumento(raw: string): string {
   const digits = raw.replace(/\D/g, "").slice(0, 14);
@@ -200,7 +191,7 @@ export default function NewCustomerPage() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <Loader size="lg" />
           <p className="text-sm text-muted-foreground">Carregando...</p>
         </div>
       </div>

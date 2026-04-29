@@ -2,15 +2,7 @@
 
 import * as React from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import {
-  Loader2,
-  AlertCircle,
-  FileText,
-  FileDown,
-  ZoomIn,
-  ZoomOut,
-  CalendarOff,
-} from "lucide-react";
+import { AlertCircle, FileText, FileDown, ZoomIn, ZoomOut, CalendarOff } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -22,6 +14,7 @@ import Image from "next/image";
 import { downloadSharedTransactionPdf } from "@/services/pdf/download-shared-transaction-pdf";
 import { computePrimaryForeground } from "@/utils/color-utils";
 import { PaymentModal } from "./_components/payment-modal";
+import { Loader } from "@/components/ui/loader";
 
 export default function SharedTransactionPage() {
   const params = useParams();
@@ -163,7 +156,7 @@ export default function SharedTransactionPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-primary" />
+          <Loader size="lg" />
           <p className="text-muted-foreground">Carregando lançamento...</p>
         </div>
       </div>
@@ -278,7 +271,7 @@ export default function SharedTransactionPage() {
               disabled={isGenerating}
             >
               {isGenerating ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader size="sm" />
               ) : (
                 <FileDown className="w-4 h-4" />
               )}
@@ -314,7 +307,7 @@ export default function SharedTransactionPage() {
             disabled={isGenerating}
           >
             {isGenerating ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader size="sm" />
             ) : (
               <FileDown className="w-4 h-4" />
             )}

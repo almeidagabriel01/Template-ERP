@@ -8,17 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  User,
-  Package,
-  Cpu,
-  Layers,
-  CheckCircle,
-  CreditCard,
-  Settings2,
-  AlertCircle,
-  Loader2,
-} from "lucide-react";
+import { User, Package, Cpu, Layers, CheckCircle, CreditCard, Settings2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SistemaSelector } from "@/components/features/automation";
 import { AmbienteManagerDialog } from "@/components/features/automation/ambiente-manager-dialog";
@@ -50,6 +40,7 @@ import {
   ProposalReadOnlyView,
   PdfDisplayOptionsSection,
 } from "./form";
+import { Loader } from "@/components/ui/loader";
 
 interface SimpleProposalFormProps {
   proposalId?: string;
@@ -1000,7 +991,7 @@ export function SimpleProposalForm({
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <Loader size="lg" />
           <p className="text-sm text-muted-foreground">
             Carregando Proposta...
           </p>

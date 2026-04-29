@@ -2,11 +2,12 @@
 
 import { useEffect, useState, Suspense, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { CheckCircle, AlertCircle } from "lucide-react";
 import { useAuth } from "@/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/firebase";
 import { ApiError } from "@/lib/api-client";
+import { Loader } from "@/components/ui/loader";
 
 function CheckoutSuccessContent() {
   const searchParams = useSearchParams();
@@ -117,7 +118,7 @@ function CheckoutSuccessContent() {
         {status === "loading" && (
           <>
             <div className="relative mx-auto w-16 h-16 mb-6">
-              <Loader2 className="w-16 h-16 animate-spin text-primary" />
+              <Loader size="lg" />
             </div>
             <h1 className="text-2xl font-bold mb-2">
               Processando pagamento...
@@ -186,7 +187,7 @@ export default function CheckoutSuccessPage() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-background flex items-center justify-center">
-          <Loader2 className="w-10 h-10 animate-spin text-primary" />
+          <Loader size="lg" />
         </div>
       }
     >

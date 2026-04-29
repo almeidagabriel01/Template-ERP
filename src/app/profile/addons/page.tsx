@@ -14,14 +14,7 @@ import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { useStripePrices } from "@/hooks/useStripePrices";
 import { ADDON_DEFINITIONS } from "@/services/addon-service";
 import { AddonType, AddonDefinition, PlanTier } from "@/types";
-import {
-  ArrowLeft,
-  Puzzle,
-  Sparkles,
-  CreditCard,
-  Loader2,
-  Calendar,
-} from "lucide-react";
+import { ArrowLeft, Puzzle, Sparkles, CreditCard, Calendar } from "lucide-react";
 import { toast } from '@/lib/toast';
 import {
   AlertDialog,
@@ -35,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AddonsSkeleton } from "./_components/addons-skeleton";
 import { formatDateBR } from "@/utils/date-format";
+import { Loader } from "@/components/ui/loader";
 
 export default function AddonsPage() {
   // ...
@@ -429,7 +423,7 @@ export default function AddonsPage() {
                         disabled={isProcessing === addonType}
                       >
                         {isProcessing === addonType ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <Loader size="sm" />
                         ) : (
                           "Cancelar Assinatura"
                         )}
@@ -488,7 +482,7 @@ export default function AddonsPage() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isProcessing !== null ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader size="sm" />
               ) : (
                 "Sim, cancelar"
               )}

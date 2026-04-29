@@ -12,22 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Trash2,
-  Edit,
-  Eye,
-  Check,
-  Loader2,
-  ChevronDown,
-  Banknote,
-  CreditCard,
-  FileText,
-  Edit2,
-  Split,
-  DollarSign,
-  Share2,
-  RefreshCw,
-} from "lucide-react";
+import { Trash2, Edit, Eye, Check, ChevronDown, Banknote, CreditCard, FileText, Edit2, Split, DollarSign, Share2, RefreshCw } from "lucide-react";
 import { Transaction, TransactionStatus } from "@/services/transaction-service";
 import { typeConfig, statusConfig } from "../_constants/config";
 import { formatCurrency } from "@/utils/format";
@@ -58,6 +43,7 @@ import {
   isProposalLinkedTransaction,
 } from "../_lib/proposal-transaction";
 import { formatDateBR } from "@/utils/date-format";
+import { Loader } from "@/components/ui/loader";
 
 interface TransactionCardProps {
   transaction: Transaction;
@@ -1011,7 +997,7 @@ export function TransactionCard({
                       />
                       {isSavingAmount && (
                         <div className="absolute -right-6 top-1/2 -translate-y-1/2">
-                          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                          <Loader size="sm" />
                         </div>
                       )}
                     </div>
@@ -1049,7 +1035,7 @@ export function TransactionCard({
                         >
                           {isUpdating ? (
                             <>
-                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <Loader size="sm" />
                               <span className="text-xs">Atualizando...</span>
                             </>
                           ) : (
@@ -1246,7 +1232,7 @@ export function TransactionCard({
                           >
                             {updatingIds.has(downPayment.id) ? (
                               <>
-                                <Loader2 className="h-3 w-3 animate-spin" />
+                                <Loader size="sm" />
                                 <span>Atualizando...</span>
                               </>
                             ) : (
@@ -1387,7 +1373,7 @@ export function TransactionCard({
                                 >
                                   {updatingIds.has(inst.id) ? (
                                     <>
-                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                      <Loader size="sm" />
                                       <span>Atualizando...</span>
                                     </>
                                   ) : (
@@ -1557,7 +1543,7 @@ export function TransactionCard({
                                 >
                                   {updatingIds.has(ec.id) ? (
                                     <>
-                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                      <Loader size="sm" />
                                       <span>Atualizando...</span>
                                     </>
                                   ) : (
@@ -1652,7 +1638,7 @@ export function TransactionCard({
                                   }
                                 >
                                   {updatingIds.has(ec.id) ? (
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    <Loader size="sm" />
                                   ) : (
                                     <Trash2 className="w-3.5 h-3.5" />
                                   )}
@@ -1765,7 +1751,7 @@ export function TransactionCard({
                                     >
                                       {updatingIds.has(ec.id) ? (
                                         <>
-                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                          <Loader size="sm" />
                                           <span>Atualizando...</span>
                                         </>
                                       ) : (
@@ -1864,7 +1850,7 @@ export function TransactionCard({
                                       }
                                     >
                                       {updatingIds.has(ec.id) ? (
-                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        <Loader size="sm" />
                                       ) : (
                                         <Trash2 className="w-3.5 h-3.5" />
                                       )}

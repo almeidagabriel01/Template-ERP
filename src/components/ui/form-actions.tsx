@@ -3,7 +3,8 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Loader2, Save, X, ArrowLeft } from "lucide-react";
+import { Save, X, ArrowLeft } from "lucide-react";
+import { Loader } from "@/components/ui/loader";
 
 interface FormActionsProps extends React.HTMLAttributes<HTMLDivElement> {
     isSubmitting?: boolean;
@@ -92,7 +93,7 @@ const FormActions = React.forwardRef<HTMLDivElement, FormActionsProps>(
                 <Button type="submit" disabled={isSubmitting} className="gap-2">
                     {isSubmitting ? (
                         <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Loader size="sm" />
                             {submitLoadingLabel}
                         </>
                     ) : (

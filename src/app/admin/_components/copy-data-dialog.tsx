@@ -12,7 +12,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { TenantBillingInfo } from "@/services/admin-service";
-import { Copy, Loader2 } from "lucide-react";
+import { Copy } from "lucide-react";
+import { Loader } from "@/components/ui/loader";
 
 interface CopyDataDialogProps {
   isOpen: boolean;
@@ -101,7 +102,7 @@ export function CopyDataDialog({
           >
             {isCopying ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader size="sm" />
                 Copiando...
               </>
             ) : (

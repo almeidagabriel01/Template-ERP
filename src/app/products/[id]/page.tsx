@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Product, ProductService } from "@/services/product-service";
 import { usePagePermission } from "@/hooks/usePagePermission";
-import { Loader2, Package, AlertCircle } from "lucide-react";
+import { Package, AlertCircle } from "lucide-react";
 import { FormContainer, FormHeader } from "@/components/ui/form-components";
 import { ProductFormNew } from "../_components/product-form-new";
 import { useCurrentNicheConfig } from "@/hooks/useCurrentNicheConfig";
+import { Loader } from "@/components/ui/loader";
 
 export default function EditProductPage() {
   const params = useParams();
@@ -56,7 +57,7 @@ export default function EditProductPage() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <Loader size="lg" />
           <p className="text-sm text-muted-foreground">
             Carregando produtos...
           </p>

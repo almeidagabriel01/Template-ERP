@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "@/lib/toast";
-import { CreditCard, QrCode, FileText, Loader2, CheckCircle2, XCircle, Info } from "lucide-react";
+import { CreditCard, QrCode, FileText, CheckCircle2, XCircle, Info } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { PixQrCodeView } from "./pix-qrcode-view";
 import { BoletoView } from "./boleto-view";
 import { CardPaymentBrick } from "./card-payment-brick";
+import { Loader } from "@/components/ui/loader";
 
 interface PaymentModalProps {
   open: boolean;
@@ -174,7 +175,7 @@ function BoletoPaymentForm({
           className="w-full"
           style={primaryColor ? { backgroundColor: primaryColor, color: "#ffffff" } : undefined}
         >
-          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : <FileText className="mr-2 h-4 w-4" aria-hidden="true" />}
+          {isLoading ? <Loader size="sm" className="mr-2" /> : <FileText className="mr-2 h-4 w-4" aria-hidden="true" />}
           {isLoading ? "Gerando boleto..." : `Gerar Boleto para ${clientName}`}
         </Button>
       </div>
@@ -223,7 +224,7 @@ function BoletoPaymentForm({
         style={primaryColor ? { backgroundColor: primaryColor, color: "#ffffff" } : undefined}
       >
         {isLoading ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+          <Loader size="sm" className="mr-2" />
         ) : (
           <FileText className="mr-2 h-4 w-4" aria-hidden="true" />
         )}
@@ -464,7 +465,7 @@ export function PaymentModal({
                   style={primaryColor ? { backgroundColor: primaryColor, color: "#ffffff" } : undefined}
                 >
                   {isGeneratingPix ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                    <Loader size="sm" className="mr-2" />
                   ) : (
                     <QrCode className="mr-2 h-4 w-4" aria-hidden="true" />
                   )}
@@ -477,7 +478,7 @@ export function PaymentModal({
           <TabsContent value="card" className="mt-4">
             {cardStep === "loading-config" && (
               <div className="flex flex-col items-center gap-4 py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden="true" />
+                <Loader size="lg" />
                 <p className="text-sm text-muted-foreground">Carregando formulário...</p>
               </div>
             )}
@@ -524,7 +525,7 @@ export function PaymentModal({
                   />
                   {cardStep === "processing" && (
                     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-lg bg-background/90 backdrop-blur-[1px]">
-                      <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" aria-hidden="true" />
+                      <Loader size="md" />
                       <div className="text-center">
                         <p className="text-sm font-medium">Processando pagamento</p>
                         <p className="text-xs text-muted-foreground mt-0.5">Não feche esta janela.</p>

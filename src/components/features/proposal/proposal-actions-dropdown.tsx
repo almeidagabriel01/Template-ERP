@@ -10,19 +10,9 @@ import {
   useDropdownMenuContext,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import {
-  MoreVertical,
-  Share2,
-  Copy,
-  Paperclip,
-  Loader2,
-  Eye,
-  FileDown,
-  Palette,
-  Pencil,
-  Trash2,
-} from "lucide-react";
+import { MoreVertical, Share2, Copy, Paperclip, Eye, FileDown, Palette, Pencil, Trash2 } from "lucide-react";
 import { Proposal } from "@/types/proposal";
+import { Loader } from "@/components/ui/loader";
 
 export interface ProposalActionsDropdownProps {
   proposal: Proposal;
@@ -75,7 +65,7 @@ function DuplicateMenuItem({
       preventClose
     >
       {isDuplicating ? (
-        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        <Loader size="sm" className="mr-2" />
       ) : (
         <Copy className="w-4 h-4 mr-2" />
       )}
@@ -112,7 +102,7 @@ function ShareMenuItem({
       preventClose
     >
       {isSharing ? (
-        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        <Loader size="sm" className="mr-2" />
       ) : (
         <Share2 className="w-4 h-4 mr-2" />
       )}
@@ -178,7 +168,7 @@ export function ProposalActionsDropdown({
                 disabled={isDownloading || !canGeneratePdf}
               >
                 {isDownloading ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader size="sm" className="mr-2" />
                 ) : (
                   <FileDown className="w-4 h-4 mr-2" />
                 )}
@@ -201,7 +191,7 @@ export function ProposalActionsDropdown({
             {onEdit && canEdit && (
               <DropdownMenuItem onClick={onEdit} disabled={isEditing}>
                 {isEditing ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader size="sm" className="mr-2" />
                 ) : (
                   <Pencil className="w-4 h-4 mr-2" />
                 )}

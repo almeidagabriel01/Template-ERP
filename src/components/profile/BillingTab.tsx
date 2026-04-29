@@ -5,13 +5,14 @@ import { UserPlan, BillingInterval } from "@/types";
 import { Button } from "@/components/ui/button";
 import { BillingToggle } from "@/components/ui/billing-toggle";
 import { PlanCard } from "@/components/profile/PlanCard";
-import { Puzzle, CreditCard, ExternalLink, Loader2 } from "lucide-react";
+import { Puzzle, CreditCard, ExternalLink } from "lucide-react";
 import {
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Loader } from "@/components/ui/loader";
 
 interface BillingTabProps {
   allPlans: UserPlan[];
@@ -98,7 +99,7 @@ export function BillingTab({
             >
               {openingPortal ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader size="sm" className="mr-2" />
                   Abrindo...
                 </>
               ) : (

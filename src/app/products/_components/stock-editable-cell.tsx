@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { Loader2, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import {
   type InventoryDefinition,
   formatInventoryValue,
   parseInventoryValue,
 } from "@/lib/niches/config";
+import { Loader } from "@/components/ui/loader";
 
 interface InventoryEditableCellProps {
   initialValue: number;
@@ -88,7 +89,7 @@ export function InventoryEditableCell({
         />
         {isLoading && (
           <div className="absolute right-[-24px]">
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            <Loader size="sm" />
           </div>
         )}
       </div>

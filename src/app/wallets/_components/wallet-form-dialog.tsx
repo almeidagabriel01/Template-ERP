@@ -15,13 +15,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Loader2 } from "lucide-react";
+;
 import { Wallet, WalletType, WALLET_TYPE_LABELS } from "@/types";
 import {
   CreateWalletInput,
   UpdateWalletInput,
 } from "@/services/wallet-service";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { Loader } from "@/components/ui/loader";
 
 interface WalletFormDialogProps {
   open: boolean;
@@ -284,7 +285,7 @@ export function WalletFormDialog({
             </Button>
             <Button type="submit" disabled={isSubmitting || !canSubmit}>
               {isSubmitting && (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader size="sm" className="mr-2" />
               )}
               {isEditMode ? "Salvar" : "Criar Carteira"}
             </Button>

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Bell, Clock, FileText, Loader2, X } from "lucide-react";
+import { AlertTriangle, Bell, Clock, FileText, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +14,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useTenant } from "@/providers/tenant-provider";
 import { Notification, NotificationType } from "@/types/notification";
 import { formatDateBR } from "@/utils/date-format";
+import { Loader } from "@/components/ui/loader";
 
 function getNotificationIcon(type: NotificationType) {
   switch (type) {
@@ -166,7 +167,7 @@ export function NotificationBell() {
                 >
                   {isMarkingAllAsRead ? (
                     <>
-                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      <Loader size="sm" className="mr-1" />
                       Marcando...
                     </>
                   ) : (
@@ -188,7 +189,7 @@ export function NotificationBell() {
               >
                 {isClearingAll ? (
                   <>
-                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    <Loader size="sm" className="mr-1" />
                     Limpando...
                   </>
                 ) : (
@@ -291,7 +292,7 @@ export function NotificationBell() {
                     }}
                   >
                     {clearingIds.includes(notification.id) ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <Loader size="sm" />
                     ) : (
                       <X className="w-3.5 h-3.5" />
                     )}

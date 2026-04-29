@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Plus, Box, Layers, Loader2 } from "lucide-react";
+import { Plus, Box, Layers } from "lucide-react";
 import { useTenant } from "@/providers/tenant-provider";
 import { useAuth } from "@/providers/auth-provider";
 import { AmbienteService } from "@/services/ambiente-service";
@@ -45,6 +45,7 @@ import {
   getSolutionsPageConfig,
   isPageEnabledForNiche,
 } from "@/lib/niches/config";
+import { Loader } from "@/components/ui/loader";
 
 interface LocalLazyOptions {
   batchSize: number;
@@ -521,7 +522,7 @@ export default function AutomationAdminPage() {
                   className="flex items-center justify-center mt-8 py-4 min-h-12"
                 >
                   {isLoadingMoreAmbientes && (
-                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                    <Loader size="md" />
                   )}
                 </div>
               )}
@@ -665,7 +666,7 @@ export default function AutomationAdminPage() {
                     className="flex items-center justify-center mt-8 py-4 min-h-12"
                   >
                     {isLoadingMoreSistemas && (
-                      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                      <Loader size="md" />
                     )}
                   </div>
                 )}
@@ -717,7 +718,7 @@ export default function AutomationAdminPage() {
                     className="flex items-center justify-center mt-8 py-4 min-h-12"
                   >
                     {isLoadingMoreAmbientes && (
-                      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                      <Loader size="md" />
                     )}
                   </div>
                 )}
@@ -778,7 +779,7 @@ export default function AutomationAdminPage() {
               }}
             >
               {isDeleting ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <Loader size="sm" className="mr-2" />
               ) : null}
               Confirmar Exclusão
             </AlertDialogAction>

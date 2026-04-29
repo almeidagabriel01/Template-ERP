@@ -3,9 +3,10 @@
 import * as React from "react";
 import Image from "next/image";
 import { toast } from "@/lib/toast";
-import { Copy, CheckCheck, Clock, Loader2, AlertCircle } from "lucide-react";
+import { Copy, CheckCheck, Clock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PublicPaymentService } from "@/services/mercadopago-service";
+import { Loader } from "@/components/ui/loader";
 
 interface PixQrCodeViewProps {
   token: string;
@@ -176,7 +177,7 @@ export function PixQrCodeView({
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+        <Loader size="sm" />
         <span>Aguardando pagamento</span>
         <span className="ml-1 font-mono font-semibold text-foreground">
           {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}

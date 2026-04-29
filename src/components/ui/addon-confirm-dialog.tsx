@@ -9,8 +9,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Puzzle } from "lucide-react";
+import { Puzzle } from "lucide-react";
 import { AddonDefinition } from "@/types";
+import { Loader } from "@/components/ui/loader";
 
 interface AddonConfirmDialogProps {
   open: boolean;
@@ -87,7 +88,7 @@ export function AddonConfirmDialog({
           <Button onClick={onConfirm} disabled={isProcessing}>
             {isProcessing ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader size="sm" className="mr-2" />
                 Processando...
               </>
             ) : (

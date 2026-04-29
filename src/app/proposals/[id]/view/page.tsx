@@ -12,19 +12,13 @@ import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { usePagePermission } from "@/hooks/usePagePermission";
 import { UpgradeModal, useUpgradeModal } from "@/components/ui/upgrade-modal";
 import { ProposalPdfViewer } from "@/components/pdf/proposal-pdf-viewer";
-import {
-  ArrowLeft,
-  FileDown,
-  Pencil,
-  Loader2,
-  Palette,
-  Crown,
-} from "lucide-react";
+import { ArrowLeft, FileDown, Pencil, Palette, Crown } from "lucide-react";
 import { ProposalService } from "@/services/proposal-service";
 import { ProposalDefaults } from "@/lib/proposal-defaults";
 import { toast } from "@/lib/toast";
 import { usePdfGenerator } from "@/components/features/proposal/pdf/use-pdf-generator";
 import { syncProposalProductWithCatalogSnapshot } from "@/lib/proposal-product";
+import { Loader } from "@/components/ui/loader";
 
 export default function ViewProposalPage() {
   const params = useParams();
@@ -200,7 +194,7 @@ export default function ViewProposalPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        <Loader size="lg" />
       </div>
     );
   }
@@ -285,7 +279,7 @@ export default function ViewProposalPage() {
           >
             {isGenerating ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader size="sm" />
                 Gerando...
               </>
             ) : (

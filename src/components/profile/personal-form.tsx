@@ -13,10 +13,11 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Mail, User as UserIcon, Save, Palette, Loader2 } from "lucide-react";
+import { Mail, User as UserIcon, Save, Palette } from "lucide-react";
 import { UserService } from "@/services/user-service";
 import { toast } from '@/lib/toast';
 import { PhoneInput } from "@/components/ui/phone-input";
+import { Loader } from "@/components/ui/loader";
 
 interface PersonalFormProps {
   user: User | null;
@@ -136,7 +137,7 @@ export function PersonalForm({ user }: PersonalFormProps) {
             <Button onClick={handleSave} disabled={!hasChanges || isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader size="sm" className="mr-2" />
                   Salvando...
                 </>
               ) : (

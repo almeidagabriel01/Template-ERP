@@ -13,10 +13,11 @@ import {
 import { ProposalPdfSettings, ProposalSection } from "@/types";
 import { Proposal } from "@/services/proposal-service";
 import { useTenant } from "@/providers/tenant-provider";
-import { Download, FileDown, Loader2 } from "lucide-react";
+import { Download, FileDown } from "lucide-react";
 import { PdfSettingsTabs, usePdfGenerator } from "./pdf";
 import { PdfSection } from "@/components/features/proposal/pdf-section-editor";
 import { DEFAULT_PDF_FONT_FAMILY } from "@/services/pdf/pdf-fonts";
+import { Loader } from "@/components/ui/loader";
 
 interface PdfGeneratorProps {
   proposal: Partial<Proposal>;
@@ -106,7 +107,7 @@ export function PdfGenerator({ proposal, sections }: PdfGeneratorProps) {
             >
               {isGenerating ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader size="sm" />
                   Gerando...
                 </>
               ) : (

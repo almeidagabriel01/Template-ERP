@@ -16,7 +16,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowLeft, Loader2, LogOut } from "lucide-react";
+import { ArrowLeft, LogOut } from "lucide-react";
+import { Loader } from "@/components/ui/loader";
 
 export default function SubscriptionBlockedPlansPage() {
   const router = useRouter();
@@ -131,7 +132,7 @@ export default function SubscriptionBlockedPlansPage() {
   if (authLoading || isLoadingPlans) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Loader size="lg" />
       </div>
     );
   }
@@ -155,7 +156,7 @@ export default function SubscriptionBlockedPlansPage() {
           >
             {isLoggingOut ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader size="sm" className="mr-2" />
                 Saindo...
               </>
             ) : (
@@ -217,7 +218,7 @@ export default function SubscriptionBlockedPlansPage() {
                 >
                   {processingTier === plan.tier ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <Loader size="sm" className="mr-2" />
                       Abrindo checkout...
                     </>
                   ) : (

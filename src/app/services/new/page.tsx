@@ -3,9 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { usePagePermission } from "@/hooks/usePagePermission";
-import { Loader2, Wrench } from "lucide-react";
+import { Wrench } from "lucide-react";
 import { FormContainer, FormHeader } from "@/components/ui/form-components";
 import { ServiceForm } from "../_components/service-form";
+import { Loader } from "@/components/ui/loader";
 
 export default function NewServicePage() {
   const router = useRouter();
@@ -21,7 +22,7 @@ export default function NewServicePage() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <Loader size="lg" />
           <p className="text-sm text-muted-foreground">Carregando...</p>
         </div>
       </div>

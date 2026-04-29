@@ -12,21 +12,14 @@ import { FormCard } from "@/components/ui/form-card";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  UserPlus,
-  Loader2,
-  Eye,
-  Edit3,
-  Trash2,
-  Shield,
-  AlertCircle,
-} from "lucide-react";
+import { UserPlus, Eye, Edit3, Trash2, Shield, AlertCircle } from "lucide-react";
 import {
   useCreateMember,
   getDefaultPermissions,
 } from "@/hooks/useCreateMember";
 import { UpgradeModal, useUpgradeModal } from "@/components/ui/upgrade-modal";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { Loader } from "@/components/ui/loader";
 
 // Pages that only support view (no create/edit/delete functionality)
 const VIEW_ONLY_PAGES = ["dashboard"];
@@ -303,7 +296,7 @@ export function CreateMemberForm() {
           >
             {isLoading ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader size="sm" className="mr-2" />
                 Criando...
               </>
             ) : (

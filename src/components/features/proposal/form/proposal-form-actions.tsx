@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Save, Loader2 } from "lucide-react";
+import { Save } from "lucide-react";
+import { Loader } from "@/components/ui/loader";
 
 interface ProposalFormActionsProps {
     isSaving: boolean;
@@ -27,7 +28,7 @@ export function ProposalFormActions({
             >
                 {isSaving ? (
                     <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader size="sm" />
                         Salvando...
                     </>
                 ) : (

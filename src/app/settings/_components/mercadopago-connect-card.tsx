@@ -3,11 +3,12 @@
 import * as React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "@/lib/toast";
-import { CreditCard, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { CreditCard, CheckCircle2, XCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MercadoPagoService, type MercadoPagoStatus } from "@/services/mercadopago-service";
+import { Loader } from "@/components/ui/loader";
 
 export function MercadoPagoConnectCard() {
   const router = useRouter();
@@ -143,7 +144,7 @@ export function MercadoPagoConnectCard() {
 
         {isLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            <Loader size="sm" />
             {isProcessingCallback ? "Finalizando conexão..." : "Carregando status..."}
           </div>
         ) : (
@@ -186,14 +187,14 @@ export function MercadoPagoConnectCard() {
                   disabled={isDisconnecting}
                 >
                   {isDisconnecting && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                    <Loader size="sm" className="mr-2" />
                   )}
                   Desconectar
                 </Button>
               ) : (
                 <Button size="sm" onClick={handleConnect} disabled={isConnecting}>
                   {isConnecting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                    <Loader size="sm" className="mr-2" />
                   ) : (
                     <CreditCard className="mr-2 h-4 w-4" aria-hidden="true" />
                   )}

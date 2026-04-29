@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronDown, Plus, User, Loader2, X } from "lucide-react";
+import { Check, ChevronDown, Plus, User, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Client, ClientService } from "@/services/client-service";
 import { useTenant } from "@/providers/tenant-provider";
 import { compareDisplayText, normalizeSortText } from "@/lib/sort-text";
 import { normalize } from "@/utils/text";
+import { Loader } from "@/components/ui/loader";
 
 interface ClientSelectProps {
   value: string; // client name
@@ -195,7 +196,7 @@ export function ClientSelect({
         <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-[300px] overflow-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <Loader size="md" />
             </div>
           ) : (
             <>

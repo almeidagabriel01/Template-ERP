@@ -26,7 +26,8 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from '@/lib/toast';
-import { Loader2 } from "lucide-react";
+import { Loader } from "@/components/ui/loader";
+;
 
 interface OptionManagerDialogProps {
     isOpen: boolean;
@@ -304,7 +305,7 @@ export function OptionManagerDialog({
                         >
                             {isDeleting ? (
                                 <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    <Loader size="sm" className="mr-2" />
                                     Excluindo...
                                 </>
                             ) : (

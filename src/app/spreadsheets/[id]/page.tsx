@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { createUniver, LocaleType, mergeLocales } from "@univerjs/presets";
 import { UniverSheetsCorePreset } from "@univerjs/preset-sheets-core";
@@ -23,6 +23,7 @@ import {
   DEFAULT_SPREADSHEET_LOCALE,
   univerPtBrLocale,
 } from "@/lib/univer-pt-br";
+import { Loader } from "@/components/ui/loader";
 
 type DisposableLike = {
   dispose?: () => void;
@@ -371,7 +372,7 @@ export default function SpreadsheetEditorPage() {
         <div className="flex items-center gap-2">
           <Button onClick={handleSave} disabled={!canSave} className="gap-2">
             {saving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader size="sm" />
             ) : (
               <Save className="w-4 h-4" />
             )}

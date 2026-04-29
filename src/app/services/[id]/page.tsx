@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Service, ServiceService } from "@/services/service-service";
 import { usePagePermission } from "@/hooks/usePagePermission";
-import { Loader2, Wrench, AlertCircle } from "lucide-react";
+import { Wrench, AlertCircle } from "lucide-react";
 import { FormContainer, FormHeader } from "@/components/ui/form-components";
 import { ServiceForm } from "../_components/service-form";
+import { Loader } from "@/components/ui/loader";
 
 export default function EditServicePage() {
   const params = useParams();
@@ -53,7 +54,7 @@ export default function EditServicePage() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <Loader size="lg" />
           <p className="text-sm text-muted-foreground">
             Carregando serviços...
           </p>

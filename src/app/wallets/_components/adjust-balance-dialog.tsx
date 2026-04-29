@@ -12,11 +12,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Loader2, Plus, Minus } from "lucide-react";
+import { Plus, Minus } from "lucide-react";
 import { Wallet } from "@/types";
 import { AdjustBalanceInput } from "@/services/wallet-service";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { formatCurrency } from "@/utils/format";
+import { Loader } from "@/components/ui/loader";
 
 interface AdjustBalanceDialogProps {
     open: boolean;
@@ -184,7 +185,7 @@ export function AdjustBalanceDialog({
                             Cancelar
                         </Button>
                         <Button type="submit" disabled={isSubmitting || !isValid}>
-                            {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            {isSubmitting && <Loader size="sm" className="mr-2" />}
                             {adjustType === "add" ? "Adicionar" : "Remover"}
                         </Button>
                     </DialogFooter>

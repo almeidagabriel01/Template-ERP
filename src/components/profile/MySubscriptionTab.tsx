@@ -18,19 +18,7 @@ import { DEFAULT_PLANS } from "@/services/plan-service";
 import Link from "next/link";
 import { formatPrice } from "@/utils/format";
 import { formatDateBR, type DateValue } from "@/utils/date-format";
-import {
-  CreditCard,
-  Calendar,
-  Crown,
-  Puzzle,
-  Check,
-  X,
-  ExternalLink,
-  Loader2,
-  AlertCircle,
-  Zap,
-  RefreshCw,
-} from "lucide-react";
+import { CreditCard, Calendar, Crown, Puzzle, Check, X, ExternalLink, AlertCircle, Zap, RefreshCw } from "lucide-react";
 
 import {
   AlertDialog,
@@ -43,6 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AiUsageCard } from "@/components/profile/ai-usage-card";
+import { Loader } from "@/components/ui/loader";
 
 interface MySubscriptionTabProps {
   user: User | null;
@@ -534,7 +523,7 @@ export function MySubscriptionTab({
               >
                 {openingPortal ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader size="sm" className="mr-2" />
                     Abrindo...
                   </>
                 ) : (
@@ -792,7 +781,7 @@ export function MySubscriptionTab({
             >
               {isCancelling ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader size="sm" className="mr-2" />
                   Cancelando...
                 </>
               ) : (
@@ -840,7 +829,7 @@ export function MySubscriptionTab({
             >
               {isCancellingSubscription ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader size="sm" className="mr-2" />
                   Cancelando...
                 </>
               ) : (

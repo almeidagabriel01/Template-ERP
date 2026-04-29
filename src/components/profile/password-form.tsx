@@ -12,7 +12,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Lock, Save, Loader2, Eye, EyeOff } from "lucide-react";
+import { Lock, Save, Eye, EyeOff } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { useAuth } from "@/providers/auth-provider";
 import { auth } from "@/lib/firebase";
@@ -22,6 +22,7 @@ import {
   EmailAuthProvider,
   onAuthStateChanged,
 } from "firebase/auth";
+import { Loader } from "@/components/ui/loader";
 
 export function PasswordForm() {
   const { logout, user } = useAuth();
@@ -251,7 +252,7 @@ export function PasswordForm() {
               <Button onClick={handleSave} disabled={!hasChanges || isLoading}>
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader size="sm" className="mr-2" />
                     Salvando...
                   </>
                 ) : (

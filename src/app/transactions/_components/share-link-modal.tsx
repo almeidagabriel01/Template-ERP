@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, Share2, Check, Copy, CalendarCheck, Infinity } from "lucide-react";
+import { Share2, Check, Copy, CalendarCheck, Infinity } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/toast";
 import { SharedTransactionService } from "@/services/shared-transaction-service";
+import { Loader } from "@/components/ui/loader";
 
 interface ShareLinkModalProps {
   open: boolean;
@@ -251,7 +252,7 @@ export function ShareLinkModal({
           >
             {isCopying ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader size="sm" className="mr-2" />
                 Gerando...
               </>
             ) : (

@@ -20,16 +20,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tenant } from "@/types";
 import { TenantBillingInfo } from "@/services/admin-service";
-import {
-  LogIn,
-  Trash2,
-  Pencil,
-  Calendar,
-  CheckCircle2,
-  Loader2,
-} from "lucide-react";
+import { LogIn, Trash2, Pencil, Calendar, CheckCircle2 } from "lucide-react";
 import { calculateNextBillingDate } from "../_utils/billing-date";
 import { formatDateBR } from "@/utils/date-format";
+import { Loader } from "@/components/ui/loader";
 
 interface TenantCardProps {
   item: TenantBillingInfo;
@@ -144,7 +138,7 @@ export function TenantCard({
               title="Excluir"
             >
               {isDeleting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader size="sm" />
               ) : (
                 <Trash2 className="w-4 h-4" />
               )}
@@ -255,7 +249,7 @@ export function TenantCard({
               disabled={isDeleting}
               variant="destructive"
             >
-              {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {isDeleting && <Loader size="sm" className="mr-2" />}
               {isDeleting ? "Removendo..." : "Remover"}
             </Button>
           </AlertDialogFooter>

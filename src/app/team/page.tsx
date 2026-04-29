@@ -20,7 +20,7 @@ import { TeamSkeleton } from "./_components/team-skeleton";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormContainer, FormHeader } from "@/components/ui/form-components";
-import { Users, Shield, UserPlus, X, Loader2 } from "lucide-react";
+import { Users, Shield, UserPlus, X } from "lucide-react";
 import { toast } from "@/lib/toast";
 import {
   TeamMember,
@@ -29,6 +29,7 @@ import {
   MemberCard,
 } from "@/components/features/team";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { Loader } from "@/components/ui/loader";
 
 export default function TeamPage() {
   const { user, isLoading: authLoading } = useAuth();
@@ -266,7 +267,7 @@ export default function TeamPage() {
                   ref={sentinelRef}
                   className="flex items-center justify-center py-4"
                 >
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  <Loader size="md" />
                 </div>
               )}
             </div>

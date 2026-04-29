@@ -3,7 +3,7 @@
 import * as React from "react";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2, Home } from "lucide-react";
+import { Plus, Home } from "lucide-react";
 import { useTenant } from "@/providers/tenant-provider";
 import { useAuth } from "@/providers/auth-provider";
 import { AmbienteService } from "@/services/ambiente-service";
@@ -30,6 +30,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Card, CardContent } from "@/components/ui/card";
 import { useSearchParams, useRouter } from "next/navigation";
 import { compareDisplayText } from "@/lib/sort-text";
+import { Loader } from "@/components/ui/loader";
 
 type SortOption = "alphabetical" | "createdDesc";
 
@@ -235,7 +236,7 @@ export default function AmbientesPage() {
       >
         {isLoading ? (
           <div className="flex items-center justify-center py-24">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            <Loader size="lg" />
           </div>
         ) : ambientes.length === 0 ? (
           <Card className="border-dashed">

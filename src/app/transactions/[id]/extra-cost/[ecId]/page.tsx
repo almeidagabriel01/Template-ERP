@@ -10,20 +10,11 @@ import {
   Transaction,
   TransactionStatus,
 } from "@/services/transaction-service";
-import {
-  ArrowLeft,
-  Loader2,
-  Wallet,
-  ArrowUpCircle,
-  ArrowDownCircle,
-  Calendar,
-  CreditCard,
-  FileText,
-  Link2,
-} from "lucide-react";
+import { ArrowLeft, Wallet, ArrowUpCircle, ArrowDownCircle, Calendar, CreditCard, FileText, Link2 } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency } from "@/utils/format";
 import { formatDateBR, formatDateTimeBR } from "@/utils/date-format";
+import { Loader } from "@/components/ui/loader";
 
 const statusConfig: Record<
   TransactionStatus,
@@ -64,7 +55,7 @@ export default function ViewExtraCostPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        <Loader size="lg" />
       </div>
     );
   }

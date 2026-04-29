@@ -20,14 +20,7 @@ import { KanbanBoardSkeleton } from "@/app/crm/_components/kanban-skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/lib/toast";
-import {
-  Plus,
-  Pencil,
-  Trash2,
-  Search,
-  ListFilter,
-  Loader2,
-} from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ListFilter } from "lucide-react";
 import { isDateBeforeTodayBR } from "@/utils/date-format";
 import { cn } from "@/lib/utils";
 import { normalize } from "@/utils/text";
@@ -48,6 +41,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Loader } from "@/components/ui/loader";
 
 export function ProposalKanbanTab() {
   const { tenant } = useTenant();
@@ -984,7 +978,7 @@ export function ProposalKanbanTab() {
               disabled={isDeletingColumn}
               className="bg-destructive hover:bg-destructive/90 gap-2"
             >
-              {isDeletingColumn && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isDeletingColumn && <Loader size="sm" />}
               {isDeletingColumn ? "Excluindo..." : "Excluir"}
             </AlertDialogAction>
           </AlertDialogFooter>
