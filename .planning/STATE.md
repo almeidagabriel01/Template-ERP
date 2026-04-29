@@ -2,15 +2,14 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — AI Assistant
-status: Phase complete — ready for verification
+status: unknown
 stopped_at: context exhaustion at 91% (2026-04-28)
-last_updated: "2026-04-28T14:02:25.683Z"
+last_updated: "2026-04-29T00:30:59.623Z"
 progress:
   total_phases: 14
   completed_phases: 13
   total_plans: 46
-  completed_plans: 44
-  percent: 96
+  completed_plans: 45
 ---
 
 # Project State
@@ -20,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Propostas e gestão financeira funcionando com confiança — ciclo proposta → aprovação → cobrança não pode quebrar.
-**Current focus:** Phase 18 — fix-lia-5-corre-es-contador-de-uso-hist-rico-quebras-de-linha-minimizar-sem-perder-estado-tool-results-sem-json-bruto
+**Current focus:** Phase 02 — auth-multitenant
 
 ## Current Position
 
-Phase: 18 (fix-lia-5-corre-es-contador-de-uso-hist-rico-quebras-de-linha-minimizar-sem-perder-estado-tool-results-sem-json-bruto) — EXECUTING
-Plan: 3 of 3
+Phase: 02 (auth-multitenant) — COMPLETE
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -148,6 +147,9 @@ Carry-forward decisions from v1.0 relevant to v2.0 work:
 - [Phase 18]: System prompt rule 15 explicitly forbids ID exposure with correct/incorrect examples — defense in depth with existing rule 11 (T-18-02 mitigated)
 - [Phase 18]: Bug 4 fix: LiaTriggerButton always mounted; CSS visibility classes (opacity-0 scale-75 pointer-events-none) drive hide/show instead of conditional render
 - [Phase 18]: Bug 2 fix: sessionId useState uses generateSessionId() directly; restoration deferred to useEffect with isRestoredRef guard preventing race between tenantId availability and localStorage read
+- [Phase 02-02]: AUTH-05 redirect param tests use page.url() after Playwright follows 307 — middleware sets redirect+redirect_reason in Location header, params are observable in final URL
+- [Phase 02-02]: AUTH-06 backend API test accepts 502 alongside 403/404 — Functions emulator not started in E2E test env; Firestore-rules tests provide equivalent isolation guarantee
+- [Phase 02-02]: Firestore isolation tests use Node.js fetch() directly to emulator REST API — no browser page fixture, independent of browser route interception layer
 
 ### Pending Todos
 
@@ -159,6 +161,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-28T14:02:25.666Z
-Stopped at: context exhaustion at 91% (2026-04-28)
+Last session: 2026-04-29T00:40:59Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None

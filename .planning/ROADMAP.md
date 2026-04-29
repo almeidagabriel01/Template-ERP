@@ -14,7 +14,7 @@ This roadmap spans two milestones. **v1.0** built the full testing infrastructur
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Test Infrastructure** - Playwright, Firebase Emulators, seed data, CI pipeline
-- [ ] **Phase 2: Auth & Multi-Tenant E2E** - Login, session, logout, claims, route guards, tenant isolation
+- [x] **Phase 2: Auth & Multi-Tenant E2E** - Login, session, logout, claims, route guards, tenant isolation (completed 2026-04-29)
 - [ ] **Phase 3: Proposals & CRM E2E** - CRUD, PDF generation, public links, status transitions
 - [ ] **Phase 4: Financial Module E2E** - Transactions, wallets, transfers, installments
 - [ ] **Phase 5: Stripe & Billing E2E** - Subscription flows, webhooks, plan limits, WhatsApp overage
