@@ -25,12 +25,12 @@ import {
   ChevronRight,
   CloudOff,
   Link2,
-  LoaderCircle,
   RefreshCcw,
   Search,
   Unlink2,
   XCircle,
 } from "lucide-react";
+import { Loader } from "@/components/ui/loader";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SelectTenantState } from "@/components/shared/select-tenant-state";
 import { Badge } from "@/components/ui/badge";
@@ -227,7 +227,7 @@ function GoogleCalendarCompanyCard(props: {
           </p>
         </div>
         {props.isLoading ? (
-          <LoaderCircle className="h-5 w-5 shrink-0 animate-spin text-muted-foreground" />
+          <Loader size="md" className="shrink-0 text-muted-foreground" />
         ) : props.status.connected ? (
           <Badge variant="success" className="shrink-0">
             Conectado
@@ -296,7 +296,7 @@ function GoogleCalendarCompanyCard(props: {
           {props.canManage ? (
             <Button onClick={props.onConnect} disabled={props.isConnecting} className="w-full">
               {props.isConnecting ? (
-                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                <Loader size="sm" variant="button" className="mr-2" />
               ) : (
                 <Link2 className="mr-2 h-4 w-4" />
               )}
@@ -1066,7 +1066,7 @@ export function CalendarPage() {
               {isLoadingEvents ? (
                 <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/28 backdrop-blur-[1px]">
                   <div className="flex items-center gap-3 rounded-full border border-border/60 bg-card/92 px-4 py-2.5 text-sm text-muted-foreground shadow-sm">
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                    <Loader size="sm" />
                     Carregando compromissos...
                   </div>
                 </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -18,11 +19,60 @@ interface LoaderProps {
   label?: string;
 }
 
-const sizeClass: Record<NonNullable<LoaderProps["size"]>, string> = {
-  sm: "h-3 w-3",
-  md: "h-5 w-5",
-  lg: "h-8 w-8",
+const DOT_PX: Record<NonNullable<LoaderProps["size"]>, number> = {
+  sm: 3,
+  md: 5,
+  lg: 7,
 };
+
+const DOT_GAP: Record<NonNullable<LoaderProps["size"]>, string> = {
+  sm: "gap-[3px]",
+  md: "gap-[5px]",
+  lg: "gap-[7px]",
+};
+
+function LoaderDots({
+  size = "md",
+  variant = "inline",
+  label = "Carregando",
+  className,
+}: LoaderProps) {
+  const px = DOT_PX[size];
+  const dotColor = variant === "button" ? "bg-current" : "bg-primary";
+
+  return (
+    <motion.span
+      role="status"
+      aria-label={label}
+      className={cn("inline-flex items-center shrink-0", DOT_GAP[size], className)}
+      animate="animate"
+      initial="initial"
+      variants={{
+        animate: { transition: { staggerChildren: 0.12 } },
+      }}
+    >
+      {[0, 1, 2].map((i) => (
+        <motion.span
+          key={i}
+          className={cn("rounded-full shrink-0", dotColor)}
+          style={{ width: px, height: px }}
+          variants={{
+            initial: { scale: 0.4, opacity: 0.35 },
+            animate: {
+              scale: [0.4, 1, 0.4],
+              opacity: [0.35, 1, 0.35],
+              transition: {
+                duration: 0.7,
+                repeat: Infinity,
+                ease: "easeInOut",
+              },
+            },
+          }}
+        />
+      ))}
+    </motion.span>
+  );
+}
 
 export function Loader({
   size = "md",
@@ -30,27 +80,10 @@ export function Loader({
   className,
   label = "Carregando",
 }: LoaderProps) {
-  const ring = (
-    <span
-      role="status"
-      aria-label={label}
-      className={cn("relative inline-flex shrink-0", sizeClass[size], className)}
-    >
-      <span
-        className="absolute inset-0 rounded-full animate-spin"
-        style={{
-          background:
-            "conic-gradient(from 0deg, transparent 0deg, var(--primary) 270deg, var(--primary) 360deg)",
-        }}
-      />
-      <span className="absolute inset-[2px] rounded-full bg-background" />
-    </span>
-  );
-
   if (variant === "contained") {
     return (
       <div className="flex items-center justify-center min-h-[200px] w-full">
-        <Loader size="md" label={label} />
+        <LoaderDots size={size === "sm" ? "md" : size} label={label} />
       </div>
     );
   }
@@ -58,16 +91,15 @@ export function Loader({
   if (variant === "page") {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
-        <div className="bg-card border border-border/50 shadow-2xl rounded-2xl p-8 max-w-sm w-full text-center flex flex-col items-center gap-4 animate-in fade-in zoom-in-95 duration-200">
-          <div className="relative">
-            <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
-            <Loader size="lg" label={label} className="relative z-10" />
-          </div>
+        <div className="bg-card border border-border/50 shadow-2xl rounded-2xl p-8 max-w-sm w-full text-center flex flex-col items-center gap-6 animate-in fade-in zoom-in-95 duration-200">
+          <LoaderDots size="lg" label={label} />
           <p className="text-sm font-medium text-muted-foreground">{label}</p>
         </div>
       </div>
     );
   }
 
-  return ring;
+  return (
+    <LoaderDots size={size} variant={variant} label={label} className={className} />
+  );
 }
