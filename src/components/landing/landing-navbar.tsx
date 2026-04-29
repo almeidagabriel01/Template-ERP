@@ -7,37 +7,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import type { User } from "@/types";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import { ProOpsLogo } from "@/components/branding/proops-logo";
+import { getAuthenticatedHome } from "@/lib/landing/auth-redirect";
 
 interface LandingNavbarProps {
   currentUser: User | null;
   onSignOut: () => void;
-}
-
-function getAuthenticatedHome(user: User): string {
-  if (user.role === "superadmin") {
-    return "/admin";
-  }
-
-  const isAdmin = ["admin", "superadmin", "MASTER"].includes(user.role);
-  const permissions = user.permissions || {};
-
-  if (isAdmin || permissions.dashboard?.canView === true) {
-    return "/dashboard";
-  }
-
-  const orderedPages = [
-    "proposals",
-    "clients",
-    "products",
-    "financial",
-    "profile",
-  ];
-
-  const firstAllowedPage = orderedPages.find(
-    (page) => permissions[page]?.canView === true || page === "profile",
-  );
-
-  return firstAllowedPage ? `/${firstAllowedPage}` : "/403";
+  isAuthLoading?: boolean;
 }
 
 const navLinks = [
@@ -47,7 +22,7 @@ const navLinks = [
   { href: "#pricing", label: "Planos" },
 ];
 
-export function LandingNavbar({ currentUser, onSignOut }: LandingNavbarProps) {
+export function LandingNavbar({ currentUser, onSignOut, isAuthLoading = false }: LandingNavbarProps) {
   const [hidden, setHidden] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const lastScrollY = useRef(0);
@@ -175,7 +150,7 @@ export function LandingNavbar({ currentUser, onSignOut }: LandingNavbarProps) {
                   aria-label="Alternar tema"
                 />
 
-                {currentUser ? (
+                {isAuthLoading ? null : currentUser ? (
                   <>
                     {isFreeAccount ? (
                       <button
@@ -267,7 +242,7 @@ export function LandingNavbar({ currentUser, onSignOut }: LandingNavbarProps) {
                 transition={{ delay: 0.3, duration: 0.3 }}
                 className="mt-4 flex flex-col items-center gap-4"
               >
-                {currentUser ? (
+                {isAuthLoading ? null : currentUser ? (
                   <>
                     {isFreeAccount ? (
                       <button

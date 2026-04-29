@@ -104,7 +104,7 @@ export function LandingNiches() {
         <div className="grid md:grid-cols-2 gap-8">
           {NICHE_CARDS.map(({ icon: Icon, eyebrow, title, description, href }) => (
             <div key={href} className="niche-card relative rounded-2xl">
-              <div className="pointer-events-none absolute -inset-px rounded-2xl bg-[conic-gradient(from_0deg,rgba(0,0,0,0)_0deg,rgba(0,0,0,0.07)_120deg,rgba(0,0,0,0)_240deg,rgba(0,0,0,0)_360deg)] dark:bg-[conic-gradient(from_0deg,rgba(255,255,255,0)_0deg,rgba(255,255,255,0.1)_120deg,rgba(255,255,255,0)_240deg,rgba(255,255,255,0)_360deg)] opacity-50 animate-spin-slow" />
+              <div className="card-border-beam" aria-hidden />
               <Link
                 href={href}
                 className="card-shine-on-hover group relative flex flex-col gap-5 rounded-2xl border border-black/10 bg-white p-8 transition-all duration-300 hover:-translate-y-1 hover:border-black/20 hover:shadow-[0_20px_40px_rgba(0,0,0,0.1)] dark:border-white/10 dark:bg-neutral-900 dark:hover:border-white/20 dark:hover:shadow-[0_20px_40px_rgba(0,0,0,0.45)]"

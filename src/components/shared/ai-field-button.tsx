@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { WandSparkles } from "lucide-react";
+import { useState, useRef } from "react";
+import { WandSparkles, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
 import { toast } from "@/lib/toast";
@@ -26,6 +26,7 @@ interface AIFieldButtonProps {
   disabledReason?: string;
   enabledHint?: string;
   className?: string;
+  getPreviousValue?: () => string;
 }
 
 export function AIFieldButton({
@@ -35,9 +36,12 @@ export function AIFieldButton({
   disabledReason,
   enabledHint,
   className,
+  getPreviousValue,
 }: AIFieldButtonProps) {
   const [loading, setLoading] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [pending, setPending] = useState(false);
+  const previousValueRef = useRef<string>("");
 
   const tooltipContent = disabledReason
     ? disabledReason
@@ -47,6 +51,9 @@ export function AIFieldButton({
 
   async function handleClick() {
     if (disabledReason) return;
+    if (getPreviousValue) {
+      previousValueRef.current = getPreviousValue();
+    }
     setLoading(true);
     try {
       const result = await generateField({ field, context: context() });
@@ -57,7 +64,11 @@ export function AIFieldButton({
             .replace(/\*\*(.*?)\*\*/g, "$1")
             .replace(/\*(.*?)\*/g, "$1");
       onGenerated(cleanValue);
-      toast.success("Sugestão preenchida — revise antes de salvar");
+      if (getPreviousValue) {
+        setPending(true);
+      } else {
+        toast.success("Sugestão preenchida — revise antes de salvar");
+      }
     } catch (err) {
       if (err instanceof AiApiError) {
         if (err.status === 403 && err.code === "AI_PLAN_NOT_ALLOWED") {
@@ -80,22 +91,63 @@ export function AIFieldButton({
     }
   }
 
+  function handleApply() {
+    setPending(false);
+    previousValueRef.current = "";
+  }
+
+  function handleDiscard() {
+    onGenerated(previousValueRef.current);
+    setPending(false);
+    previousValueRef.current = "";
+    toast.info("Sugestão descartada");
+  }
+
   return (
     <>
-      <Tooltip content={tooltipContent} delayMs={300}>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className={cn("h-6 w-6 text-muted-foreground hover:text-primary", className)}
-          onClick={handleClick}
-          disabled={loading || !!disabledReason}
-          aria-label={tooltipContent}
-          loading={loading}
-        >
-          {!loading && <WandSparkles className="h-3.5 w-3.5" />}
-        </Button>
-      </Tooltip>
+      {pending ? (
+        <>
+          <Tooltip content="Aplicar sugestão" delayMs={300}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-500 dark:hover:bg-green-950"
+              onClick={handleApply}
+              aria-label="Aplicar sugestão"
+            >
+              <Check className="h-3.5 w-3.5" />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Descartar sugestão" delayMs={300}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-red-500 hover:text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
+              onClick={handleDiscard}
+              aria-label="Descartar sugestão"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </Tooltip>
+        </>
+      ) : (
+        <Tooltip content={tooltipContent} delayMs={300}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={cn("h-6 w-6 text-muted-foreground hover:text-primary", className)}
+            onClick={handleClick}
+            disabled={loading || !!disabledReason}
+            aria-label={tooltipContent}
+            loading={loading}
+          >
+            {!loading && <WandSparkles className="h-3.5 w-3.5" />}
+          </Button>
+        </Tooltip>
+      )}
 
       <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
         <DialogContent>

@@ -61,9 +61,9 @@ export function NicheFaq({ faq }: NicheFaqProps) {
     <section className="border-t border-black/10 bg-black/[0.015] py-24 px-4 dark:border-white/10 dark:bg-white/[0.03]">
       <div className="mx-auto max-w-3xl">
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
+          initial={{ opacity: 0, x: -40 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: false, amount: 0.3 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           className="mb-12 text-center"
         >
@@ -79,9 +79,9 @@ export function NicheFaq({ faq }: NicheFaqProps) {
           {faq.map((item, index) => (
             <motion.div
               key={item.question}
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
+              initial={{ opacity: 0, x: 40 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: false, amount: 0.3 }}
               transition={{
                 duration: 0.4,
                 delay: index * 0.07,

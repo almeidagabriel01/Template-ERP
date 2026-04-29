@@ -83,7 +83,7 @@ export function NicheFeatures({ features }: NicheFeaturesProps) {
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
           {features.map(({ icon: Icon, title, description }) => (
             <div key={title} className="niche-feature-card relative rounded-2xl">
-              <div className="pointer-events-none absolute -inset-px rounded-2xl bg-[conic-gradient(from_0deg,rgba(0,0,0,0)_0deg,rgba(0,0,0,0.08)_120deg,rgba(0,0,0,0)_240deg,rgba(0,0,0,0)_360deg)] dark:bg-[conic-gradient(from_0deg,rgba(255,255,255,0)_0deg,rgba(255,255,255,0.12)_120deg,rgba(255,255,255,0)_240deg,rgba(255,255,255,0)_360deg)] opacity-50 animate-spin-slow" />
+              <div className="card-border-beam" aria-hidden />
               <div className="card-shine-on-hover group relative rounded-2xl border border-black/10 bg-white p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(0,0,0,0.12)] dark:border-white/10 dark:bg-neutral-900 dark:hover:shadow-[0_18px_40px_rgba(0,0,0,0.45)]">
                 <div className="relative z-10">
                   <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-lg border border-black/10 bg-black/[0.04] transition-transform duration-300 group-hover:scale-105 dark:border-white/10 dark:bg-white/[0.08]">

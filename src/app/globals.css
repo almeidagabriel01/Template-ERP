@@ -326,12 +326,45 @@ body {
   background: linear-gradient(120deg, transparent 0%, rgba(0,0,0,0.18) 50%, transparent 100%);
 }
 
-/* Slow spin for idle border glow */
-@keyframes spin-slow {
-  to { transform: rotate(360deg); }
+/* Border beam for idle card animation */
+@property --card-beam-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
 }
-.animate-spin-slow {
-  animation: spin-slow 12s linear infinite;
+
+@keyframes card-beam-spin {
+  to { --card-beam-angle: 360deg; }
+}
+
+.card-border-beam {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--card-beam-angle) at 50% 50%,
+    transparent 0deg,
+    rgba(0, 0, 0, 0.55) 60deg,
+    transparent 120deg,
+    transparent 360deg
+  );
+  mask: linear-gradient(white 0 0) content-box, linear-gradient(white 0 0);
+  -webkit-mask: linear-gradient(white 0 0) content-box, linear-gradient(white 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: destination-out;
+  animation: card-beam-spin 5s linear infinite;
+}
+
+.dark .card-border-beam {
+  background: conic-gradient(
+    from var(--card-beam-angle) at 50% 50%,
+    transparent 0deg,
+    rgba(255, 255, 255, 0.5) 60deg,
+    transparent 120deg,
+    transparent 360deg
+  );
 }
 
 @theme inline {

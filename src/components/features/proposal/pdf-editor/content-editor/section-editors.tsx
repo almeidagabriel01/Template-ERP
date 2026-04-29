@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Tooltip } from "@/components/ui/tooltip";
-import { Upload, Bold, Italic } from "lucide-react";
+import { Upload, Bold, Italic, List, ListOrdered } from "lucide-react";
 import { PdfSection } from "../../pdf-section-editor";
 import {
   HorizontalAlignControls,
@@ -15,6 +15,10 @@ import {
 } from "./style-controls";
 import { ALLOWED_TYPES } from "@/services/storage-service";
 import { AIFieldButton } from "@/components/shared/ai-field-button";
+import {
+  MarkdownEditor,
+  type MarkdownEditorHandle,
+} from "./markdown-editor";
 
 export interface PdfSectionProposalContext {
   title?: string;
@@ -123,34 +127,6 @@ function hasMinimumContent(content?: string): boolean {
   return trimmed.length >= 10 || /\s/.test(trimmed);
 }
 
-function toggleWrap(
-  value: string,
-  start: number,
-  end: number,
-  marker: string,
-): { value: string; start: number; end: number } | null {
-  if (start === end) return null;
-  const before = value.slice(0, start);
-  const sel = value.slice(start, end);
-  const after = value.slice(end);
-  if (
-    sel.startsWith(marker) &&
-    sel.endsWith(marker) &&
-    sel.length >= marker.length * 2
-  ) {
-    return {
-      value: before + sel.slice(marker.length, -marker.length) + after,
-      start,
-      end: end - marker.length * 2,
-    };
-  }
-  return {
-    value: before + marker + sel + marker + after,
-    start: start + marker.length,
-    end: end + marker.length,
-  };
-}
-
 interface TextEditorProps {
   section: PdfSection;
   updateSection: (id: string, updates: Partial<PdfSection>) => void;
@@ -168,45 +144,55 @@ export function TextEditor({
   sectionType = "generic",
   sectionTitle,
 }: TextEditorProps) {
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-
-  function applyWrap(marker: string) {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    const result = toggleWrap(ta.value, ta.selectionStart, ta.selectionEnd, marker);
-    if (!result) return;
-    updateSection(section.id, { content: result.value });
-    requestAnimationFrame(() => {
-      ta.focus();
-      ta.setSelectionRange(result.start, result.end);
-    });
-  }
+  const markdownEditorRef = React.useRef<MarkdownEditorHandle>(null);
 
   return (
     <div className="grid gap-2">
       <div className="flex items-center justify-between">
         <Label>{label}</Label>
         <div className="flex items-center gap-1">
-          <Tooltip content="Negrito (selecione texto primeiro)" delayMs={300}>
+          <Tooltip content="Negrito (Ctrl+B)" delayMs={300}>
             <Button
               type="button"
               variant="ghost"
               size="icon"
               className="h-6 w-6 text-muted-foreground"
-              onClick={() => applyWrap("**")}
+              onClick={() => markdownEditorRef.current?.toggleBold()}
             >
               <Bold className="h-3.5 w-3.5" />
             </Button>
           </Tooltip>
-          <Tooltip content="Itálico (selecione texto primeiro)" delayMs={300}>
+          <Tooltip content="Itálico (Ctrl+I)" delayMs={300}>
             <Button
               type="button"
               variant="ghost"
               size="icon"
               className="h-6 w-6 text-muted-foreground"
-              onClick={() => applyWrap("*")}
+              onClick={() => markdownEditorRef.current?.toggleItalic()}
             >
               <Italic className="h-3.5 w-3.5" />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Lista com marcadores" delayMs={300}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground"
+              onClick={() => markdownEditorRef.current?.toggleBulletList()}
+            >
+              <List className="h-3.5 w-3.5" />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Lista numerada" delayMs={300}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground"
+              onClick={() => markdownEditorRef.current?.toggleOrderedList()}
+            >
+              <ListOrdered className="h-3.5 w-3.5" />
             </Button>
           </Tooltip>
           <AIFieldButton
@@ -227,15 +213,14 @@ export function TextEditor({
                 ? "Digite ao menos algumas palavras para ativar"
                 : undefined
             }
+            getPreviousValue={() => section.content ?? ""}
           />
         </div>
       </div>
-      <Textarea
-        ref={textareaRef}
-        value={section.content}
-        onChange={(e) => updateSection(section.id, { content: e.target.value })}
-        placeholder="Digite o texto..."
-        rows={4}
+      <MarkdownEditor
+        ref={markdownEditorRef}
+        value={section.content ?? ""}
+        onChange={(value) => updateSection(section.id, { content: value })}
       />
       {!hasMinimumContent(section.content) && (
         <p className="text-[11px] text-muted-foreground">
@@ -301,6 +286,7 @@ export function ProductTableEditor({
                   ? "Adicione produtos à proposta primeiro"
                   : undefined
               }
+              getPreviousValue={() => linkedScopeTextSection?.content ?? ""}
             />
           </div>
           <Textarea
@@ -352,6 +338,7 @@ export function PaymentTermsEditor({
             onGenerated={(value) =>
               updateSection(section.id, { content: value })
             }
+            getPreviousValue={() => section.content ?? ""}
           />
         </div>
         <Textarea

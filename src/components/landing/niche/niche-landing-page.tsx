@@ -17,7 +17,7 @@ interface NicheLandingPageProps {
 
 export function NicheLandingPage({ slug }: NicheLandingPageProps) {
   const config = NICHE_LANDING_CONFIG[slug];
-  const { currentUser, handleSignOut } = useLandingPage();
+  const { currentUser, isAuthLoading, handleSignOut } = useLandingPage();
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
@@ -31,10 +31,10 @@ export function NicheLandingPage({ slug }: NicheLandingPageProps) {
 
   return (
     <div className="min-h-screen overflow-x-clip bg-white text-black selection:bg-black selection:text-white dark:bg-neutral-950 dark:text-neutral-100 dark:selection:bg-white dark:selection:text-black">
-      <LandingNavbar currentUser={currentUser} onSignOut={handleSignOut} />
+      <LandingNavbar currentUser={currentUser} isAuthLoading={isAuthLoading} onSignOut={handleSignOut} />
 
       <main>
-        <NicheHero hero={config.hero} />
+        <NicheHero hero={config.hero} currentUser={currentUser} isAuthLoading={isAuthLoading} />
         <NicheFeatures features={config.features} />
         <NicheModules
           modules={config.modules}

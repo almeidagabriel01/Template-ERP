@@ -90,7 +90,7 @@ export function NicheModules({ modules, sectionTitle, sectionSubtitle }: NicheMo
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {modules.map(({ icon: Icon, title, description, bullets }) => (
             <div key={title} className="niche-module-card relative rounded-2xl">
-              <div className="pointer-events-none absolute -inset-px rounded-2xl bg-[conic-gradient(from_0deg,rgba(0,0,0,0)_0deg,rgba(0,0,0,0.08)_120deg,rgba(0,0,0,0)_240deg,rgba(0,0,0,0)_360deg)] dark:bg-[conic-gradient(from_0deg,rgba(255,255,255,0)_0deg,rgba(255,255,255,0.12)_120deg,rgba(255,255,255,0)_240deg,rgba(255,255,255,0)_360deg)] opacity-50 animate-spin-slow" />
+              <div className="card-border-beam" aria-hidden />
             <div
               className="card-shine-on-hover group relative rounded-2xl border border-black/10 bg-black/[0.015] p-8 transition-all duration-300 hover:-translate-y-1 hover:border-black/20 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-white/20 dark:hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)]"
             >

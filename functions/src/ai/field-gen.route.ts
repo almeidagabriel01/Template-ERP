@@ -23,7 +23,8 @@ function sanitizeContext(obj: Record<string, unknown>): Record<string, unknown> 
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(obj)) {
     if (typeof v === "string") {
-      const clean = sanitizeText(v).slice(0, MAX_CONTEXT_STRING_LEN);
+      const limit = k === "currentContent" ? 1000 : MAX_CONTEXT_STRING_LEN;
+      const clean = sanitizeText(v).slice(0, limit);
       out[k] = clean;
     } else if (typeof v === "number") {
       out[k] = v;

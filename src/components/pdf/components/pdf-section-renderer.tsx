@@ -84,10 +84,17 @@ export function PdfSectionRenderer({
         ) : (
           <ReactMarkdown
             remarkPlugins={[remarkBreaks]}
-            allowedElements={["p", "br", "strong", "em"]}
+            allowedElements={["p", "br", "strong", "em", "ul", "ol", "li"]}
             unwrapDisallowed
             components={{
               p: ({ children }) => <span>{children}</span>,
+              ul: ({ children }) => (
+                <ul style={{ listStyle: "disc", paddingLeft: "1.25rem", margin: "0.25rem 0" }}>{children}</ul>
+              ),
+              ol: ({ children }) => (
+                <ol style={{ listStyle: "decimal", paddingLeft: "1.25rem", margin: "0.25rem 0" }}>{children}</ol>
+              ),
+              li: ({ children }) => <li style={{ margin: "0.125rem 0" }}>{children}</li>,
             }}
           >
             {section.content}

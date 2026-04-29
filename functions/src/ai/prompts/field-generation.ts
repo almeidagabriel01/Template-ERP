@@ -48,7 +48,7 @@ export const MAX_OUTPUT_TOKENS: Record<GenerateFieldRequestField, number> = {
   "product.description": 200,
   "product.category": 80,
   "proposal.notes": 500,
-  "proposal.pdfSection": 800,
+  "proposal.pdfSection": 350,
   "item.description": 200,
   "service.description": 200,
 };
@@ -106,6 +106,15 @@ export function buildPrompt(req: GenerateFieldRequest): { system: string; user: 
     }
 
     case "proposal.pdfSection": {
+      const currentContent = req.context.currentContent?.trim();
+
+      if (currentContent) {
+        return {
+          system: `Você é redator de documentos comerciais em PT-BR. O usuário escreveu o início de um texto e quer que você o complete e expanda em um parágrafo profissional.\n\nREGRAS ABSOLUTAS:\n- Preserve EXATAMENTE as palavras de abertura do usuário — não as altere, não as substitua, não as mova.\n- Continue e expanda o texto no mesmo assunto e tom que o usuário iniciou. Se começou com gratidão, expanda esse tema. Se começou com uma afirmação, desenvolva-a.\n- NÃO mude de assunto. NÃO introduza temas que não estejam na abertura do usuário.\n- Resultado: 3 a 5 frases no total (incluindo a abertura), máximo 120 palavras.\n- Você pode usar **negrito** em até 2 termos-chave.\n- Não use títulos (#, ##), links, imagens, emojis, código nem JSON.`,
+          user: `Complete e expanda este texto preservando a abertura exata:\n"""\n${truncate(currentContent, 800)}\n"""`,
+        };
+      }
+
       const sectionLabels: Record<string, string> = {
         cover: "capa / apresentação",
         scope: "escopo do projeto",
@@ -117,10 +126,18 @@ export function buildPrompt(req: GenerateFieldRequest): { system: string; user: 
         .slice(0, 10)
         .map((p) => `- ${truncate(p.name, 100)} (×${p.quantity})`)
         .join("\n");
-      const currentContent = req.context.currentContent?.trim();
+
+      const userParts: string[] = [
+        `Título da proposta: ${truncate(req.context.title)}`,
+        `Tema da seção: ${topicLabel}`,
+      ];
+      if (productList) {
+        userParts.push(`Itens:\n${productList}`);
+      }
+
       return {
-        system: `Você é redator de propostas comerciais para empresas de ${nicheLabel(req.context.niche)}. Escreva em PT-BR o conteúdo da seção "${topicLabel}" para um PDF profissional. Tom formal e adequado ao tema da seção. Sem títulos ou subtítulos repetindo o nome da seção. Você pode usar **palavra** para destacar termos importantes (e nada mais de markdown). Não use listas, títulos, links nem emojis.`,
-        user: `Título da proposta: ${truncate(req.context.title)}\nTema da seção: ${topicLabel}${currentContent ? `\nConteúdo atual (mantenha o tema, reescreva com mais qualidade): ${truncate(currentContent, 300)}` : ""}${productList ? `\nItens:\n${productList}` : ""}`,
+        system: `Você é redator de propostas comerciais para empresas de ${nicheLabel(req.context.niche)}. Escreva em PT-BR o conteúdo da seção "${topicLabel}" para um PDF profissional. Tom formal, claro e direto.\n\nFORMATO OBRIGATÓRIO:\n- Tamanho: máximo 2 parágrafos curtos (3-5 frases cada) OU 1 parágrafo curto seguido de lista de 3 a 5 itens. Nunca ultrapasse 150 palavras.\n- Você pode usar **negrito** para destacar até 3 termos-chave.\n- Você pode usar listas com hífen (- item) ou numeradas (1. item) quando o conteúdo for naturalmente itemizável.\n- Não use títulos (#, ##) nem subtítulos repetindo o nome da seção.\n- Não use links, imagens, emojis, código nem JSON.\n- Vá direto ao ponto, sem introduções genéricas como "Apresentamos..." ou "Esta proposta...".`,
+        user: userParts.join("\n"),
       };
     }
 

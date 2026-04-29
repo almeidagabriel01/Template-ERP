@@ -1,5 +1,8 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
+import { motion } from "motion/react";
 import { ProOpsLogo } from "@/components/branding/proops-logo";
 
 export function LandingFooter() {
@@ -7,7 +10,13 @@ export function LandingFooter() {
     <footer className="border-t border-black/10 bg-white pb-10 pt-16 dark:border-white/10 dark:bg-neutral-950">
       <div className="mx-auto max-w-7xl px-6">
         <div className="mb-14 grid grid-cols-2 gap-10 md:grid-cols-4">
-          <div className="col-span-2">
+          <motion.div
+            className="col-span-2"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.5, delay: 0, ease: [0.22, 1, 0.36, 1] }}
+          >
             <Link
               href="/"
               className="mb-6 inline-flex items-center cursor-pointer"
@@ -35,9 +44,14 @@ export function LandingFooter() {
                 gestao@proops.com.br
               </a>
             </p>
-          </div>
+          </motion.div>
 
-          <div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.5, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+          >
             <h4 className="mb-4 font-semibold text-black dark:text-white">
               Produto
             </h4>
@@ -67,9 +81,14 @@ export function LandingFooter() {
                 </Link>
               </li>
             </ul>
-          </div>
+          </motion.div>
 
-          <div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.5, delay: 0.16, ease: [0.22, 1, 0.36, 1] }}
+          >
             <h4 className="mb-4 font-semibold text-black dark:text-white">
               Institucional
             </h4>
@@ -107,10 +126,16 @@ export function LandingFooter() {
                 </a>
               </li>
             </ul>
-          </div>
+          </motion.div>
         </div>
 
-        <div className="flex flex-col items-center justify-between gap-4 border-t border-black/10 pt-8 text-sm text-black/55 dark:border-white/10 dark:text-white/55 md:flex-row">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false, amount: 0.2 }}
+          transition={{ duration: 0.5, delay: 0.24, ease: [0.22, 1, 0.36, 1] }}
+          className="flex flex-col items-center justify-between gap-4 border-t border-black/10 pt-8 text-sm text-black/55 dark:border-white/10 dark:text-white/55 md:flex-row"
+        >
           <p className="flex items-center gap-2">
             <ProOpsLogo
               variant="symbol"
@@ -122,7 +147,7 @@ export function LandingFooter() {
             &copy; {new Date().getFullYear()} ProOps. Todos os direitos
             reservados.
           </p>
-        </div>
+        </motion.div>
       </div>
     </footer>
   );

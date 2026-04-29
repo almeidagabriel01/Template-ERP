@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import { toast } from "@/lib/toast";
 import { PlanService } from "@/services/plan-service";
-import { User, UserPlan } from "@/types";
+import { UserPlan } from "@/types";
+import { useAuth } from "@/providers/auth-provider";
 
 export interface LandingPlan {
   name: string;
@@ -61,7 +61,7 @@ function mapPlans(sourcePlans: UserPlan[]): LandingPlan[] {
 }
 
 export function useLandingPage() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { user: currentUser, isLoading: isAuthLoading } = useAuth();
   const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">(
     "monthly",
   );
@@ -85,41 +85,9 @@ export function useLandingPage() {
     fetchPlans();
   }, []);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (!firebaseUser) {
-        setCurrentUser(null);
-        return;
-      }
-
-      try {
-        const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-        if (userDoc.exists()) {
-          setCurrentUser({ id: firebaseUser.uid, ...userDoc.data() } as User);
-          return;
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      }
-
-      setCurrentUser({
-        id: firebaseUser.uid,
-        email: firebaseUser.email || "",
-        role: "free",
-        name:
-          firebaseUser.displayName ||
-          firebaseUser.email?.split("@")[0] ||
-          "User",
-      });
-    });
-
-    return () => unsubscribe();
-  }, []);
-
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      setCurrentUser(null);
       toast.success("Voce saiu da sua conta.", {
         title: "Logout realizado",
       });
@@ -132,6 +100,7 @@ export function useLandingPage() {
 
   return {
     currentUser,
+    isAuthLoading,
     billingInterval,
     setBillingInterval,
     plans,
