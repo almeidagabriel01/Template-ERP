@@ -62,7 +62,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] 02-01-PLAN.md -- Auth Flow E2E Tests (Login, Session, Logout, Custom Claims)
 - [x] 02-02-PLAN.md -- Route Guards + Tenant Isolation E2E Tests
 - [x] 02-03-PLAN.md -- AUTH-06 gap closure: tighten backend API isolation assertion to [403, 404]
-- [ ] 02-04-PLAN.md -- AUTH-05 gap closure: diagnose + fix redirect params stripped from final login URL
+- [x] 02-04-PLAN.md -- AUTH-05 gap closure: diagnose + fix redirect params stripped from final login URL
 
 ### Phase 3: Proposals & CRM E2E
 
@@ -366,7 +366,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase                             | Plans Complete | Status      | Completed  |
 | --------------------------------- | -------------- | ----------- | ---------- |
 | 1. Test Infrastructure            | 3/3            | Complete    | 2026-04-06 |
-| 2. Auth & Multi-Tenant E2E        | 3/3            | Complete    | 2026-04-28 |
+| 2. Auth & Multi-Tenant E2E        | 4/4            | Complete    | 2026-04-29 |
 | 3. Proposals & CRM E2E            | 3/3            | Complete    | 2026-04-07 |
 | 4. Financial Module E2E           | 3/3            | Complete    | 2026-04-07 |
 | 5. Stripe & Billing E2E           | 3/3            | Complete    | 2026-04-08 |

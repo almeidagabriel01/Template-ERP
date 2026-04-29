@@ -4,12 +4,12 @@ milestone: v3.0
 milestone_name: — AI Assistant
 status: unknown
 stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-04-28T00:05:00.000Z"
+last_updated: "2026-04-29T01:39:07.726Z"
 progress:
   total_phases: 14
   completed_phases: 13
-  total_plans: 47
-  completed_plans: 46
+  total_plans: 48
+  completed_plans: 47
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 02 (auth-multitenant) — EXECUTING
-Plan: 1 of 1
+Plan: 1 of 4
 
 ## Performance Metrics
 
@@ -151,6 +151,7 @@ Carry-forward decisions from v1.0 relevant to v2.0 work:
 - [Phase 02-02]: AUTH-06 backend API test accepts 502 alongside 403/404 — Functions emulator not started in E2E test env; Firestore-rules tests provide equivalent isolation guarantee
 - [Phase 02-02]: Firestore isolation tests use Node.js fetch() directly to emulator REST API — no browser page fixture, independent of browser route interception layer
 - [Phase 02-03]: AUTH-06 gap closed — 502 removed from backend API isolation assertion; global-setup.ts already starts Functions emulator (--only auth,firestore,storage,functions); tightened [403, 404] assertion causes hard failure if emulator unreachable
+- [Phase 02-04]: AUTH-05 redirect params stripped by ProtectedRoute client-side router.push('/login') which lacked query params; middleware returns HTTP 200 for App Router shell — client JS layer is the actual redirect mechanism. Fixed router.push to include redirect + redirect_reason params. 18/18 auth suite green.
 
 ### Pending Todos
 
@@ -162,6 +163,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-28T00:05:00Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-04-29T00:00:00Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None
