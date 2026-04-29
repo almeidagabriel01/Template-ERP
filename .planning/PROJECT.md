@@ -30,6 +30,13 @@ Propostas e gestão financeira funcionando com confiança — se tudo mais falha
 - AIBI-05: Near-limit warning banner in Lia panel — Validated in Phase 16: lia-seguranca-billing
 - AIBI-06: Firestore deny-write rules for aiUsage + aiConversations — Validated in Phase 16: lia-seguranca-billing
 
+- AUTH-01: Login flow E2E — Validated in Phase 02: auth-multitenant
+- AUTH-02: Session expiration redirect E2E — Validated in Phase 02: auth-multitenant
+- AUTH-03: Route guard protection E2E — Validated in Phase 02: auth-multitenant
+- AUTH-04: Tenant isolation frontend E2E — Validated in Phase 02: auth-multitenant
+- AUTH-05: Redirect params preserved through auth bounce — Validated in Phase 02: auth-multitenant
+- AUTH-06: Backend API tenant isolation assertion (403/404 only) — Validated in Phase 02: auth-multitenant
+
 ### Active
 
 _(Definidos no Milestone v1.0 — veja REQUIREMENTS.md)_
