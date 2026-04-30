@@ -101,6 +101,7 @@ export const DynamicSelect = React.forwardRef<DynamicSelectHandle, DynamicSelect
       [tenant?.id, isCreatingOption, options, storageKey, label],
     );
 
+    const { name: imperativeName, onChange: imperativeOnChange } = props;
     React.useImperativeHandle(
       ref,
       () => ({
@@ -108,13 +109,13 @@ export const DynamicSelect = React.forwardRef<DynamicSelectHandle, DynamicSelect
           const createdLabel = await handleCreateOption(inputLabel);
           if (createdLabel !== undefined) {
             const event = {
-              target: { value: createdLabel, name: props.name ?? "" },
+              target: { value: createdLabel, name: imperativeName ?? "" },
             } as React.ChangeEvent<HTMLSelectElement>;
-            props.onChange?.(event);
+            imperativeOnChange?.(event);
           }
         },
       }),
-      [handleCreateOption, props.name, props.onChange],
+      [handleCreateOption, imperativeName, imperativeOnChange],
     );
 
     return (

@@ -64,7 +64,7 @@ export default function SharedTransactionPage() {
     } finally {
       setIsGenerating(false);
     }
-  }, [token, transaction?.description]);
+  }, [token, transaction]);
 
   React.useEffect(() => {
     // Auto-fit PDF on mobile screens initially and on resize
