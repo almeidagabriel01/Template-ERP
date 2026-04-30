@@ -23,8 +23,8 @@ interface AuthContextType {
   isLoading: boolean;
   /** Whether the __session cookie is known to be in sync with the current token. */
   isSessionSynced: boolean;
-  /** True while logout() is executing — prevents ProtectedRoute from racing. */
-  isLoggingOut: boolean;
+  /** Returns true while logout() is executing — prevents ProtectedRoute from racing. */
+  getIsLoggingOut: () => boolean;
   login: (
     email: string,
     pass: string,
@@ -39,7 +39,7 @@ const AuthContext = React.createContext<AuthContextType>({
   user: null,
   isLoading: true,
   isSessionSynced: false,
-  isLoggingOut: false,
+  getIsLoggingOut: () => false,
   login: async () => ({ success: false }),
   logout: async () => {},
   refreshUser: async () => {},
@@ -96,7 +96,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<User | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSessionSynced, setIsSessionSynced] = React.useState(false);
-  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+  const isLoggingOutRef = React.useRef(false);
+  const getIsLoggingOut = React.useCallback(() => isLoggingOutRef.current, []);
   const router = useRouter();
 
   // Guards against concurrent and rapid sequential syncServerSession calls.
@@ -466,7 +467,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    setIsLoggingOut(true);
+    isLoggingOutRef.current = true;
     try {
       await clearServerSession();
       await signOut(auth);
@@ -480,10 +481,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Logout failed", error);
     }
-    // Defer reset to the next macro-task. setUser(null) fires as a microtask
-    // (from onAuthStateChanged), so React renders user=null with isLoggingOut=true
-    // first — preventing ProtectedRoute from adding session_expired params.
-    setTimeout(() => setIsLoggingOut(false), 0);
+    // Defer reset to the next macro-task so the ProtectedRoute effect that fires
+    // on user=null reads isLoggingOutRef.current=true and skips the session_expired redirect.
+    setTimeout(() => {
+      isLoggingOutRef.current = false;
+    }, 0);
   };
 
   return (
@@ -492,7 +494,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         isLoading,
         isSessionSynced,
-        isLoggingOut,
+        getIsLoggingOut,
         login,
         logout,
         refreshUser,
