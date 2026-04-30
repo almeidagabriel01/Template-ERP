@@ -1339,7 +1339,23 @@ export const updateProposal = async (req: Request, res: Response) => {
         updateData.extraExpense !== undefined
           ? Number(updateData.extraExpense)
           : Number(proposalData?.extraExpense) || 0;
-      safeUpdate.totalValue = subtotal - discountAmount + extraExpense;
+      const computedTotal = subtotal - discountAmount + extraExpense;
+
+      // If closedValue was explicitly included in the payload, use safeUpdate.closedValue (already processed).
+      // If not included, fall back to the existing document value.
+      // hasOwnProperty is required: frontend sends closedValue: null when the user clears the field,
+      // so safeUpdate.closedValue may already be null — using ?? would incorrectly fall back to the old doc value.
+      const effectiveClosedValue = Object.prototype.hasOwnProperty.call(
+        updateData,
+        "closedValue",
+      )
+        ? Number(safeUpdate.closedValue) || 0
+        : Number(proposalData?.closedValue) || 0;
+
+      safeUpdate.totalValue =
+        effectiveClosedValue > 0
+          ? effectiveClosedValue
+          : Math.max(0, computedTotal);
     }
 
     await proposalRef.update(safeUpdate);
