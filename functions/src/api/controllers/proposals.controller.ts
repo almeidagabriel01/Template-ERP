@@ -56,7 +56,7 @@ const CreateProposalSchema = z.object({
   downPaymentDueDate: z.string().max(30).optional(),
   downPaymentMethod: z.string().max(50).optional(),
   installmentsEnabled: z.boolean().optional(),
-  installmentsCount: z.number().int().min(1).max(120).nullable().optional(),
+  installmentsCount: z.number().int().min(0).max(120).nullable().optional(),
   installmentValue: z.number().nullable().optional(),
   installmentsWallet: z.string().max(200).optional(),
   firstInstallmentDate: z.string().max(30).optional(),
@@ -609,7 +609,7 @@ async function syncApprovedProposalTransactions(params: {
   } = params;
   const defaultWalletName =
     await resolveDefaultWalletNameForTenant(proposalTenantId);
-  const { drafts: desiredDrafts } = buildApprovedProposalTransactionDrafts({
+  const { drafts: desiredDrafts, effectiveDownPaymentValue, effectiveInstallmentValue } = buildApprovedProposalTransactionDrafts({
     proposalId,
     proposalData,
     userId,
@@ -790,6 +790,12 @@ async function syncApprovedProposalTransactions(params: {
   }
 
   await batch.commit();
+
+  await db.collection(PROPOSALS_COLLECTION).doc(proposalId).update({
+    installmentValue: effectiveInstallmentValue,
+    downPaymentValue: effectiveDownPaymentValue,
+    updatedAt: now,
+  });
 }
 
 export const createProposal = async (req: Request, res: Response) => {

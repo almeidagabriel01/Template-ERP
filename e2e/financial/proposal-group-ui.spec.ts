@@ -83,16 +83,17 @@ test.describe("FIN-UI-01: Fixed entry + saldo — card expansion shows Entrada a
 
     await approveProposal(authenticatedPage.request, idToken, proposalId);
 
-    // Navigate to /transactions (grouped card view)
+    // Navigate to /transactions and switch to grouped card view
     await authenticatedPage.goto("/transactions");
     await authenticatedPage.waitForURL(/\/transactions/, { timeout: 15000 });
+    await authenticatedPage.getByRole("button", { name: /agrupados/i }).click();
+    await authenticatedPage.waitForSelector('[data-testid="transaction-card"]', { timeout: 15000 });
 
     // Find the card containing the proposal title
-    const card = authenticatedPage.locator("div").filter({
-      hasText: proposalTitle,
-    }).filter({
-      has: authenticatedPage.getByTitle("Excluir"),
-    }).first();
+    const card = authenticatedPage
+      .locator('[data-testid="transaction-card"]')
+      .filter({ hasText: proposalTitle })
+      .first();
 
     await expect(card).toBeVisible({ timeout: 15000 });
 
@@ -113,17 +114,17 @@ test.describe("FIN-UI-01: Fixed entry + saldo — card expansion shows Entrada a
     }
 
     // After expansion, the "Entrada" section should appear
-    await expect(card.getByText("Entrada")).toBeVisible({ timeout: 5000 });
+    await expect(card.getByText("Entrada").first()).toBeVisible({ timeout: 5000 });
 
     // The "Saldo restante" section should appear (this is the new render branch)
     await expect(card.getByText("Saldo restante")).toBeVisible({ timeout: 5000 });
 
-    // Verify entry amount (R$ 1.000,xx) — the card shows "1.000" within the entry row
-    const entradaRow = card.locator("div").filter({ hasText: "Entrada" }).last();
+    // Verify entry amount (R$ 1.000,xx) — row container holds both label and value
+    const entradaRow = card.locator('[data-testid="down-payment-row"]');
     await expect(entradaRow).toContainText("1.000");
 
     // Verify saldo amount (R$ 4.000,xx)
-    const saldoRow = card.locator("div").filter({ hasText: "Saldo restante" }).last();
+    const saldoRow = card.locator('[data-testid="saldo-row"]');
     await expect(saldoRow).toContainText("4.000");
 
     // Cleanup
@@ -171,12 +172,13 @@ test.describe("FIN-UI-02: Entry % + saldo — card expansion shows Entrada and S
 
     await authenticatedPage.goto("/transactions");
     await authenticatedPage.waitForURL(/\/transactions/, { timeout: 15000 });
+    await authenticatedPage.getByRole("button", { name: /agrupados/i }).click();
+    await authenticatedPage.waitForSelector('[data-testid="transaction-card"]', { timeout: 15000 });
 
-    const card = authenticatedPage.locator("div").filter({
-      hasText: proposalTitle,
-    }).filter({
-      has: authenticatedPage.getByTitle("Excluir"),
-    }).first();
+    const card = authenticatedPage
+      .locator('[data-testid="transaction-card"]')
+      .filter({ hasText: proposalTitle })
+      .first();
 
     await expect(card).toBeVisible({ timeout: 15000 });
 
@@ -193,7 +195,7 @@ test.describe("FIN-UI-02: Entry % + saldo — card expansion shows Entrada and S
     }
 
     // Both sections should appear after expansion
-    await expect(card.getByText("Entrada")).toBeVisible({ timeout: 5000 });
+    await expect(card.getByText("Entrada").first()).toBeVisible({ timeout: 5000 });
     await expect(card.getByText("Saldo restante")).toBeVisible({ timeout: 5000 });
 
     // Cleanup
@@ -243,12 +245,13 @@ test.describe("FIN-UI-03: Entry + installments regression — Saldo restante mus
 
     await authenticatedPage.goto("/transactions");
     await authenticatedPage.waitForURL(/\/transactions/, { timeout: 15000 });
+    await authenticatedPage.getByRole("button", { name: /agrupados/i }).click();
+    await authenticatedPage.waitForSelector('[data-testid="transaction-card"]', { timeout: 15000 });
 
-    const card = authenticatedPage.locator("div").filter({
-      hasText: proposalTitle,
-    }).filter({
-      has: authenticatedPage.getByTitle("Excluir"),
-    }).first();
+    const card = authenticatedPage
+      .locator('[data-testid="transaction-card"]')
+      .filter({ hasText: proposalTitle })
+      .first();
 
     await expect(card).toBeVisible({ timeout: 15000 });
 
@@ -262,7 +265,7 @@ test.describe("FIN-UI-03: Entry + installments regression — Saldo restante mus
     }
 
     // With installments, "Entrada" section should appear
-    await expect(card.getByText("Entrada")).toBeVisible({ timeout: 5000 });
+    await expect(card.getByText("Entrada").first()).toBeVisible({ timeout: 5000 });
 
     // "Saldo restante" must NOT appear when installmentsEnabled (regression guard)
     await expect(card.getByText("Saldo restante")).not.toBeVisible();

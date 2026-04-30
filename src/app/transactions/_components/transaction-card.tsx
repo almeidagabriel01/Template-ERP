@@ -734,7 +734,11 @@ export function TransactionCard({
       : [transaction.id, extraCostToDelete];
 
   return (
-    <div className="group">
+    <div
+      className="group"
+      data-testid="transaction-card"
+      data-transaction-id={transaction.id}
+    >
       <Card
         className={`transition-all duration-200 ${
           isExpanded ? "ring-2 ring-primary/20 shadow-md" : "hover:bg-muted/50"
@@ -1191,6 +1195,7 @@ export function TransactionCard({
               {/* Down Payment Section */}
               {downPayment && (
                 <div
+                  data-testid="down-payment-row"
                   className={`flex items-center justify-between py-2 px-3 bg-blue-500/10 rounded-lg border border-blue-500/20 ${selectedIds?.has(downPayment.id) ? "ring-2 ring-primary" : ""}`}
                 >
                   <div className="flex items-center gap-3">
@@ -1473,6 +1478,7 @@ export function TransactionCard({
               {/* Saldo Restante Section */}
               {saldoTx && !installments.length && (
                 <div
+                  data-testid="saldo-row"
                   className={`flex items-center justify-between py-2 px-3 bg-muted/50 rounded-lg border ${selectedIds?.has(saldoTx.id) ? "ring-2 ring-primary" : ""}`}
                 >
                   <div className="flex items-center gap-3">
