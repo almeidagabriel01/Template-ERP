@@ -198,10 +198,17 @@ uiTest.describe("AI-08: At-limit disabled input with reset date", () => {
       await expect
         .poll(
           async () => {
+            // Move away first so React sees a fresh pointerenter on every retry
+            await page.mouse.move(0, 0);
             await tooltipTrigger.hover();
+            // Wait for the tooltip to render before counting
+            await page
+              .getByRole("tooltip")
+              .waitFor({ state: "visible", timeout: 800 })
+              .catch(() => {});
             return await page.getByRole("tooltip").count();
           },
-          { timeout: 10000, intervals: [300, 500, 1000, 1500] },
+          { timeout: 10000, intervals: [500, 1000, 1500, 2000] },
         )
         .toBeGreaterThan(0);
 
