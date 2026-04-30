@@ -10,6 +10,7 @@
 
 import { test, expect } from "../fixtures/base.fixture";
 import { signInWithEmailPassword } from "../helpers/firebase-auth-api";
+import { PROPOSAL_BETA_DRAFT } from "../seed/data/proposals";
 import { USER_ADMIN_ALPHA, USER_ADMIN_BETA } from "../seed/data/users";
 
 const FIRESTORE_EMULATOR_URL =
@@ -23,7 +24,7 @@ test.describe("AUTH-06: Tenant isolation", () => {
     );
 
     const response = await fetch(
-      `${FIRESTORE_EMULATOR_URL}/proposals/proposal-beta-draft`,
+      `${FIRESTORE_EMULATOR_URL}/proposals/${PROPOSAL_BETA_DRAFT.id}`,
       {
         method: "GET",
         headers: {
@@ -42,7 +43,7 @@ test.describe("AUTH-06: Tenant isolation", () => {
     );
 
     const response = await fetch(
-      `${FIRESTORE_EMULATOR_URL}/proposals/proposal-beta-draft`,
+      `${FIRESTORE_EMULATOR_URL}/proposals/${PROPOSAL_BETA_DRAFT.id}`,
       {
         method: "PATCH",
         headers: {
@@ -66,7 +67,7 @@ test.describe("AUTH-06: Tenant isolation", () => {
       USER_ADMIN_ALPHA.password,
     );
 
-    const response = await request.put("/api/backend/proposals/proposal-beta-draft", {
+    const response = await request.put(`/api/backend/proposals/${PROPOSAL_BETA_DRAFT.id}`, {
       headers: {
         Authorization: `Bearer ${idToken}`,
       },
@@ -75,12 +76,9 @@ test.describe("AUTH-06: Tenant isolation", () => {
       },
     });
 
-    // 502 is accepted when the Functions emulator is not running (test env limitation).
-    // The Next.js proxy targets http://127.0.0.1:5001/erp-softcode/... but the Playwright
-    // global-setup only starts auth,firestore,storage emulators (not functions).
-    // Tenant isolation at the API layer is verified in full-stack integration environments.
-    // The Firestore-level isolation tests above cover the same security requirement.
-    expect([403, 404, 502]).toContain(response.status());
+    // Functions emulator is started in global-setup (--only auth,firestore,storage,functions).
+    // 403 = tenantId mismatch caught by Express middleware; 404 = document not found after tenant filter.
+    expect([403, 404]).toContain(response.status());
   });
 
   test("beta token cannot read alpha proposal from Firestore", async () => {

@@ -3,13 +3,13 @@
 import * as React from "react";
 import {
   Clock3,
-  LoaderCircle,
   MapPin,
   NotebookPen,
   Palette,
   Trash2,
   Type,
 } from "lucide-react";
+import { Loader } from "@/components/ui/loader";
 import {
   Dialog,
   DialogContent,
@@ -470,7 +470,7 @@ export function CalendarEventDialog({
                 disabled={isDeleting || isSubmitting}
               >
                 {isDeleting ? (
-                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader size="sm" variant="button" className="mr-2" />
                 ) : (
                   <Trash2 className="mr-2 h-4 w-4" />
                 )}

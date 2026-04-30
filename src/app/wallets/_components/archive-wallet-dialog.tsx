@@ -10,8 +10,9 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Archive, ArchiveRestore } from "lucide-react";
+import { Archive, ArchiveRestore } from "lucide-react";
 import { Wallet } from "@/types";
+import { Loader } from "@/components/ui/loader";
 
 interface ArchiveWalletDialogProps {
     open: boolean;
@@ -62,7 +63,7 @@ export function ArchiveWalletDialog({
                         disabled={isLoading}
                         variant={isArchiving ? "default" : "default"}
                     >
-                        {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        {isLoading && <Loader size="sm" className="mr-2" />}
                         {isArchiving ? "Arquivar" : "Restaurar"}
                     </Button>
                 </AlertDialogFooter>

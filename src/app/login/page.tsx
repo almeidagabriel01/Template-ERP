@@ -2,16 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Loader2,
-  ArrowLeft,
-  User as UserIcon,
-  Building2,
-  Upload,
-  CheckCircle,
-  Mail,
-  Palette,
-} from "lucide-react";
+import { ArrowLeft, User as UserIcon, Building2, Upload, CheckCircle, Mail, Palette } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useLoginForm } from "./_hooks/useLoginForm";
@@ -29,6 +20,7 @@ import { NICHE_LABELS, TenantNiche } from "@/types";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { AuthLayout } from "./_components/auth-layout";
 import { motion, AnimatePresence } from "framer-motion";
+import { Loader } from "@/components/ui/loader";
 
 function LoginContent() {
   const {
@@ -138,7 +130,7 @@ function LoginContent() {
   if (isLoading && !isLoggingIn && !isRegistering && !user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <Loader size="lg" />
       </div>
     );
   }
@@ -148,7 +140,7 @@ function LoginContent() {
 
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <Loader size="lg" />
         <p className="mt-4 text-sm text-muted-foreground">Redirecionando...</p>
       </div>
     );
@@ -296,7 +288,7 @@ function LoginContent() {
                       disabled={isGoogleLoading || isRegistering}
                     >
                       {isGoogleLoading ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        <Loader size="sm" className="mr-2" />
                       ) : (
                         <svg
                           aria-hidden="true"
@@ -571,7 +563,7 @@ function LoginContent() {
                       disabled={isResetting}
                     >
                       {isResetting ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        <Loader size="sm" className="mr-2" />
                       ) : (
                         "Enviar Link de Redefinição"
                       )}
@@ -644,7 +636,7 @@ function LoginContent() {
                     disabled={isLoggingIn || isGoogleLoading}
                   >
                     {isLoggingIn ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader size="sm" className="mr-2" />
                     ) : (
                       "Entrar"
                     )}
@@ -669,7 +661,7 @@ function LoginContent() {
                     disabled={isGoogleLoading || isLoggingIn}
                   >
                     {isGoogleLoading ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader size="sm" className="mr-2" />
                     ) : (
                       <svg
                         aria-hidden="true"
@@ -714,7 +706,7 @@ export default function LoginPage() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center bg-background">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <Loader size="lg" />
         </div>
       }
     >

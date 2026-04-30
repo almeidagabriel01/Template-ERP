@@ -1,15 +1,10 @@
-import { Loader2, LucideProps } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Loader } from "@/components/ui/loader"
 
-interface SpinnerProps extends LucideProps {
+interface SpinnerProps {
     className?: string
 }
 
-export function Spinner({ className, ...props }: SpinnerProps) {
-    return (
-        <Loader2
-            className={cn("h-4 w-4 animate-spin text-muted-foreground", className)}
-            {...props}
-        />
-    )
+export function Spinner({ className }: SpinnerProps) {
+    return <Loader size="sm" variant="inline" className={cn(className)} />
 }

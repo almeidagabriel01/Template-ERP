@@ -7,6 +7,7 @@ import { UsePlanUsageReturn } from "@/hooks/usePlanUsage";
 import { PersonalForm } from "./personal-form";
 import { OrganizationForm } from "./organization-form";
 import { PasswordForm } from "./password-form";
+import { MercadoPagoConnectCard } from "@/app/settings/_components/mercadopago-connect-card";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 
@@ -47,6 +48,7 @@ export function OverviewTab({
         ) : (
           <PlanUsageCard variant="profile" data={planUsageData} />
         )}
+        {isMaster && <MercadoPagoConnectCard />}
       </div>
       {/* Right Column: Organization + Plan Usage */}
       <div className="flex flex-col gap-6">

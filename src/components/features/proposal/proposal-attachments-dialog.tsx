@@ -11,14 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Proposal, ProposalAttachment } from "@/types/proposal";
-import {
-  Upload,
-  FileImage,
-  FileText,
-  Loader2,
-  Trash2,
-  ExternalLink,
-} from "lucide-react";
+import { Upload, FileImage, FileText, Trash2, ExternalLink } from "lucide-react";
 import { toast } from '@/lib/toast';
 import { ProposalService } from "@/services/proposal-service";
 import {
@@ -26,6 +19,7 @@ import {
   uploadProposalAttachment,
 } from "@/services/storage-service";
 import { formatDateBR } from "@/utils/date-format";
+import { Loader } from "@/components/ui/loader";
 
 interface ProposalAttachmentsDialogProps {
   proposal: Proposal;
@@ -341,7 +335,7 @@ export function ProposalAttachmentsDialog({
             />
             {isUploading ? (
               <div className="flex flex-col items-center gap-2">
-                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                <Loader size="lg" />
                 <span className="text-sm text-muted-foreground">
                   Enviando arquivo...
                 </span>
@@ -418,7 +412,7 @@ export function ProposalAttachmentsDialog({
                         title="Excluir"
                       >
                         {deletingId === attachment.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <Loader size="sm" />
                         ) : (
                           <Trash2 className="w-4 h-4" />
                         )}

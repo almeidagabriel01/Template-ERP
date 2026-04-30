@@ -14,21 +14,7 @@ import { ProposalActionsDropdown } from "@/components/features/proposal/proposal
 import { ProposalAttachmentsDialog } from "@/components/features/proposal/proposal-attachments-dialog";
 import { useTenant } from "@/providers/tenant-provider";
 import { useAuth } from "@/providers/auth-provider";
-import {
-  Plus,
-  FileText,
-  Search,
-  ChevronDown,
-  Loader2,
-  Check,
-  Crown,
-  Eye,
-  FileDown,
-  Trash2,
-  Palette,
-  Pencil,
-  Kanban,
-} from "lucide-react";
+import { Plus, FileText, Search, ChevronDown, Check, Crown, Eye, FileDown, Trash2, Palette, Pencil, Kanban } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ProposalsSkeleton } from "./_components/proposals-skeleton";
 import { ProposalsTableSkeleton } from "./_components/proposals-table-skeleton";
@@ -78,6 +64,7 @@ import { usePdfGenerator } from "@/components/features/proposal/pdf/use-pdf-gene
 import { Tenant } from "@/types";
 import { SharedProposalService } from "@/services/shared-proposal-service";
 import { formatDateBR } from "@/utils/date-format";
+import { Loader } from "@/components/ui/loader";
 
 function PdfDownloader({
   proposal,
@@ -722,7 +709,7 @@ export default function ProposalsPage() {
                       className="text-xs cursor-pointer hover:brightness-110 transition-all gap-1 pr-1.5 min-w-[100px] justify-start border"
                     >
                       {updatingStatusId === proposal.id ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
+                        <Loader size="sm" />
                       ) : null}
                       {getStatusLabel(proposal.status)}
                       <ChevronDown className="w-3 h-3 opacity-60 ml-1" />
@@ -908,7 +895,7 @@ export default function ProposalsPage() {
                 }
               >
                 {downloadingId === proposal.id ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader size="sm" />
                 ) : (
                   <FileDown className="w-4 h-4" />
                 )}
@@ -948,7 +935,7 @@ export default function ProposalsPage() {
                   disabled={editingId === proposal.id}
                 >
                   {editingId === proposal.id ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader size="sm" />
                   ) : (
                     <Pencil className="w-4 h-4" />
                   )}
@@ -1145,7 +1132,7 @@ export default function ProposalsPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   icon={
                     isFiltering && isLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                      <Loader size="sm" />
                     ) : (
                       <Search className="w-4 h-4" />
                     )

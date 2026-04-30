@@ -10,15 +10,7 @@ import { useThemePrimaryColor } from "@/hooks/useThemePrimaryColor";
 import { usePagePermission } from "@/hooks/usePagePermission";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { Transaction } from "@/services/transaction-service";
-import {
-  Crown,
-  Kanban,
-  Plus,
-  Search,
-  Wallet,
-  WalletCards,
-  X,
-} from "lucide-react";
+import { Crown, Kanban, Plus, Search, Wallet, WalletCards, X } from "lucide-react";
 import type { Wallet as WalletType } from "@/types";
 import { formatCurrency } from "@/utils/format";
 import { useFinancialData } from "./_hooks/useFinancialData";
@@ -35,8 +27,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSort } from "@/hooks/use-sort";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
-import { Loader2 } from "lucide-react";
+;
 import { SelectTenantState } from "@/components/shared/select-tenant-state";
+import { Loader } from "@/components/ui/loader";
 
 const isDownPaymentLike = (t: Transaction): boolean =>
   !!t.isDownPayment || (t.installmentNumber || 0) === 0;
@@ -217,7 +210,7 @@ function TransactionListInfinite({
           ref={sentinelRef}
           className="flex items-center justify-center py-4"
         >
-          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          <Loader size="md" />
         </div>
       )}
     </div>

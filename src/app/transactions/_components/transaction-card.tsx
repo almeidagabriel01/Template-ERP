@@ -12,22 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Trash2,
-  Edit,
-  Eye,
-  Check,
-  Loader2,
-  ChevronDown,
-  Banknote,
-  CreditCard,
-  FileText,
-  Edit2,
-  Split,
-  DollarSign,
-  Share2,
-  RefreshCw,
-} from "lucide-react";
+import { Trash2, Edit, Eye, Check, ChevronDown, Banknote, CreditCard, FileText, Edit2, Split, DollarSign, Share2, RefreshCw } from "lucide-react";
 import { Transaction, TransactionStatus } from "@/services/transaction-service";
 import { typeConfig, statusConfig } from "../_constants/config";
 import { formatCurrency } from "@/utils/format";
@@ -48,9 +33,9 @@ import { TransactionInstallmentsList } from "./transaction-installments-list";
 import { EditBlockDialog } from "./edit-block-dialog";
 import { PartialPaymentDialog } from "./partial-payment-dialog";
 import { ExtraCostDialog } from "./extra-cost-dialog";
+import { ShareLinkModal } from "./share-link-modal";
 import { useTransactionStatuses } from "@/app/transactions/_hooks/useTransactionStatuses";
 import { TransactionService } from "@/services/transaction-service";
-import { SharedTransactionService } from "@/services/shared-transaction-service";
 import { useRouter } from "next/navigation";
 import { Wallet } from "@/types";
 import {
@@ -58,6 +43,7 @@ import {
   isProposalLinkedTransaction,
 } from "../_lib/proposal-transaction";
 import { formatDateBR } from "@/utils/date-format";
+import { Loader } from "@/components/ui/loader";
 
 interface TransactionCardProps {
   transaction: Transaction;
@@ -169,7 +155,7 @@ export function TransactionCard({
     React.useState(false);
   const [partialPaymentTransaction, setPartialPaymentTransaction] =
     React.useState<Transaction | null>(null);
-  const [isGeneratingLink, setIsGeneratingLink] = React.useState(false);
+  const [shareModalOpen, setShareModalOpen] = React.useState(false);
   const router = useRouter();
 
   // ... rest of implementation until Edit button
@@ -360,57 +346,9 @@ export function TransactionCard({
     return formatDateBR(dateString, "");
   };
 
-  const handleShare = async (e: React.MouseEvent) => {
+  const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsGeneratingLink(true);
-    try {
-      const result = await SharedTransactionService.generateShareLink(
-        transaction.id,
-      );
-
-      try {
-        // Try modern clipboard API
-        if (navigator.clipboard && window.isSecureContext) {
-          await navigator.clipboard.writeText(result.shareUrl);
-          toast.success("Link copiado para a área de transferência!");
-        } else {
-          throw new Error("Clipboard API not available");
-        }
-      } catch (clipboardError) {
-        console.warn("Clipboard API failed, trying fallback", clipboardError);
-        // Fallback for older browsers or when focus is lost (execCommand might still work in some browsers)
-        try {
-          const textArea = document.createElement("textarea");
-          textArea.value = result.shareUrl;
-          textArea.style.position = "fixed"; // Avoid scrolling to bottom
-          textArea.style.left = "-999999px";
-          textArea.style.top = "0";
-          document.body.appendChild(textArea);
-          textArea.focus();
-          textArea.select();
-
-          const successful = document.execCommand("copy");
-          textArea.remove();
-
-          if (successful) {
-            toast.success("Link copiado para a área de transferência!");
-          } else {
-            throw new Error("Fallback copy failed");
-          }
-        } catch (fallbackError) {
-          console.error("Fallback copy also failed", fallbackError);
-          toast.warning(
-            "Link gerado, mas não copiado. Por favor, não mude de aba enquanto gera o link.",
-            { autoClose: 5000 },
-          );
-        }
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Erro ao gerar link de compartilhamento.");
-    } finally {
-      setIsGeneratingLink(false);
-    }
+    setShareModalOpen(true);
   };
 
   // Handle status change for the main card (updates all in group)
@@ -1059,7 +997,7 @@ export function TransactionCard({
                       />
                       {isSavingAmount && (
                         <div className="absolute -right-6 top-1/2 -translate-y-1/2">
-                          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                          <Loader size="sm" />
                         </div>
                       )}
                     </div>
@@ -1097,7 +1035,7 @@ export function TransactionCard({
                         >
                           {isUpdating ? (
                             <>
-                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <Loader size="sm" />
                               <span className="text-xs">Atualizando...</span>
                             </>
                           ) : (
@@ -1185,14 +1123,9 @@ export function TransactionCard({
                 size="icon"
                 className="h-8 w-8 text-muted-foreground hover:text-primary"
                 onClick={handleShare}
-                disabled={isGeneratingLink}
                 title="Compartilhar Link"
               >
-                {isGeneratingLink ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Share2 className="w-4 h-4" />
-                )}
+                <Share2 className="w-4 h-4" />
               </Button>
               {canEdit && !transaction.proposalId && onUpdate && (
                 <Button
@@ -1299,7 +1232,7 @@ export function TransactionCard({
                           >
                             {updatingIds.has(downPayment.id) ? (
                               <>
-                                <Loader2 className="h-3 w-3 animate-spin" />
+                                <Loader size="sm" />
                                 <span>Atualizando...</span>
                               </>
                             ) : (
@@ -1440,7 +1373,7 @@ export function TransactionCard({
                                 >
                                   {updatingIds.has(inst.id) ? (
                                     <>
-                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                      <Loader size="sm" />
                                       <span>Atualizando...</span>
                                     </>
                                   ) : (
@@ -1610,7 +1543,7 @@ export function TransactionCard({
                                 >
                                   {updatingIds.has(ec.id) ? (
                                     <>
-                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                      <Loader size="sm" />
                                       <span>Atualizando...</span>
                                     </>
                                   ) : (
@@ -1705,7 +1638,7 @@ export function TransactionCard({
                                   }
                                 >
                                   {updatingIds.has(ec.id) ? (
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    <Loader size="sm" />
                                   ) : (
                                     <Trash2 className="w-3.5 h-3.5" />
                                   )}
@@ -1818,7 +1751,7 @@ export function TransactionCard({
                                     >
                                       {updatingIds.has(ec.id) ? (
                                         <>
-                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                          <Loader size="sm" />
                                           <span>Atualizando...</span>
                                         </>
                                       ) : (
@@ -1917,7 +1850,7 @@ export function TransactionCard({
                                       }
                                     >
                                       {updatingIds.has(ec.id) ? (
-                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        <Loader size="sm" />
                                       ) : (
                                         <Trash2 className="w-3.5 h-3.5" />
                                       )}
@@ -1939,6 +1872,12 @@ export function TransactionCard({
         open={showEditBlockDialog}
         onOpenChange={setShowEditBlockDialog}
         proposalId={transaction.proposalId}
+      />
+      <ShareLinkModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        transactionId={transaction.id}
+        transactionDescription={transaction.description || "Lançamento"}
       />
       {partialPaymentTransaction && (
         <PartialPaymentDialog

@@ -15,18 +15,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Building2,
-  Shield,
-  Loader2,
-  Save,
-  Palette,
-  Camera,
-  X,
-} from "lucide-react";
+import { Building2, Shield, Save, Palette, Camera, X } from "lucide-react";
 import { TenantService } from "@/services/tenant-service";
 import { ALLOWED_TYPES } from "@/services/storage-service";
 import { toast } from '@/lib/toast';
+import { Loader } from "@/components/ui/loader";
 
 interface OrganizationFormProps {
   tenant: Tenant | null;
@@ -334,7 +327,7 @@ export function OrganizationForm({ tenant, isMaster }: OrganizationFormProps) {
             <Button onClick={handleSave} disabled={!hasChanges || isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader size="sm" className="mr-2" />
                   Salvando...
                 </>
               ) : (

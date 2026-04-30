@@ -1,4 +1,5 @@
 import React from "react";
+import { CreditCard } from "lucide-react";
 import { Transaction } from "@/services/transaction-service";
 import { Tenant } from "@/types";
 import { formatCurrency } from "@/utils/format";
@@ -10,12 +11,19 @@ export interface TransactionPdfViewerProps {
   transaction: Transaction;
   relatedTransactions?: Transaction[];
   tenant: Tenant | null;
+  onPayInstallment?: (tx: Transaction) => void;
 }
+
+type PdfTableItem = {
+  type: "single" | "downpayment" | "installment" | "recurring" | "extracost";
+  data: Transaction;
+};
 
 export function TransactionPdfViewer({
   transaction,
   relatedTransactions = [],
   tenant,
+  onPayInstallment = undefined,
 }: TransactionPdfViewerProps) {
   // Use tenant color or default to a reliable blue
   const primaryColor = tenant?.primaryColor || "#3b82f6";
@@ -40,10 +48,36 @@ export function TransactionPdfViewer({
   // Deduplicate by ID
   const uniqueTxs = Array.from(new Map(allTxs.map((t) => [t.id, t])).values());
 
-  const downPayment = uniqueTxs.find((t) => t.isDownPayment);
-  const installments = uniqueTxs
-    .filter((t) => t.isInstallment)
-    .sort((a, b) => (a.installmentNumber || 0) - (b.installmentNumber || 0));
+  const classifyTx = (tx: Transaction): "downpayment" | "installment" | "recurring" | "single" => {
+    if (tx.isDownPayment === true) return "downpayment";
+    if (tx.isInstallment === true) return "installment";
+    if (tx.isRecurring === true || !!tx.recurringGroupId) return "recurring";
+    return "single";
+  };
+
+  const classified = uniqueTxs.map((t) => ({ tx: t, role: classifyTx(t) }));
+  const downPayment = classified.find((c) => c.role === "downpayment")?.tx;
+  const installments = classified
+    .filter((c) => c.role === "installment")
+    .map((c) => c.tx)
+    .sort((a, b) =>
+      (a.installmentNumber ?? 0) - (b.installmentNumber ?? 0) ||
+      (a.dueDate ?? a.date ?? "").localeCompare(b.dueDate ?? b.date ?? "") ||
+      (a.id ?? "").localeCompare(b.id ?? ""),
+    );
+  const recurringItems = classified
+    .filter((c) => c.role === "recurring")
+    .map((c) => c.tx)
+    .sort((a, b) =>
+      (a.installmentNumber ?? 0) - (b.installmentNumber ?? 0) ||
+      (a.dueDate ?? a.date ?? "").localeCompare(b.dueDate ?? b.date ?? ""),
+    );
+  const singleItems = classified
+    .filter((c) => c.role === "single")
+    .map((c) => c.tx)
+    .sort((a, b) =>
+      (a.dueDate ?? a.date ?? "").localeCompare(b.dueDate ?? b.date ?? ""),
+    );
 
   uniqueTxs.forEach((t) => {
     if (t.status === "paid" || t.isPartialPayment) totalPaid += t.amount;
@@ -53,11 +87,21 @@ export function TransactionPdfViewer({
 
   const totalAmount = totalPaid + totalPending + totalOverdue;
 
-  const extraCosts = transaction.extraCosts || [];
+  // Aggregate extraCosts from ALL transactions in the group (not just anchor)
+  const seenEcKeys = new Set<string>();
+  const allExtraCosts: Transaction[] = [];
+  uniqueTxs.forEach((tx) => {
+    (tx.extraCosts || []).forEach((ec) => {
+      const key = ec.id || `${tx.id}:${ec.description}:${ec.amount}:${ec.createdAt}`;
+      if (!seenEcKeys.has(key)) {
+        seenEcKeys.add(key);
+        allExtraCosts.push(ec as unknown as Transaction);
+      }
+    });
+  });
   let totalExtraCosts = 0;
-  extraCosts.forEach((ec) => {
+  allExtraCosts.forEach((ec) => {
     totalExtraCosts += ec.amount;
-    // Also include extra costs in the paid/pending totals based on status
     if (ec.status === "paid") totalPaid += ec.amount;
     else if (ec.status === "pending") totalPending += ec.amount;
     else if (ec.status === "overdue") totalOverdue += ec.amount;
@@ -82,22 +126,11 @@ export function TransactionPdfViewer({
   };
 
   const allTableItems: PdfTableItem[] = [
-    ...(uniqueTxs.length === 1 &&
-    uniqueTxs[0].isInstallment === false &&
-    uniqueTxs[0].isDownPayment === false
-      ? [{ type: "single" as const, data: transaction as Transaction }]
-      : []),
-    ...(downPayment
-      ? [{ type: "downpayment" as const, data: downPayment as Transaction }]
-      : []),
-    ...installments.map((inst) => ({
-      type: "installment" as const,
-      data: inst as Transaction,
-    })),
-    ...extraCosts.map((ec) => ({
-      type: "extracost" as const,
-      data: ec as unknown as Transaction,
-    })),
+    ...(downPayment ? [{ type: "downpayment" as const, data: downPayment }] : []),
+    ...installments.map((t) => ({ type: "installment" as const, data: t })),
+    ...recurringItems.map((t) => ({ type: "recurring" as const, data: t })),
+    ...singleItems.map((t) => ({ type: "single" as const, data: t })),
+    ...allExtraCosts.map((ec) => ({ type: "extracost" as const, data: ec })),
   ];
 
   // Logic for items per page
@@ -114,13 +147,9 @@ export function TransactionPdfViewer({
 
   const totalPages = 1 + subsequentPagesItems.length;
 
-  type PdfTableItem = {
-    type: "single" | "downpayment" | "installment" | "extracost";
-    data: Transaction;
-  };
-
   const renderTableRow = (item: PdfTableItem, idx: number) => {
     if (item.type === "single") {
+      const isPayable = item.data.status === "pending" || item.data.status === "overdue";
       return (
         <tr
           key="single"
@@ -137,10 +166,28 @@ export function TransactionPdfViewer({
           <td className="py-3 px-4 text-right font-medium">
             {formatCurrency(item.data.amount)}
           </td>
+          {onPayInstallment && (
+            <td data-pdf-ui="true" className="py-3 px-4">
+              {isPayable ? (
+                <button
+                  type="button"
+                  data-pay-button
+                  onClick={() => onPayInstallment(item.data)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold shadow-sm transition-all cursor-pointer hover:brightness-110 hover:shadow-md active:scale-95"
+                  style={{ backgroundColor: primaryColor, color: "#ffffff" }}
+                  aria-label={`Pagar ${formatCurrency(item.data.amount)}`}
+                >
+                  <CreditCard className="w-3 h-3" aria-hidden="true" />
+                  Pagar
+                </button>
+              ) : null}
+            </td>
+          )}
         </tr>
       );
     }
     if (item.type === "downpayment") {
+      const isPayable = item.data.status === "pending" || item.data.status === "overdue";
       return (
         <tr
           key="downpayment"
@@ -162,11 +209,68 @@ export function TransactionPdfViewer({
           >
             {formatCurrency(item.data.amount)}
           </td>
+          {onPayInstallment && (
+            <td data-pdf-ui="true" className="py-3 px-4">
+              {isPayable ? (
+                <button
+                  type="button"
+                  data-pay-button
+                  onClick={() => onPayInstallment(item.data)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold shadow-sm transition-all cursor-pointer hover:brightness-110 hover:shadow-md active:scale-95"
+                  style={{ backgroundColor: primaryColor, color: "#ffffff" }}
+                  aria-label={`Pagar ${formatCurrency(item.data.amount)}`}
+                >
+                  <CreditCard className="w-3 h-3" aria-hidden="true" />
+                  Pagar
+                </button>
+              ) : null}
+            </td>
+          )}
+        </tr>
+      );
+    }
+    if (item.type === "recurring") {
+      const rec = item.data;
+      const isPayable = rec.status === "pending" || rec.status === "overdue";
+      return (
+        <tr
+          key={rec.id}
+          className="border-b"
+          style={{ borderColor: "#e5e7eb" }}
+        >
+          <td className="py-3 px-4">
+            Recorrente {rec.installmentNumber ? `#${rec.installmentNumber}` : ""}
+            {rec.isPartialPayment ? " (Parcial)" : ""}
+          </td>
+          <td className="py-3 px-4">{formatDate(rec.dueDate || rec.date)}</td>
+          <td className="py-3 px-4">
+            <PdfStatusBadge status={rec.status} />
+          </td>
+          <td className="py-3 px-4 text-right font-medium">
+            {formatCurrency(rec.amount)}
+          </td>
+          {onPayInstallment && (
+            <td data-pdf-ui="true" className="py-3 px-4">
+              {isPayable ? (
+                <button
+                  type="button"
+                  onClick={() => onPayInstallment(rec)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold shadow-sm transition-all cursor-pointer hover:brightness-110 hover:shadow-md active:scale-95"
+                  style={{ backgroundColor: primaryColor, color: "#ffffff" }}
+                  aria-label={`Pagar ${formatCurrency(rec.amount)}`}
+                >
+                  <CreditCard className="w-3 h-3" aria-hidden="true" />
+                  Pagar
+                </button>
+              ) : null}
+            </td>
+          )}
         </tr>
       );
     }
     if (item.type === "installment") {
       const inst = item.data;
+      const isPayable = inst.status === "pending" || inst.status === "overdue";
       return (
         <tr
           key={inst.id}
@@ -184,11 +288,28 @@ export function TransactionPdfViewer({
           <td className="py-3 px-4 text-right font-medium">
             {formatCurrency(inst.amount)}
           </td>
+          {onPayInstallment && (
+            <td data-pdf-ui="true" className="py-3 px-4">
+              {isPayable ? (
+                <button
+                  type="button"
+                  onClick={() => onPayInstallment(inst)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold shadow-sm transition-all cursor-pointer hover:brightness-110 hover:shadow-md active:scale-95"
+                  style={{ backgroundColor: primaryColor, color: "#ffffff" }}
+                  aria-label={`Pagar ${formatCurrency(inst.amount)}`}
+                >
+                  <CreditCard className="w-3 h-3" aria-hidden="true" />
+                  Pagar
+                </button>
+              ) : null}
+            </td>
+          )}
         </tr>
       );
     }
     if (item.type === "extracost") {
       const ec = item.data;
+      const isPayable = ec.status === "pending" || ec.status === "overdue";
       return (
         <tr
           key={ec.id || `ec-${idx}`}
@@ -208,6 +329,22 @@ export function TransactionPdfViewer({
           >
             {formatCurrency(ec.amount)}
           </td>
+          {onPayInstallment && (
+            <td data-pdf-ui="true" className="py-3 px-4">
+              {isPayable && ec.id ? (
+                <button
+                  type="button"
+                  onClick={() => onPayInstallment(ec)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold shadow-sm transition-all cursor-pointer hover:brightness-110 hover:shadow-md active:scale-95"
+                  style={{ backgroundColor: primaryColor, color: "#ffffff" }}
+                  aria-label={`Pagar ${formatCurrency(ec.amount)}`}
+                >
+                  <CreditCard className="w-3 h-3" aria-hidden="true" />
+                  Pagar
+                </button>
+              ) : null}
+            </td>
+          )}
         </tr>
       );
     }
@@ -216,6 +353,7 @@ export function TransactionPdfViewer({
 
   return (
     <div className="pdf-container">
+      <style>{`@media print { [data-pay-button] { display: none !important; } }`}</style>
       {/* PAGE 1 */}
       <div data-page-index="1" className={pageClass} style={pageStyle}>
         <PdfPageHeader
@@ -354,6 +492,11 @@ export function TransactionPdfViewer({
                 >
                   Valor
                 </th>
+                {onPayInstallment && (
+                  <th className="py-3 px-4 font-semibold" style={{ color: "#374151" }} data-pdf-ui="true">
+                    Ação
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -415,6 +558,11 @@ export function TransactionPdfViewer({
                   >
                     Valor
                   </th>
+                  {onPayInstallment && (
+                    <th className="py-3 px-4 font-semibold" style={{ color: "#374151" }} data-pdf-ui="true">
+                      Ação
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Loader2 } from "lucide-react";
+import { Loader } from "@/components/ui/loader";
 import { DashboardSkeleton } from "@/app/dashboard/_components/dashboard-skeleton";
 import { ProfileSkeleton } from "@/app/profile/_components/profile-skeleton";
 import { FinancialSkeleton } from "@/app/transactions/_components/financial-skeleton";
@@ -11,6 +11,7 @@ import { AdminOverviewSkeleton } from "@/app/admin/overview/_components/admin-ov
 import { ProductsSkeleton } from "@/app/products/_components/products-skeleton";
 import { ServicesSkeleton } from "@/app/services/_components/services-skeleton";
 import { ProposalsSkeleton } from "@/app/proposals/_components/proposals-skeleton";
+import { ProposalLoadingState } from "@/components/features/proposal/proposal-loading-state";
 import { ContactsSkeleton } from "@/app/contacts/_components/contacts-skeleton";
 import { AddonsSkeleton } from "@/app/profile/addons/_components/addons-skeleton";
 import { AutomationSkeleton } from "@/components/features/automation/automation-skeleton";
@@ -23,14 +24,7 @@ import { isPageEnabledForNiche } from "@/lib/niches/config";
 
 /** Simple spinner used for create/edit sub-routes instead of the full page skeleton */
 function SpinnerFallback({ message = "Carregando..." }: { message?: string }) {
-  return (
-    <div className="flex items-center justify-center min-h-[50vh]">
-      <div className="flex flex-col items-center gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">{message}</p>
-      </div>
-    </div>
-  );
+  return <Loader variant="contained" label={message} />;
 }
 
 export function RouteContentSkeleton({ pathname }: { pathname: string }) {
@@ -86,7 +80,7 @@ export function RouteContentSkeleton({ pathname }: { pathname: string }) {
     return pathname === "/proposals" ? (
       <ProposalsSkeleton />
     ) : (
-      <SpinnerFallback message="Carregando Proposta..." />
+      <ProposalLoadingState />
     );
   }
 

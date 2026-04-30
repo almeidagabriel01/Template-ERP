@@ -22,22 +22,7 @@ import {
 } from "../_lib/proposal-transaction";
 import { formatDateBR } from "@/utils/date-format";
 
-import {
-  Check,
-  Loader2,
-  ChevronDown,
-  Eye,
-  Trash2,
-  ArrowUpCircle,
-  ArrowDownCircle,
-  ArrowUp,
-  ArrowDown,
-  ChevronsUpDown,
-  Split,
-  FileText,
-  Banknote,
-  CreditCard,
-} from "lucide-react";
+import { Check, ChevronDown, Eye, Trash2, ArrowUpCircle, ArrowDownCircle, ArrowUp, ArrowDown, ChevronsUpDown, Split, FileText, Banknote, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { PartialPaymentDialog } from "./partial-payment-dialog";
@@ -55,6 +40,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Loader } from "@/components/ui/loader";
 
 type SyncTx = Transaction & {
   isExtraCostSync?: boolean;
@@ -699,7 +685,7 @@ export function TransactionListByDueDate({
                               disabled={isRowUpdating}
                             >
                               {isUpdatingWallet ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
+                                <Loader size="sm" />
                               ) : (
                                 <>
                                   <span className="truncate">
@@ -763,7 +749,7 @@ export function TransactionListByDueDate({
                               disabled={isRowUpdating}
                             >
                               {isUpdatingStatus ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
+                                <Loader size="sm" />
                               ) : (
                                 <>
                                   {(() => {
@@ -896,7 +882,7 @@ export function TransactionListByDueDate({
                           title="Excluir"
                         >
                           {isDeletingExtraCost ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
+                            <Loader size="sm" />
                           ) : (
                             <Trash2 className="w-3 h-3" />
                           )}
@@ -924,7 +910,7 @@ export function TransactionListByDueDate({
           ref={sentinelRef}
           className="flex items-center justify-center py-4"
         >
-          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          <Loader size="md" />
         </div>
       )}
 

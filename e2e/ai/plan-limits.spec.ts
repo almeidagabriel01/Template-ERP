@@ -178,19 +178,42 @@ uiTest.describe("AI-08: At-limit disabled input with reset date", () => {
       const lia = new LiaPage(page);
       await lia.openPanel();
 
-      // Aguarda o botão aparecer e estabilizar sem depender de networkidle
+      // Aguarda o estado at-limit propagar no client (textarea fica disabled de verdade)
+      await expect(lia.messageInput).toBeDisabled({ timeout: 10000 });
+
       const sendButton = page.getByRole("button", { name: "Enviar mensagem" });
-      await sendButton.waitFor({ state: "attached", timeout: 10000 });
-      await page.waitForTimeout(500); // aguarda re-render do uso
 
-      // Re-localiza após estabilização para evitar detach
-      await page
-        .getByRole("button", { name: "Enviar mensagem" })
-        .hover({ force: true });
+      // Aguarda o wrapper <Tooltip> (span.inline-flex) ser montado pelo React antes de interagir.
+      // O Tooltip é condicional (só existe quando isAtLimit=true) — sem essa espera há race
+      // entre o commit do React e o dispatch do mousemove pelo Playwright.
+      const tooltipTrigger = sendButton.locator(
+        "xpath=ancestor::span[contains(@class, 'inline-flex')][1]",
+      );
+      await expect(tooltipTrigger).toBeVisible({ timeout: 5000 });
 
-      // Tooltip deve aparecer
+      // Retry hover + contagem do tooltip para sobreviver a race conditions residuais.
+      // Hover no tooltipTrigger (o span com onPointerEnter) é mais confiável que hover
+      // no sendButton filho — a propagação pointerenter pode falhar em CI antes dos
+      // listeners do span estarem attached ao synthetic event system do React.
+      await expect
+        .poll(
+          async () => {
+            // Move away first so React sees a fresh pointerenter on every retry
+            await page.mouse.move(0, 0);
+            await tooltipTrigger.hover();
+            // Wait for the tooltip to render before counting
+            await page
+              .getByRole("tooltip")
+              .waitFor({ state: "visible", timeout: 800 })
+              .catch(() => {});
+            return await page.getByRole("tooltip").count();
+          },
+          { timeout: 10000, intervals: [500, 1000, 1500, 2000] },
+        )
+        .toBeGreaterThan(0);
+
       const tooltip = page.getByRole("tooltip");
-      await expect(tooltip).toBeVisible({ timeout: 5000 });
+      await expect(tooltip).toBeVisible();
       await expect(tooltip).toContainText("Renova em");
     },
   );

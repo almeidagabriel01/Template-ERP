@@ -5,11 +5,13 @@ import { resolveUserAndTenant, checkPermission, UserDoc } from "../../lib/auth-h
 import { checkClientLimit } from "../../lib/billing-helpers";
 import { z } from "zod";
 import { sanitizeText, sanitizeRichText } from "../../utils/sanitize";
+import { cpf, cnpj } from "cpf-cnpj-validator";
 
 const CreateClientSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres.").max(200).trim(),
   email: z.string().email().max(254).optional().or(z.literal("")),
   phone: z.string().max(30).trim().optional().or(z.literal("")),
+  document: z.string().max(20).trim().optional().or(z.literal("")),
   address: z.string().max(500).trim().optional().or(z.literal("")),
   notes: z.string().max(2000).trim().optional().or(z.literal("")),
   types: z.array(z.string().max(50)).max(10).optional(),
@@ -22,6 +24,7 @@ const UpdateClientSchema = z.object({
   name: z.string().min(1).max(200).trim().optional(),
   email: z.string().email().max(254).optional().or(z.literal("")),
   phone: z.string().max(30).trim().optional().or(z.literal("")),
+  document: z.string().max(20).trim().optional().or(z.literal("")),
   address: z.string().max(500).trim().optional().or(z.literal("")),
   notes: z.string().max(2000).trim().optional().or(z.literal("")),
   types: z.array(z.string().max(50)).max(10).optional(),
@@ -43,6 +46,19 @@ export const createClient = async (req: Request, res: Response) => {
     input.name = sanitizeText(input.name);
     if (input.address) input.address = sanitizeRichText(input.address);
     if (input.notes) input.notes = sanitizeRichText(input.notes);
+
+    // Validate document (CPF/CNPJ) if provided
+    if (input.document) {
+      const digits = input.document.replace(/\D/g, "");
+      const isValidDoc = digits.length === 11
+        ? cpf.isValid(digits)
+        : digits.length === 14
+          ? cnpj.isValid(digits)
+          : false;
+      if (!isValidDoc) {
+        return res.status(400).json({ code: "INVALID_DOCUMENT_FORMAT", message: "CPF ou CNPJ inválido." });
+      }
+    }
 
     const { userData, masterData, masterRef, isMaster, isSuperAdmin, tenantId } =
       await resolveUserAndTenant(userId, req.user);
@@ -157,6 +173,7 @@ export const createClient = async (req: Request, res: Response) => {
 
       if (input.email) clientData.email = input.email.toLowerCase().trim();
       if (input.phone) clientData.phone = input.phone;
+      if (input.document) clientData.document = input.document.replace(/\D/g, "");
       if (input.address) clientData.address = input.address;
       if (input.notes) clientData.notes = input.notes;
 
@@ -252,6 +269,22 @@ export const updateClient = async (req: Request, res: Response) => {
     if (updateData.name !== undefined) safeUpdate.name = updateData.name;
     if (updateData.email !== undefined) safeUpdate.email = updateData.email;
     if (updateData.phone !== undefined) safeUpdate.phone = updateData.phone;
+    if (updateData.document !== undefined) {
+      if (updateData.document === "") {
+        safeUpdate.document = "";
+      } else {
+        const digits = updateData.document.replace(/\D/g, "");
+        const isValidDoc = digits.length === 11
+          ? cpf.isValid(digits)
+          : digits.length === 14
+            ? cnpj.isValid(digits)
+            : false;
+        if (!isValidDoc) {
+          return res.status(400).json({ code: "INVALID_DOCUMENT_FORMAT", message: "CPF ou CNPJ inválido." });
+        }
+        safeUpdate.document = digits;
+      }
+    }
     if (updateData.address !== undefined)
       safeUpdate.address = updateData.address;
     if (updateData.notes !== undefined) safeUpdate.notes = updateData.notes;

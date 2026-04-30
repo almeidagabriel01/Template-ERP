@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — AI Assistant
-status: Phase complete — ready for verification
-stopped_at: context exhaustion at 99% (2026-04-16)
-last_updated: "2026-04-16T16:57:34.451Z"
+status: unknown
+stopped_at: context exhaustion at 97% (2026-04-29)
+last_updated: "2026-04-29T06:04:49.709Z"
 progress:
   total_phases: 14
-  completed_phases: 13
-  total_plans: 46
-  completed_plans: 44
-  percent: 96
+  completed_phases: 14
+  total_plans: 48
+  completed_plans: 48
+  percent: 100
 ---
 
 # Project State
@@ -20,12 +20,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Propostas e gestão financeira funcionando com confiança — ciclo proposta → aprovação → cobrança não pode quebrar.
-**Current focus:** Phase 18 — fix-lia-5-corre-es-contador-de-uso-hist-rico-quebras-de-linha-minimizar-sem-perder-estado-tool-results-sem-json-bruto
+**Current focus:** Phase 02 — auth-multitenant
 
 ## Current Position
 
-Phase: 18 (fix-lia-5-corre-es-contador-de-uso-hist-rico-quebras-de-linha-minimizar-sem-perder-estado-tool-results-sem-json-bruto) — EXECUTING
-Plan: 3 of 3
+Phase: 02 (auth-multitenant) — EXECUTING
+Plan: 1 of 4
 
 ## Performance Metrics
 
@@ -148,6 +148,11 @@ Carry-forward decisions from v1.0 relevant to v2.0 work:
 - [Phase 18]: System prompt rule 15 explicitly forbids ID exposure with correct/incorrect examples — defense in depth with existing rule 11 (T-18-02 mitigated)
 - [Phase 18]: Bug 4 fix: LiaTriggerButton always mounted; CSS visibility classes (opacity-0 scale-75 pointer-events-none) drive hide/show instead of conditional render
 - [Phase 18]: Bug 2 fix: sessionId useState uses generateSessionId() directly; restoration deferred to useEffect with isRestoredRef guard preventing race between tenantId availability and localStorage read
+- [Phase 02-02]: AUTH-05 redirect param tests use page.url() after Playwright follows 307 — middleware sets redirect+redirect_reason in Location header, params are observable in final URL
+- [Phase 02-02]: AUTH-06 backend API test accepts 502 alongside 403/404 — Functions emulator not started in E2E test env; Firestore-rules tests provide equivalent isolation guarantee
+- [Phase 02-02]: Firestore isolation tests use Node.js fetch() directly to emulator REST API — no browser page fixture, independent of browser route interception layer
+- [Phase 02-03]: AUTH-06 gap closed — 502 removed from backend API isolation assertion; global-setup.ts already starts Functions emulator (--only auth,firestore,storage,functions); tightened [403, 404] assertion causes hard failure if emulator unreachable
+- [Phase 02-04]: AUTH-05 redirect params stripped by ProtectedRoute client-side router.push('/login') which lacked query params; middleware returns HTTP 200 for App Router shell — client JS layer is the actual redirect mechanism. Fixed router.push to include redirect + redirect_reason params. 18/18 auth suite green.
 
 ### Pending Todos
 
@@ -159,6 +164,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-16T16:57:34.445Z
-Stopped at: context exhaustion at 99% (2026-04-16)
+Last session: 2026-04-29T06:04:49.705Z
+Stopped at: context exhaustion at 97% (2026-04-29)
 Resume file: None

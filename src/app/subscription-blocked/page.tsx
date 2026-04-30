@@ -3,14 +3,7 @@
 import { useAuth } from "@/providers/auth-provider";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import {
-  AlertTriangle,
-  CreditCard,
-  Mail,
-  Loader2,
-  LogOut,
-  ArrowRight,
-} from "lucide-react";
+import { AlertTriangle, CreditCard, Mail, LogOut, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { StripeService } from "@/services/stripe-service";
+import { Loader } from "@/components/ui/loader";
 
 export default function SubscriptionBlockedPage() {
   const { user, isLoading, logout } = useAuth();
@@ -109,7 +103,7 @@ export default function SubscriptionBlockedPage() {
   if (isLoading || !user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Loader size="lg" />
       </div>
     );
   }
@@ -146,7 +140,7 @@ export default function SubscriptionBlockedPage() {
           >
             {isRedirecting ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader size="sm" className="mr-2" />
                 Abrindo...
               </>
             ) : (
@@ -176,7 +170,7 @@ export default function SubscriptionBlockedPage() {
           >
             {isLoggingOut ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader size="sm" className="mr-2" />
                 Saindo...
               </>
             ) : (

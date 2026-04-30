@@ -1,7 +1,9 @@
 "use client";
 
+import * as React from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { AIFieldButton } from "@/components/shared/ai-field-button";
 import {
   Wrench,
   DollarSign,
@@ -14,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { FileUpload } from "@/components/ui/file-upload";
-import { DynamicSelect } from "@/components/features/dynamic-select";
+import { DynamicSelect, DynamicSelectHandle } from "@/components/features/dynamic-select";
 import { LimitReachedModal } from "@/components/ui/limit-reached-modal";
 import { StepWizard, StepNavigation } from "@/components/ui/step-wizard";
 import { FormStepCard } from "@/components/ui/form-step-card";
@@ -26,6 +28,7 @@ import {
 } from "@/components/ui/form-components";
 import { useProductForm } from "@/app/products/_hooks/useProductForm";
 import { Service } from "@/services/service-service";
+import { useCurrentNicheConfig } from "@/hooks/useCurrentNicheConfig";
 
 interface ServiceFormProps {
   initialData?: Service;
@@ -66,6 +69,7 @@ export function ServiceForm({
   isReadOnly = false,
 }: ServiceFormProps) {
   const router = useRouter();
+  const nicheConfig = useCurrentNicheConfig();
   const {
     formData,
     imageUrls,
@@ -84,6 +88,8 @@ export function ServiceForm({
     handleRemoveImage,
     handleSubmit,
   } = useProductForm(initialData, serviceId, "service");
+
+  const categoryRef = React.useRef<DynamicSelectHandle>(null);
 
   const servicePrice = parseFloat(formData.price || "0");
 
@@ -201,20 +207,50 @@ export function ServiceForm({
                 />
               </FormItem>
 
-              <DynamicSelect
-                storageKey="product_categories"
-                label="Categoria"
-                id="category"
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                required
-                error={errors.category}
-                className="flex flex-col gap-4 space-y-0 [&>div:first-child]:h-5 [&_label]:leading-5"
-              />
+              <div className="relative">
+                <DynamicSelect
+                  ref={categoryRef}
+                  storageKey="product_categories"
+                  label="Categoria"
+                  id="category"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  required
+                  error={errors.category}
+                  className="flex flex-col gap-4 space-y-0 [&>div:first-child]:h-5 [&_label]:leading-5"
+                />
+                <div className="absolute top-0 right-20 flex items-center h-5">
+                  <AIFieldButton
+                    field="product.category"
+                    context={() => ({ name: formData.name, description: formData.description, niche: nicheConfig.id })}
+                    onGenerated={(value) => categoryRef.current?.createAndSelectOption(value)}
+                    disabledReason={!formData.name ? "Preencha o nome do serviço primeiro" : undefined}
+                  />
+                </div>
+              </div>
             </FormGroup>
 
-            <FormItem label="Descrição" htmlFor="description">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label htmlFor="description" className="text-sm font-medium leading-none">
+                  Descrição
+                </label>
+                <AIFieldButton
+                  field="service.description"
+                  context={() => ({
+                    name: formData.name,
+                    category: formData.category,
+                    niche: nicheConfig.id,
+                  })}
+                  onGenerated={(value) =>
+                    handleChange({
+                      target: { name: "description", value },
+                    } as React.ChangeEvent<HTMLTextAreaElement>)
+                  }
+                  disabledReason={!formData.name ? "Preencha o nome do serviço primeiro" : undefined}
+                />
+              </div>
               <Textarea
                 id="description"
                 name="description"
@@ -223,7 +259,7 @@ export function ServiceForm({
                 onChange={handleChange}
                 className="min-h-[140px]"
               />
-            </FormItem>
+            </div>
           </div>
 
           <StepNavigation onBeforeNext={validateInfoStep} />

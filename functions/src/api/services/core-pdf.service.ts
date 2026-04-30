@@ -127,11 +127,13 @@ export async function renderPageToPdfBuffer(options: RenderPdfOptions): Promise<
   const executablePath = await chromiumPackage.executablePath();
   const pageErrors: string[] = [];
 
+  console.time("pdf:launch");
   const browser = await chromium.launch({
     executablePath,
     args: chromiumPackage.args,
     headless: true,
   });
+  console.timeEnd("pdf:launch");
 
   try {
     const context = await browser.newContext({
@@ -160,8 +162,13 @@ export async function renderPageToPdfBuffer(options: RenderPdfOptions): Promise<
     };
     if (vercelBypassSecret) {
       extraHeaders["x-vercel-protection-bypass"] = vercelBypassSecret;
+      extraHeaders["x-vercel-set-bypass-cookie"] = "samesitenone";
     }
     await page.setExtraHTTPHeaders(extraHeaders);
+
+    console.log("[core-pdf] Headers configurados", {
+      hasVercelBypass: Boolean(vercelBypassSecret),
+    });
 
     page.on("pageerror", (error) => {
       pageErrors.push(error?.message || "unknown_page_error");
@@ -172,12 +179,15 @@ export async function renderPageToPdfBuffer(options: RenderPdfOptions): Promise<
       pageErrors.push(`${request.method()} ${request.url()} :: ${failure}`);
     });
 
+    console.time("pdf:goto");
     await page.goto(url, {
       waitUntil: "networkidle",
       timeout: PDF_PAGE_READY_TIMEOUT_MS,
     });
+    console.timeEnd("pdf:goto");
 
     // Aguardar marcador de pronto + imagens.
+    console.time("pdf:ready");
     await page.waitForFunction(
       async (selector: string) => {
         try {
@@ -206,12 +216,50 @@ export async function renderPageToPdfBuffer(options: RenderPdfOptions): Promise<
       readySelector,
       { timeout: PDF_RENDER_ASSET_TIMEOUT_MS },
     );
+    console.timeEnd("pdf:ready");
 
-    // Pequena pausa para garantir animações CSS.
+    // Pausa para layout/paint completarem após React commit.
+    // 1000ms é necessário: o marker de readiness dispara no mesmo tick que o
+    // viewer é montado; 150ms não é suficiente para layout + paint de grids complexos.
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     await page.emulateMedia({ media: "print" });
 
+    // Guard pré-PDF: verifica que a página ainda está em estado de sucesso.
+    // Sem este guard, se o fetch in-page falhar após o waitForFunction passar,
+    // page.pdf() captura a UI de erro e o buffer é salvo no cache como PDF válido.
+    const ERROR_PHRASES = [
+      "erro ao carregar",
+      "algo deu errado",
+      "link inválido",
+      "link expirado",
+      "não foi possível",
+      "não encontrada",
+      "não encontrado",
+    ];
+    const prePdfState = await page.evaluate(
+      (args: { selector: string; errorPhrases: string[] }) => {
+        const bodyText = (document.body.innerText || "").toLowerCase();
+        return {
+          markerPresent: !!document.querySelector(args.selector),
+          errorTextPresent: args.errorPhrases.some((p) => bodyText.includes(p)),
+          bodyTextPreview: bodyText.slice(0, 200),
+          bodyH: document.body.offsetHeight,
+          htmlLen: document.documentElement.outerHTML.length,
+        };
+      },
+      { selector: readySelector, errorPhrases: ERROR_PHRASES },
+    );
+
+    console.log("[core-pdf] pre-pdf state", prePdfState);
+
+    if (!prePdfState.markerPresent || prePdfState.errorTextPresent) {
+      throw new Error(
+        `PDF_RENDER_ERROR_STATE: marker=${prePdfState.markerPresent} errorText=${prePdfState.errorTextPresent} preview="${prePdfState.bodyTextPreview.slice(0, 100)}"`,
+      );
+    }
+
+    console.time("pdf:generate");
     const pdf = await page.pdf({
       format: "A4",
       printBackground: true,
@@ -223,6 +271,14 @@ export async function renderPageToPdfBuffer(options: RenderPdfOptions): Promise<
         left: "0mm",
       },
     });
+    console.timeEnd("pdf:generate");
+
+    if (pageErrors.length > 0) {
+      console.warn("[core-pdf] Render concluiu mas com pageErrors", {
+        pageErrors: pageErrors.slice(0, 8),
+      });
+    }
+    console.log("[core-pdf] PDF renderizado", { bufferSize: pdf.length });
 
     return Buffer.from(pdf);
   } catch (error) {

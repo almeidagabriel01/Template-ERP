@@ -3,8 +3,9 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { usePagePermission } from "@/hooks/usePagePermission";
-import { Loader2 } from "lucide-react";
+;
 import { SimpleProposalForm } from "@/components/features/proposal/simple-proposal-form"
+import { EntityLoadingState } from "@/components/shared/entity-loading-state";
 
 export default function NewProposalPage() {
     const router = useRouter();
@@ -18,7 +19,7 @@ export default function NewProposalPage() {
 
     // Show loading while checking permissions OR while redirecting (no permission)
     if (isLoading || !canCreate) {
-        return <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin" /></div>;
+        return <EntityLoadingState message="Carregando Proposta..." />;
     }
     return <SimpleProposalForm />
 }

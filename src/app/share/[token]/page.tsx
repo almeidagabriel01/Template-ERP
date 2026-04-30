@@ -2,14 +2,7 @@
 
 import * as React from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import {
-  Loader2,
-  AlertCircle,
-  FileText,
-  FileDown,
-  ZoomIn,
-  ZoomOut,
-} from "lucide-react";
+import { AlertCircle, FileText, FileDown, ZoomIn, ZoomOut } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { SharedProposalService } from "@/services/shared-proposal-service";
@@ -21,6 +14,7 @@ import Image from "next/image";
 import { ProposalDefaults } from "@/lib/proposal-defaults";
 import { downloadSharedProposalPdf } from "@/services/pdf/download-shared-proposal-pdf";
 import { computePrimaryForeground } from "@/utils/color-utils";
+import { Loader } from "@/components/ui/loader";
 
 export default function SharedProposalPage() {
   const params = useParams();
@@ -113,15 +107,11 @@ export default function SharedProposalPage() {
         // });
       } catch (err: unknown) {
         console.error("Error loading shared proposal:", err);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const errorAny = err as any;
+        const errorAny = err as { status?: number; data?: { code?: string } };
 
-        if (
-          errorAny?.message?.includes("410") ||
-          errorAny?.response?.data?.code === "EXPIRED_LINK"
-        ) {
+        if (errorAny?.status === 410 || errorAny?.data?.code === "EXPIRED_LINK") {
           setError("Este link expirou. Solicite um novo link ao responsável.");
-        } else if (errorAny?.message?.includes("404")) {
+        } else if (errorAny?.status === 404) {
           setError("Link inválido ou proposta não encontrada.");
         } else {
           setError("Erro ao carregar proposta. Tente novamente mais tarde.");
@@ -134,11 +124,30 @@ export default function SharedProposalPage() {
     loadSharedProposal();
   }, [token]);
 
+  if (isPrintMode && proposal) {
+    return (
+      <div className="bg-white w-[794px] m-0 p-0">
+        <span data-pdf-products-ready="1" style={{ display: "none" }} />
+        <ProposalPdfViewer
+          proposal={proposal}
+          tenant={tenant}
+          template={template}
+          skipCatalogEnrichment
+          customSettings={
+            (proposal.pdfSettings as Parameters<
+              typeof ProposalPdfViewer
+            >[0]["customSettings"]) ?? undefined
+          }
+        />
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-primary" />
+          <Loader size="lg" />
           <p className="text-muted-foreground">Carregando proposta...</p>
         </div>
       </div>
@@ -175,24 +184,6 @@ export default function SharedProposalPage() {
             </Alert>
           </CardContent>
         </Card>
-      </div>
-    );
-  }
-
-  if (isPrintMode) {
-    return (
-      <div className="bg-white w-[794px] m-0 p-0">
-        <ProposalPdfViewer
-          proposal={proposal}
-          tenant={tenant}
-          template={template}
-          skipCatalogEnrichment
-          customSettings={
-            (proposal.pdfSettings as Parameters<
-              typeof ProposalPdfViewer
-            >[0]["customSettings"]) ?? undefined
-          }
-        />
       </div>
     );
   }
@@ -262,7 +253,7 @@ export default function SharedProposalPage() {
               disabled={isGenerating}
             >
               {isGenerating ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader size="sm" />
               ) : (
                 <FileDown className="w-4 h-4" />
               )}
@@ -298,7 +289,7 @@ export default function SharedProposalPage() {
             disabled={isGenerating}
           >
             {isGenerating ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader size="sm" />
             ) : (
               <FileDown className="w-4 h-4" />
             )}

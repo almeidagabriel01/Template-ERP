@@ -20,8 +20,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { CheckCircle, Loader2, Lock, MailCheck, XCircle } from "lucide-react";
+import { CheckCircle, Lock, MailCheck, XCircle } from "lucide-react";
 import { toast } from "@/lib/toast";
+import { Loader } from "@/components/ui/loader";
 
 type ActionMode = "resetPassword" | "verifyEmail";
 
@@ -158,7 +159,7 @@ function AuthActionContent() {
       <div className="flex min-h-screen items-center justify-center bg-muted/50 p-4">
         <Card className="w-full max-w-md text-center py-10">
           <CardContent>
-            <Loader2 className="h-10 w-10 animate-spin mx-auto text-primary mb-4" />
+            <Loader size="lg" />
             <p className="text-muted-foreground">
               {mode === "verifyEmail"
                 ? "Validando confirmação do seu e-mail..."
@@ -280,7 +281,7 @@ function AuthActionContent() {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader size="sm" className="mr-2" />
                   Alterando...
                 </>
               ) : (
@@ -299,7 +300,7 @@ export default function AuthActionPage() {
     <Suspense
       fallback={
         <div className="flex h-screen items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin" />
+          <Loader size="lg" />
         </div>
       }
     >

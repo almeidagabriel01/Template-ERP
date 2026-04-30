@@ -2,8 +2,9 @@
 
 import { useEffect, useState, Suspense, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { CheckCircle, AlertCircle } from "lucide-react";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { Loader } from "@/components/ui/loader";
 
 function AddonSuccessContent() {
   const searchParams = useSearchParams();
@@ -68,7 +69,7 @@ function AddonSuccessContent() {
         {status === "loading" && (
           <>
             <div className="relative mx-auto w-16 h-16 mb-6">
-              <Loader2 className="w-16 h-16 animate-spin text-primary" />
+              <Loader size="lg" />
             </div>
             <h1 className="text-2xl font-bold mb-2">Ativando add-on...</h1>
             <p className="text-muted-foreground">
@@ -117,7 +118,7 @@ export default function AddonSuccessPage() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-background flex items-center justify-center">
-          <Loader2 className="w-10 h-10 animate-spin text-primary" />
+          <Loader size="lg" />
         </div>
       }
     >

@@ -6,13 +6,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
-import { Upload } from "lucide-react";
+import { Tooltip } from "@/components/ui/tooltip";
+import { Upload, Bold, Italic, List, ListOrdered } from "lucide-react";
 import { PdfSection } from "../../pdf-section-editor";
 import {
   HorizontalAlignControls,
   VerticalAlignControls,
 } from "./style-controls";
 import { ALLOWED_TYPES } from "@/services/storage-service";
+import { AIFieldButton } from "@/components/shared/ai-field-button";
+import {
+  MarkdownEditor,
+  type MarkdownEditorHandle,
+} from "./markdown-editor";
+
+export interface PdfSectionProposalContext {
+  title?: string;
+  clientName?: string;
+  niche?: string;
+  products?: { name: string; quantity: number }[];
+}
 
 // ============================================
 // COLUMN LAYOUT CONTROL
@@ -109,26 +122,111 @@ export function TitleEditor({ section, updateSection }: TitleEditorProps) {
 // TEXT EDITOR
 // ============================================
 
+function hasMinimumContent(content?: string): boolean {
+  const trimmed = (content ?? "").trim();
+  return trimmed.length >= 10 || /\s/.test(trimmed);
+}
+
 interface TextEditorProps {
   section: PdfSection;
   updateSection: (id: string, updates: Partial<PdfSection>) => void;
   label?: string;
+  proposalContext?: PdfSectionProposalContext;
+  sectionType?: "generic" | "scope" | "terms";
+  sectionTitle?: string;
 }
 
 export function TextEditor({
   section,
   updateSection,
   label = "Conteúdo",
+  proposalContext,
+  sectionType = "generic",
+  sectionTitle,
 }: TextEditorProps) {
+  const markdownEditorRef = React.useRef<MarkdownEditorHandle>(null);
+
   return (
     <div className="grid gap-2">
-      <Label>{label}</Label>
-      <Textarea
-        value={section.content}
-        onChange={(e) => updateSection(section.id, { content: e.target.value })}
-        placeholder="Digite o texto..."
-        rows={4}
+      <div className="flex items-center justify-between">
+        <Label>{label}</Label>
+        <div className="flex items-center gap-1">
+          <Tooltip content="Negrito (Ctrl+B)" delayMs={300}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground"
+              onClick={() => markdownEditorRef.current?.toggleBold()}
+            >
+              <Bold className="h-3.5 w-3.5" />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Itálico (Ctrl+I)" delayMs={300}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground"
+              onClick={() => markdownEditorRef.current?.toggleItalic()}
+            >
+              <Italic className="h-3.5 w-3.5" />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Lista com marcadores" delayMs={300}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground"
+              onClick={() => markdownEditorRef.current?.toggleBulletList()}
+            >
+              <List className="h-3.5 w-3.5" />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Lista numerada" delayMs={300}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground"
+              onClick={() => markdownEditorRef.current?.toggleOrderedList()}
+            >
+              <ListOrdered className="h-3.5 w-3.5" />
+            </Button>
+          </Tooltip>
+          <AIFieldButton
+            field="proposal.pdfSection"
+            context={() => ({
+              title: proposalContext?.title ?? "",
+              sectionType,
+              sectionTitle: sectionTitle ?? "",
+              currentContent: section.content ?? "",
+              products: proposalContext?.products ?? [],
+              niche: proposalContext?.niche ?? "automacao_residencial",
+            })}
+            onGenerated={(value) =>
+              updateSection(section.id, { content: value })
+            }
+            disabledReason={
+              !hasMinimumContent(section.content)
+                ? "Digite ao menos algumas palavras para ativar"
+                : undefined
+            }
+            getPreviousValue={() => section.content ?? ""}
+          />
+        </div>
+      </div>
+      <MarkdownEditor
+        ref={markdownEditorRef}
+        value={section.content ?? ""}
+        onChange={(value) => updateSection(section.id, { content: value })}
       />
+      {!hasMinimumContent(section.content) && (
+        <p className="text-[11px] text-muted-foreground">
+          Digite ao menos algumas palavras para ativar a geração com IA
+        </p>
+      )}
     </div>
   );
 }
@@ -141,12 +239,14 @@ interface ProductTableEditorProps {
   linkedScopeTitleSection?: PdfSection;
   linkedScopeTextSection?: PdfSection;
   updateSection: (id: string, updates: Partial<PdfSection>) => void;
+  proposalContext?: PdfSectionProposalContext;
 }
 
 export function ProductTableEditor({
   linkedScopeTitleSection,
   linkedScopeTextSection,
   updateSection,
+  proposalContext,
 }: ProductTableEditorProps) {
   return (
     <div className="space-y-4">
@@ -167,7 +267,28 @@ export function ProductTableEditor({
 
       {linkedScopeTextSection && (
         <div className="grid gap-2">
-          <Label>Texto Introdutório do Escopo</Label>
+          <div className="flex items-center justify-between">
+            <Label>Texto Introdutório do Escopo</Label>
+            <AIFieldButton
+              field="proposal.pdfSection"
+              context={() => ({
+                title: proposalContext?.title ?? "",
+                sectionType: "scope" as const,
+                sectionTitle: "Escopo do Projeto",
+                products: proposalContext?.products ?? [],
+                niche: proposalContext?.niche ?? "automacao_residencial",
+              })}
+              onGenerated={(value) =>
+                updateSection(linkedScopeTextSection.id, { content: value })
+              }
+              disabledReason={
+                !proposalContext?.products?.length
+                  ? "Adicione produtos à proposta primeiro"
+                  : undefined
+              }
+              getPreviousValue={() => linkedScopeTextSection?.content ?? ""}
+            />
+          </div>
           <Textarea
             value={linkedScopeTextSection.content}
             onChange={(e) =>
@@ -192,16 +313,34 @@ export function ProductTableEditor({
 interface PaymentTermsEditorProps {
   section: PdfSection;
   updateSection: (id: string, updates: Partial<PdfSection>) => void;
+  proposalContext?: PdfSectionProposalContext;
 }
 
 export function PaymentTermsEditor({
   section,
   updateSection,
+  proposalContext,
 }: PaymentTermsEditorProps) {
   return (
     <div className="space-y-4">
       <div className="grid gap-2">
-        <Label>Texto das Condições de Pagamento</Label>
+        <div className="flex items-center justify-between">
+          <Label>Texto das Condições de Pagamento</Label>
+          <AIFieldButton
+            field="proposal.pdfSection"
+            context={() => ({
+              title: proposalContext?.title ?? "",
+              sectionType: "terms" as const,
+              sectionTitle: "Condições de Pagamento",
+              products: proposalContext?.products ?? [],
+              niche: proposalContext?.niche ?? "automacao_residencial",
+            })}
+            onGenerated={(value) =>
+              updateSection(section.id, { content: value })
+            }
+            getPreviousValue={() => section.content ?? ""}
+          />
+        </div>
         <Textarea
           value={section.content || ""}
           onChange={(e) =>

@@ -15,8 +15,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { PlanFeatures } from "@/types";
 import { AdminService } from "@/services/admin-service";
-import { Loader2 } from "lucide-react";
+;
 import { toast } from '@/lib/toast';
+import { Loader } from "@/components/ui/loader";
 
 interface Props {
   open: boolean;
@@ -188,7 +189,7 @@ export function EditLimitsDialog({
             Cancelar
           </Button>
           <Button onClick={handleSave} disabled={loading || !hasChanges}>
-            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {loading && <Loader size="sm" className="mr-2" />}
             Salvar Alterações
           </Button>
         </DialogFooter>

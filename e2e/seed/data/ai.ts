@@ -42,6 +42,16 @@ export const TENANT_AI_QUOTA: SeedTenant = {
   createdAt: new Date("2024-01-01T00:00:00Z").toISOString(),
 };
 
+/** Dedicated tenant for rate-limit E2E test — never shared with other specs */
+export const TENANT_AI_RATELIMIT: SeedTenant = {
+  id: "ai-ratelimit",
+  tenantId: "ai-ratelimit",
+  name: "AI RateLimit Corp",
+  niche: "automacao_residencial",
+  primaryColor: "#EF4444",
+  createdAt: new Date("2024-01-01T00:00:00Z").toISOString(),
+};
+
 // ─── User Constants ───────────────────────────────────────────────────────────
 
 export const USER_AI_ADMIN: SeedUser = {
@@ -95,6 +105,17 @@ export const USER_AI_QUOTA: SeedUser = {
   masterId: "ai-quota-uid",
 };
 
+/** Dedicated starter user for rate-limit E2E test — never shared with other specs */
+export const USER_AI_RATELIMIT: SeedUser = {
+  uid: "ai-ratelimit-uid",
+  email: "ai-ratelimit@test.com",
+  password: "TestPass123!",
+  name: "AI RateLimit Admin",
+  tenantId: "ai-ratelimit",
+  role: "admin",
+  masterId: "ai-ratelimit-uid",
+};
+
 // USER_AI_FREE_ROLE: user with role: "free" in custom claims.
 // Protected-app-shell.tsx gates LiaContainer with `user.role !== "free"`,
 // so this user must NOT see the Lia trigger button.
@@ -142,6 +163,12 @@ const AI_TENANT_PLANS: Record<
     subscriptionStatus: "active",
     whatsappEnabled: false,
   },
+  "ai-ratelimit": {
+    plan: "starter",
+    planId: "starter",
+    subscriptionStatus: "active",
+    whatsappEnabled: false,
+  },
 };
 
 // ─── Seed Function ────────────────────────────────────────────────────────────
@@ -151,7 +178,7 @@ const AI_TENANT_PLANS: Record<
  * Called from seedAll() in seed-factory.ts after seedUsers().
  */
 export async function seedAiTenants(auth: Auth, db: Firestore): Promise<void> {
-  const tenants = [TENANT_AI_TEST, TENANT_AI_STARTER, TENANT_AI_FREE, TENANT_AI_QUOTA];
+  const tenants = [TENANT_AI_TEST, TENANT_AI_STARTER, TENANT_AI_FREE, TENANT_AI_QUOTA, TENANT_AI_RATELIMIT];
 
   // Seed tenants with plan metadata
   const batch = db.batch();
@@ -165,7 +192,7 @@ export async function seedAiTenants(auth: Auth, db: Firestore): Promise<void> {
   await batch.commit();
 
   // Seed users (SeedUser-typed)
-  const standardUsers: SeedUser[] = [USER_AI_ADMIN, USER_AI_MEMBER, USER_AI_STARTER, USER_AI_FREE, USER_AI_QUOTA];
+  const standardUsers: SeedUser[] = [USER_AI_ADMIN, USER_AI_MEMBER, USER_AI_STARTER, USER_AI_FREE, USER_AI_QUOTA, USER_AI_RATELIMIT];
 
   for (const user of standardUsers) {
     try {

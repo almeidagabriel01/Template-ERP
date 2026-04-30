@@ -12,11 +12,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Wallet } from "@/types";
 import { TransferInput } from "@/services/wallet-service";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { formatCurrency } from "@/utils/format";
+import { Loader } from "@/components/ui/loader";
 
 interface TransferDialogProps {
   open: boolean;
@@ -174,7 +175,7 @@ export function TransferDialog({
             </Button>
             <Button type="submit" disabled={isSubmitting || !isValid}>
               {isSubmitting && (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader size="sm" className="mr-2" />
               )}
               Transferir
             </Button>

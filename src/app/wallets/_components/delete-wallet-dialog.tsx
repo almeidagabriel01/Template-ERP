@@ -12,9 +12,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { Wallet } from "@/types";
 import { formatCurrency } from "@/utils/format";
+import { Loader } from "@/components/ui/loader";
 
 interface DeleteWalletDialogProps {
   open: boolean;
@@ -104,7 +105,7 @@ export function DeleteWalletDialog({
             disabled={isDeleting || !canDelete}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {isDeleting && <Loader size="sm" className="mr-2" />}
             Excluir{hasBalance ? " mesmo assim" : ""}
           </AlertDialogAction>
         </AlertDialogFooter>

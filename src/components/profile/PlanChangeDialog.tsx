@@ -9,10 +9,11 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, CreditCard } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { BillingInterval, UserPlan } from "@/types";
 import { PlanPreview } from "@/types/plan";
 import { formatPrice } from "@/utils/format";
+import { Loader } from "@/components/ui/loader";
 
 interface PlanChangeDialogProps {
     open: boolean;
@@ -96,7 +97,7 @@ export function PlanChangeDialog({
                     >
                         {isProcessing ? (
                             <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                <Loader size="sm" className="mr-2" />
                                 Processando...
                             </>
                         ) : (
@@ -112,7 +113,7 @@ export function PlanChangeDialog({
 function LoadingState() {
     return (
         <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <Loader size="lg" />
         </div>
     );
 }

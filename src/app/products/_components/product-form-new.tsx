@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FileUpload } from "@/components/ui/file-upload";
-import { DynamicSelect } from "@/components/features/dynamic-select";
+import { DynamicSelect, DynamicSelectHandle } from "@/components/features/dynamic-select";
 import { LimitReachedModal } from "@/components/ui/limit-reached-modal";
 import { useProductForm } from "../_hooks/useProductForm";
 import { Product } from "@/services/product-service";
@@ -28,6 +28,7 @@ import {
   Tag,
 } from "lucide-react";
 import { useCurrentNicheConfig } from "@/hooks/useCurrentNicheConfig";
+import { AIFieldButton } from "@/components/shared/ai-field-button";
 import { ProductPricingStep } from "./product-pricing-step";
 import {
   calculateSellingPrice,
@@ -116,6 +117,9 @@ export function ProductFormNew({
     removeHeightPricingTier,
     handleSubmit,
   } = useProductForm(initialData, productId, entityType);
+
+  const serviceCategoryRef = React.useRef<DynamicSelectHandle>(null);
+  const productCategoryRef = React.useRef<DynamicSelectHandle>(null);
 
   const entityLabel = entityType === "service" ? "Serviço" : "Produto";
   const entityLabelLower = entityType === "service" ? "serviço" : "produto";
@@ -315,17 +319,28 @@ export function ProductFormNew({
                   />
                 </FormItem>
 
-                <DynamicSelect
-                  storageKey="product_categories"
-                  label="Categoria"
-                  id="category"
-                  name="category"
-                  value={formData.category}
-                  onChange={handleChange}
-                  required
-                  error={errors.category}
-                  className="flex flex-col gap-4 space-y-0 [&>div:first-child]:h-5 [&_label]:leading-5"
-                />
+                <div className="relative">
+                  <DynamicSelect
+                    ref={serviceCategoryRef}
+                    storageKey="product_categories"
+                    label="Categoria"
+                    id="category"
+                    name="category"
+                    value={formData.category}
+                    onChange={handleChange}
+                    required
+                    error={errors.category}
+                    className="flex flex-col gap-4 space-y-0 [&>div:first-child]:h-5 [&_label]:leading-5"
+                  />
+                  <div className="absolute top-0 right-20 flex items-center h-5">
+                    <AIFieldButton
+                      field="product.category"
+                      context={() => ({ name: formData.name, description: formData.description, niche: nicheConfig.id })}
+                      onGenerated={(value) => serviceCategoryRef.current?.createAndSelectOption(value)}
+                      disabledReason={!formData.name ? "Preencha o nome do serviço primeiro" : undefined}
+                    />
+                  </div>
+                </div>
               </FormGroup>
             ) : (
               <>
@@ -349,17 +364,28 @@ export function ProductFormNew({
                 </FormItem>
 
                 <FormGroup cols={2}>
-                  <DynamicSelect
-                    storageKey="product_categories"
-                    label="Categoria"
-                    id="category"
-                    name="category"
-                    value={formData.category}
-                    onChange={handleChange}
-                    required
-                    error={errors.category}
-                    className="flex flex-col gap-4 space-y-0 [&>div:first-child]:h-5 [&_label]:leading-5"
-                  />
+                  <div className="relative">
+                    <DynamicSelect
+                      ref={productCategoryRef}
+                      storageKey="product_categories"
+                      label="Categoria"
+                      id="category"
+                      name="category"
+                      value={formData.category}
+                      onChange={handleChange}
+                      required
+                      error={errors.category}
+                      className="flex flex-col gap-4 space-y-0 [&>div:first-child]:h-5 [&_label]:leading-5"
+                    />
+                    <div className="absolute top-0 right-20 flex items-center h-5">
+                      <AIFieldButton
+                        field="product.category"
+                        context={() => ({ name: formData.name, description: formData.description, niche: nicheConfig.id })}
+                        onGenerated={(value) => productCategoryRef.current?.createAndSelectOption(value)}
+                        disabledReason={!formData.name ? "Preencha o nome do produto primeiro" : undefined}
+                      />
+                    </div>
+                  </div>
 
                   <DynamicSelect
                     storageKey="product_manufacturers"
@@ -376,7 +402,27 @@ export function ProductFormNew({
               </>
             )}
 
-            <FormItem label="Descrição" htmlFor="description">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label htmlFor="description" className="text-sm font-medium leading-none">
+                  Descrição
+                </label>
+                <AIFieldButton
+                  field="product.description"
+                  context={() => ({
+                    name: formData.name,
+                    category: formData.category,
+                    manufacturer: formData.manufacturer,
+                    niche: nicheConfig.id,
+                  })}
+                  onGenerated={(value) =>
+                    handleChange({
+                      target: { name: "description", value },
+                    } as React.ChangeEvent<HTMLTextAreaElement>)
+                  }
+                  disabledReason={!formData.name ? "Preencha o nome primeiro" : undefined}
+                />
+              </div>
               <Textarea
                 id="description"
                 name="description"
@@ -385,7 +431,7 @@ export function ProductFormNew({
                 onChange={handleChange}
                 className="min-h-[140px]"
               />
-            </FormItem>
+            </div>
           </div>
 
           <StepNavigation onBeforeNext={validateStep1} />

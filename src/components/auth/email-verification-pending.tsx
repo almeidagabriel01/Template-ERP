@@ -12,9 +12,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, MailCheck } from "lucide-react";
+import { MailCheck } from "lucide-react";
 import { useAuth } from "@/providers/auth-provider";
 import { useRouter } from "next/navigation";
+import { Loader } from "@/components/ui/loader";
 
 const RESEND_COOLDOWN_MS = 60_000;
 
@@ -173,7 +174,7 @@ export function EmailVerificationPending({
       <div className="flex items-center justify-center p-4">
         <Card className="w-full max-w-md text-center shadow-xl border-border bg-card">
           <CardContent className="py-10">
-            <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
+            <Loader size="lg" />
             <p className="mt-4 text-sm text-muted-foreground">
               Verificando confirmação do seu e-mail...
             </p>

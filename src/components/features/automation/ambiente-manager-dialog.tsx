@@ -28,8 +28,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from '@/lib/toast';
-import { Loader2 } from "lucide-react";
+;
 import { MasterDataAction } from "@/hooks/proposal/useMasterDataTransaction";
+import { Loader } from "@/components/ui/loader";
 
 interface AmbienteManagerDialogProps {
   isOpen: boolean;
@@ -459,7 +460,7 @@ export function AmbienteManagerDialog({
             >
               {isDeleting ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader size="sm" className="mr-2" />
                   Excluindo...
                 </>
               ) : (

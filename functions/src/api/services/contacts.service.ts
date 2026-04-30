@@ -1,6 +1,7 @@
 import { db } from "../../init";
 import { Timestamp } from "firebase-admin/firestore";
 import { sanitizeText, sanitizeRichText } from "../../utils/sanitize";
+import { cpf, cnpj } from "cpf-cnpj-validator";
 
 // CRITICAL: collection name is "clients", not "contacts"
 const CLIENTS_COLLECTION = "clients";
@@ -41,9 +42,22 @@ export interface UpdateContactParams {
   name?: string;
   email?: string;
   phone?: string;
+  document?: string;
   address?: string;
   notes?: string;
   types?: string[];
+}
+
+// ===== Helpers =====
+
+function validateDocument(doc: string): void {
+  const digits = doc.replace(/\D/g, "");
+  const isValid = digits.length === 11
+    ? cpf.isValid(digits)
+    : digits.length === 14
+      ? cnpj.isValid(digits)
+      : false;
+  if (!isValid) throw new Error("INVALID_DOCUMENT_FORMAT");
 }
 
 // ===== Service Functions =====
@@ -134,7 +148,10 @@ export async function createContact(
   if (params.phone) contactData.phone = params.phone;
   if (params.address) contactData.address = sanitizeRichText(params.address);
   if (params.notes) contactData.notes = sanitizeRichText(params.notes);
-  if (params.document) contactData.document = params.document;
+  if (params.document) {
+    validateDocument(params.document);
+    contactData.document = params.document.replace(/\D/g, "");
+  }
 
   await contactRef.set(contactData);
 
@@ -165,6 +182,10 @@ export async function updateContact(
   if (updates.name !== undefined) safeUpdate.name = sanitizeText(updates.name);
   if (updates.email !== undefined) safeUpdate.email = updates.email;
   if (updates.phone !== undefined) safeUpdate.phone = updates.phone;
+  if (updates.document !== undefined) {
+    validateDocument(updates.document);
+    safeUpdate.document = updates.document.replace(/\D/g, "");
+  }
   if (updates.address !== undefined) safeUpdate.address = sanitizeRichText(updates.address);
   if (updates.notes !== undefined) safeUpdate.notes = sanitizeRichText(updates.notes);
   if (updates.types !== undefined) safeUpdate.types = updates.types;

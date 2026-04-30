@@ -1,4 +1,6 @@
 import React from "react";
+import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
 
 interface PdfSectionRendererProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -80,12 +82,23 @@ export function PdfSectionRenderer({
             )}
           </div>
         ) : (
-          section.content.split("\n").map((line: string, i: number) => (
-            <React.Fragment key={i}>
-              {line}
-              {i < section.content.split("\n").length - 1 && <br />}
-            </React.Fragment>
-          ))
+          <ReactMarkdown
+            remarkPlugins={[remarkBreaks]}
+            allowedElements={["p", "br", "strong", "em", "ul", "ol", "li"]}
+            unwrapDisallowed
+            components={{
+              p: ({ children }) => <span>{children}</span>,
+              ul: ({ children }) => (
+                <ul style={{ listStyle: "disc", paddingLeft: "1.25rem", margin: "0.25rem 0" }}>{children}</ul>
+              ),
+              ol: ({ children }) => (
+                <ol style={{ listStyle: "decimal", paddingLeft: "1.25rem", margin: "0.25rem 0" }}>{children}</ol>
+              ),
+              li: ({ children }) => <li style={{ margin: "0.125rem 0" }}>{children}</li>,
+            }}
+          >
+            {section.content}
+          </ReactMarkdown>
         )}
       </div>
     </div>

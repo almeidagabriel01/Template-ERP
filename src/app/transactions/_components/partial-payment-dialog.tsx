@@ -16,8 +16,9 @@ import { Transaction } from "@/services/transaction-service";
 import { formatCurrency } from "@/utils/format";
 import { getTodayISO } from "@/utils/date-utils";
 import { CurrencyInput } from "@/components/ui/currency-input";
-import { Loader2 } from "lucide-react";
+;
 import { toast } from '@/lib/toast';
+import { Loader } from "@/components/ui/loader";
 
 interface PartialPaymentDialogProps {
   open: boolean;
@@ -125,7 +126,7 @@ export function PartialPaymentDialog({
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader size="sm" className="mr-2" />
                   Salvando...
                 </>
               ) : (

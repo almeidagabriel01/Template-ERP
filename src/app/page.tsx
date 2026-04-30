@@ -8,6 +8,7 @@ import {
   LandingShowcase,
   LandingModules,
   LandingFeatures,
+  LandingNiches,
   LandingPricing,
   LandingCTA,
   LandingFooter,
@@ -18,6 +19,7 @@ import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 export default function LandingPage() {
   const {
     currentUser,
+    isAuthLoading,
     billingInterval,
     setBillingInterval,
     plans,
@@ -38,13 +40,14 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen overflow-x-clip bg-white text-black selection:bg-black selection:text-white dark:bg-neutral-950 dark:text-neutral-100 dark:selection:bg-white dark:selection:text-black">
-      <LandingNavbar currentUser={currentUser} onSignOut={handleSignOut} />
+      <LandingNavbar currentUser={currentUser} isAuthLoading={isAuthLoading} onSignOut={handleSignOut} />
 
       <main>
         <LandingHeroFrames />
         <LandingShowcase />
         <LandingModules />
         <LandingFeatures />
+        <LandingNiches />
 
         <div className="mx-auto h-px w-full max-w-7xl bg-gradient-to-r from-transparent via-black/15 to-transparent dark:via-white/15" />
 

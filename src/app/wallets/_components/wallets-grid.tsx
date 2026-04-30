@@ -1,9 +1,10 @@
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
-import { Loader2 } from "lucide-react";
+;
 import { Wallet } from "@/types";
 import { WalletCard } from "./wallet-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Loader } from "@/components/ui/loader";
 
 interface WalletsGridProps {
   filteredWallets: Wallet[];
@@ -59,7 +60,7 @@ export function WalletsGrid({
           ref={sentinelRef}
           className="flex items-center justify-center py-4"
         >
-          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          <Loader size="md" />
         </div>
       )}
     </div>

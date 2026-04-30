@@ -6,10 +6,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Clock, Loader2, Sparkles, Zap, Star } from "lucide-react";
+import { Check, Clock, Sparkles, Zap, Star } from "lucide-react";
 import { UserPlan, BillingInterval } from "@/types";
 import { formatPrice } from "@/utils/format";
 import { cn } from "@/lib/utils";
+import { Loader } from "@/components/ui/loader";
 
 const ENTERPRISE_CONTACT_EMAIL = "gestao@proops.com.br";
 
@@ -313,7 +314,7 @@ export function PlanCard({
                 >
                   {processingTier === plan.tier ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader size="sm" className="mr-2" />
                       Processando...
                     </>
                   ) : isEnterprise ? (

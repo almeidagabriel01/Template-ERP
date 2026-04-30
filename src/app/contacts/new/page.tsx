@@ -23,16 +23,23 @@ import {
   StepNavigation,
 } from "@/components/ui/step-wizard";
 import { FormStepCard } from "@/components/ui/form-step-card";
-import {
-  User,
-  Mail,
-  MapPin,
-  FileText,
-  Loader2,
-  CheckCircle,
-  Users,
-  Building2,
-} from "lucide-react";
+import { User, Mail, MapPin, FileText, CheckCircle, Users, Building2, CreditCard } from "lucide-react";
+import { EntityLoadingState } from "@/components/shared/entity-loading-state";
+
+function formatDocumento(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 14);
+  if (digits.length <= 11) {
+    return digits
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  }
+  return digits
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1/$2")
+    .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+}
 
 const customerSteps = [
   {
@@ -86,6 +93,7 @@ export default function NewCustomerPage() {
     phone: "",
     address: "",
     notes: "",
+    document: "",
     types: ["cliente"] as ("cliente" | "fornecedor")[],
   });
 
@@ -97,6 +105,14 @@ export default function NewCustomerPage() {
     // Clear error when user starts typing (exclude types since it's not in schema)
     if (name !== "types" && errors[name as keyof typeof errors]) {
       clearFieldError(name as Exclude<keyof typeof formData, "types">);
+    }
+  };
+
+  const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatDocumento(e.target.value);
+    setFormData((prev) => ({ ...prev, document: formatted }));
+    if (errors.document) {
+      clearFieldError("document");
     }
   };
 
@@ -156,6 +172,7 @@ export default function NewCustomerPage() {
         phone: formData.phone || undefined,
         address: formData.address || undefined,
         notes: formData.notes || undefined,
+        document: formData.document ? formData.document.replace(/\D/g, "") : undefined,
         types: formData.types,
         source: "manual",
         targetTenantId: tenant?.id, // Ensure correct tenant for super admin
@@ -171,14 +188,7 @@ export default function NewCustomerPage() {
 
   // Show loading while checking permissions OR while redirecting (no permission)
   if (permLoading || !canCreate) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Carregando...</p>
-        </div>
-      </div>
-    );
+    return <EntityLoadingState message="Carregando cliente..." />;
   }
 
   return (
@@ -361,6 +371,24 @@ export default function NewCustomerPage() {
                 />
               </FormItem>
             </FormGroup>
+
+            <FormItem
+              label="CPF ou CNPJ"
+              htmlFor="document"
+              hint="Necessário para gerar boleto bancário. Pode ser preenchido depois."
+              error={errors.document}
+            >
+              <Input
+                id="document"
+                name="document"
+                value={formData.document}
+                onChange={handleDocumentChange}
+                onBlur={(e) => validateField("document", e.target.value, formData)}
+                placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                icon={<CreditCard className="w-4 h-4" />}
+                className={errors.document ? "border-destructive" : ""}
+              />
+            </FormItem>
           </div>
           <StepNavigation onBeforeNext={validateStep1} />
         </FormStepCard>
@@ -446,6 +474,12 @@ export default function NewCustomerPage() {
                     {formData.address || "—"}
                   </p>
                 </div>
+                {formData.document && (
+                  <div>
+                    <span className="text-muted-foreground">CPF/CNPJ:</span>
+                    <p className="font-medium">{formData.document}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

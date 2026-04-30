@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Loader } from "@/components/ui/loader";
 import { AlertTriangle, Save, Settings } from "lucide-react";
 
 interface SaveConfirmationModalProps {
@@ -114,7 +115,7 @@ export function SaveConfirmationModal({
           >
             {isLoading ? (
               <>
-                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                <Loader size="sm" variant="button" />
                 Salvando...
               </>
             ) : (

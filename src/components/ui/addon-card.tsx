@@ -3,20 +3,11 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AddonDefinition } from "@/types";
-import {
-  DollarSign,
-  FileEdit,
-  Layout,
-  Palette,
-  Users,
-  Check,
-  Crown,
-  Loader2,
-  Calendar,
-} from "lucide-react";
+import { DollarSign, FileEdit, Layout, Palette, Users, Check, Crown, Calendar } from "lucide-react";
 import { useThemePrimaryColor } from "@/hooks/useThemePrimaryColor";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/utils/format";
+import { Loader } from "@/components/ui/loader";
 
 interface AddonCardProps {
   addon: AddonDefinition;
@@ -173,7 +164,7 @@ export function AddonCard({
             style={{ backgroundColor: primaryColor }}
           >
             {isLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader size="sm" />
             ) : (
               <>
                 <Crown className="w-4 h-4" />

@@ -5,17 +5,7 @@ import { Ambiente } from "@/types/automation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  Pencil,
-  Trash2,
-  Home,
-  Plus,
-  Loader2,
-  Check,
-  X,
-  LayoutGrid,
-  Package,
-} from "lucide-react";
+import { Pencil, Trash2, Home, Plus, Check, X, LayoutGrid, Package } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { AmbienteService } from "@/services/ambiente-service";
 import { useTenant } from "@/providers/tenant-provider";
@@ -31,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { motion, AnimatePresence } from "motion/react";
 import { AmbienteProductsDialog } from "@/components/features/automation/ambiente-products-dialog";
+import { Loader } from "@/components/ui/loader";
 
 interface AmbienteListProps {
   ambientes: Ambiente[];
@@ -308,7 +299,7 @@ export function AmbienteList({
               disabled={isDeleting}
             >
               {isDeleting ? (
-                <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                <Loader size="sm" className="mr-2" />
               ) : (
                 "Excluir"
               )}

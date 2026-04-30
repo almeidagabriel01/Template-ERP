@@ -4,19 +4,10 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  FileText,
-  Users,
-  Package,
-  UserPlus,
-  HardDrive,
-  Sparkles,
-  ArrowRight,
-  Loader2,
-  Infinity,
-} from "lucide-react";
+import { FileText, Users, Package, UserPlus, HardDrive, Sparkles, ArrowRight, Infinity } from "lucide-react";
 import { usePlanUsage, UsePlanUsageReturn } from "@/hooks/usePlanUsage";
 import { cn } from "@/lib/utils";
+import { Loader } from "@/components/ui/loader";
 
 interface PlanUsageCardProps {
   variant?: "compact" | "detailed" | "inline" | "profile";
@@ -160,7 +151,7 @@ export function PlanUsageCard({
     return (
       <Card className={cn("", className)}>
         <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          <Loader size="md" />
         </CardContent>
       </Card>
     );

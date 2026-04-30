@@ -5,7 +5,7 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+;
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { Loader } from "@/components/ui/loader";
 
 // ============================================
 // COLOR PALETTE
@@ -230,7 +231,7 @@ export function KanbanStatusDialog({
               Cancelar
             </Button>
             <Button type="submit" disabled={!canSubmit}>
-              {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {isSaving && <Loader size="sm" className="mr-2" />}
               {isEditing ? "Salvar" : "Criar"}
             </Button>
           </div>

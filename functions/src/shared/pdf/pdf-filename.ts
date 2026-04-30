@@ -5,7 +5,6 @@ export interface BuildPdfFilenameOptions {
 
 export function sanitizePdfFilename(value: string): string {
   return value
-    .replace(/[\\u0000-\\u001f\\u007f]/g, "")
     .replace(/[<>:"/\\|?*;]/g, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -29,14 +28,10 @@ export function buildPdfFilename(
 }
 
 export function buildProposalPdfFilename(title?: string): string {
-  const filename = buildPdfFilename(title, {
+  return buildPdfFilename(title, {
     prefix: "Proposta",
     fallbackName: "Proposta.pdf",
   });
-
-  return /^roposta\b/i.test(filename) && !/^proposta\b/i.test(filename)
-    ? `P${filename}`
-    : filename;
 }
 
 export function buildReceiptPdfFilename(title?: string): string {

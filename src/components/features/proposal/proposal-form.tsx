@@ -20,7 +20,8 @@ import { PdfGenerator } from "@/components/features/proposal/pdf-generator";
 import { ProposalSection, ProposalStatus } from "@/types"; // Keep types that are only in MockDB
 import { ProposalService, Proposal } from "@/services/proposal-service"; // Use Service for logic
 import { useTenant } from "@/providers/tenant-provider";
-import { Save, ArrowLeft, Eye, Edit, Loader2 } from "lucide-react";
+import { Save, ArrowLeft, Eye, Edit } from "lucide-react";
+import { Loader } from "@/components/ui/loader";
 
 interface ProposalFormProps {
   proposalId?: string;
@@ -123,7 +124,7 @@ export function ProposalForm({ proposalId }: ProposalFormProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        <Loader size="lg" />
       </div>
     );
   }
@@ -177,7 +178,7 @@ export function ProposalForm({ proposalId }: ProposalFormProps) {
           <Button onClick={handleSubmit} disabled={isSaving} className="gap-2">
             {isSaving ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader size="sm" />
                 Salvando...
               </>
             ) : (

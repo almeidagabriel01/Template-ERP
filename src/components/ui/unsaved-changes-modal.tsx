@@ -10,7 +10,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { Loader } from "@/components/ui/loader";
 
 interface UnsavedChangesModalProps {
   isOpen: boolean;
@@ -62,7 +63,7 @@ export function UnsavedChangesModal({
           <Button onClick={handleSave} disabled={isSaving}>
             {isSaving ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader size="sm" className="mr-2" />
                 Salvando...
               </>
             ) : (

@@ -33,6 +33,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+!.env.local.example
 
 # vercel
 .vercel
@@ -94,3 +95,6 @@ report_html.html
 # env files (can opt-in for committing if needed)
 !.env.test
 
+
+# Git worktrees
+.worktrees/

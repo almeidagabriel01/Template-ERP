@@ -15,10 +15,11 @@ import {
 } from "@/components/ui/step-wizard";
 import { ALLOWED_TYPES } from "@/services/storage-service";
 import { NICHE_LABELS, TenantNiche } from "@/types";
-import { ArrowLeft, Building2, Loader2, Palette, Upload } from "lucide-react";
+import { ArrowLeft, Building2, Palette, Upload } from "lucide-react";
 import { AuthLayout } from "@/app/login/_components/auth-layout";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import { Loader } from "@/components/ui/loader";
 
 function GoogleSetupContent() {
   const router = useRouter();
@@ -280,7 +281,7 @@ function GoogleSetupContent() {
   if (isCheckingAuth) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <Loader size="lg" />
       </div>
     );
   }
@@ -472,7 +473,7 @@ export default function GoogleSetupPage() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-background flex items-center justify-center">
-          <Loader2 className="w-10 h-10 animate-spin text-primary" />
+          <Loader size="lg" />
         </div>
       }
     >

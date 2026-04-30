@@ -170,6 +170,32 @@ body {
   }
 }
 
+@keyframes luma-spin {
+  0%    { inset: 0 var(--ls-off) var(--ls-off) 0; }
+  12.5% { inset: 0 var(--ls-off) 0 0; }
+  25%   { inset: var(--ls-off) var(--ls-off) 0 0; }
+  37.5% { inset: var(--ls-off) 0 0 0; }
+  50%   { inset: var(--ls-off) 0 0 var(--ls-off); }
+  62.5% { inset: 0 0 0 var(--ls-off); }
+  75%   { inset: 0 0 var(--ls-off) var(--ls-off); }
+  87.5% { inset: 0 0 var(--ls-off) 0; }
+  100%  { inset: 0 var(--ls-off) var(--ls-off) 0; }
+}
+
+.luma-spin-seg {
+  position: absolute;
+  border-radius: 50px;
+  box-shadow: inset 0 0 0 var(--ls-border) var(--ls-color, #1f2937);
+  animation: luma-spin 2.5s infinite;
+  will-change: inset;
+}
+.dark .luma-spin-seg {
+  box-shadow: inset 0 0 0 var(--ls-border) var(--ls-color, #f3f4f6);
+}
+.luma-spin-seg-delay {
+  animation-delay: -1.25s;
+}
+
 /* Animation Utilities */
 .animate-gradient-text {
   animation: gradient-text 3s ease infinite;
@@ -250,6 +276,95 @@ body {
 
 .scroll-stack-end {
   pointer-events: none;
+}
+
+/* Card shine on hover */
+@keyframes card-shine {
+  0% { transform: translateX(-120%) skewX(-20deg); }
+  100% { transform: translateX(220%) skewX(-20deg); }
+}
+.card-shine-on-hover {
+  position: relative;
+  overflow: hidden;
+}
+.card-shine-on-hover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 0%, rgba(0,0,0,0.06) 50%, transparent 100%);
+  transform: translateX(-120%) skewX(-20deg);
+  pointer-events: none;
+  z-index: 1;
+}
+.card-shine-on-hover:hover::before {
+  animation: card-shine 0.9s ease-out forwards;
+}
+.dark .card-shine-on-hover::before {
+  background: linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%);
+}
+
+/* Button sweep on hover */
+.btn-sweep {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.btn-sweep::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%);
+  transform: translateX(-110%);
+  transition: transform 0.55s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+.btn-sweep:hover::before {
+  transform: translateX(110%);
+}
+.dark .btn-sweep::before {
+  background: linear-gradient(120deg, transparent 0%, rgba(0,0,0,0.18) 50%, transparent 100%);
+}
+
+/* Border beam for idle card animation */
+@property --card-beam-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes card-beam-spin {
+  to { --card-beam-angle: 360deg; }
+}
+
+.card-border-beam {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--card-beam-angle) at 50% 50%,
+    transparent 0deg,
+    rgba(0, 0, 0, 0.55) 60deg,
+    transparent 120deg,
+    transparent 360deg
+  );
+  mask: linear-gradient(white 0 0) content-box, linear-gradient(white 0 0);
+  -webkit-mask: linear-gradient(white 0 0) content-box, linear-gradient(white 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: destination-out;
+  animation: card-beam-spin 5s linear infinite;
+}
+
+.dark .card-border-beam {
+  background: conic-gradient(
+    from var(--card-beam-angle) at 50% 50%,
+    transparent 0deg,
+    rgba(255, 255, 255, 0.5) 60deg,
+    transparent 120deg,
+    transparent 360deg
+  );
 }
 
 @theme inline {
