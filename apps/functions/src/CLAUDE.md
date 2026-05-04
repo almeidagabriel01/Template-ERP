@@ -2,7 +2,7 @@
 
 ## Visao geral
 
-`functions/src/index.ts` e o entry point que exporta todas as Cloud Functions V2:
+`apps/functions/src/index.ts` e o entry point que exporta todas as Cloud Functions V2:
 
 | Exportacao | Tipo | Descricao |
 |------------|------|-----------|
@@ -59,7 +59,7 @@ Cada cron pode sobrescrever `memory`, `timeoutSeconds` e `schedule` individualme
 
 ### 1. `checkDueDates` — Verificacao de vencimentos
 
-**Arquivo:** `functions/src/checkDueDates.ts`
+**Arquivo:** `apps/functions/src/checkDueDates.ts`
 **Schedule:** `every 24 hours`
 **Timeout:** 300 segundos
 **Regiao:** `southamerica-east1`
@@ -111,7 +111,7 @@ Isso garante que a mesma transacao nao gera multiplas notificacoes a cada execuc
 
 ### 2. `checkStripeSubscriptions` — Sync diario de assinaturas Stripe
 
-**Arquivo:** `functions/src/checkStripeSubscriptions.ts`
+**Arquivo:** `apps/functions/src/checkStripeSubscriptions.ts`
 **Schedule:** `every 24 hours`
 **Timeout:** 540 segundos (9 minutos)
 **Memory:** 512MiB
@@ -139,7 +139,7 @@ Isso garante que a mesma transacao nao gera multiplas notificacoes a cada execuc
 
 ### 3. `checkManualSubscriptions` — Assinaturas manuais
 
-**Arquivo:** `functions/src/checkManualSubscriptions.ts`
+**Arquivo:** `apps/functions/src/checkManualSubscriptions.ts`
 **Schedule:** `every 24 hours`
 **Timeout:** 300 segundos
 
@@ -164,7 +164,7 @@ past_due ─── mais de 7 dias expirado ──►  canceled (planId: "free")
 
 ### 4. `reportWhatsappOverage` — Billing de overage WhatsApp
 
-**Arquivo:** `functions/src/reportWhatsappOverage.ts`
+**Arquivo:** `apps/functions/src/reportWhatsappOverage.ts`
 **Schedule:** `0 3 1 * *` — Dia 1 de cada mes as 03:00 BRT
 **Timeout:** 300 segundos
 **Memory:** 256MiB
@@ -210,7 +210,7 @@ O mes pode ser passado via `body.month` ou `query.month`. Formato: `YYYY-MM`.
 
 ### 5. `cleanupStorageAndSharedLinks`
 
-**Arquivo:** `functions/src/cleanupStorageAndSharedLinks.ts`
+**Arquivo:** `apps/functions/src/cleanupStorageAndSharedLinks.ts`
 **Schedule:** Periodica (ver arquivo)
 
 Remove:
@@ -221,7 +221,7 @@ Remove:
 
 ## `stripeWebhook` — Webhook Stripe
 
-**Arquivo:** `functions/src/stripe/stripeWebhook.ts`
+**Arquivo:** `apps/functions/src/stripe/stripeWebhook.ts`
 
 Funcao HTTP separada (nao faz parte do monolito `api`):
 
@@ -285,7 +285,7 @@ Funcao HTTP separada (nao faz parte do monolito `api`):
 
 ```bash
 # Compilar TypeScript
-cd functions && npm run build
+cd apps/functions && npm run build
 
 # Deploy para dev
 npm run deploy:dev    # na raiz do projeto

@@ -272,14 +272,21 @@ Firebase projects: `erp-softcode` (dev), `erp-softcode-prod` (prod). Configured 
 │           └── shared/           # Shared types between controllers
 ├── tests/
 │   ├── e2e/              # Playwright E2E tests
-│   └── firestore-rules/  # Firestore security rules tests (Jest)
+│   │   └── security/     # ZAP security checks + .zap-rules.tsv
+│   ├── firestore-rules/  # Firestore security rules tests (Jest)
+│   ├── playwright.config.ts
+│   ├── playwright.perf.config.ts
+│   ├── jest.config.js
+│   └── tsconfig.rules.json
+├── firebase/
+│   ├── firestore.rules
+│   ├── firestore.indexes.json
+│   ├── storage.rules
+│   └── cors.json
 ├── .claude/              # Claude Code configuration
 │   ├── agents/           # frontend.md, backend.md, full-stack.md
 │   ├── commands/         # /deploy-check, /new-feature, /debug, /document-api
 │   └── skills/           # new-component, new-api-route, new-firebase-query, review-security
-├── firestore.rules       # Firestore security rules
-├── firestore.indexes.json
-├── storage.rules
 └── package.json          # Monorepo root coordinator (workspaces: [apps/web])
 ```
 

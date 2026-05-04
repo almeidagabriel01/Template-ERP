@@ -1,4 +1,4 @@
-# CLAUDE.md — functions/ (Firebase Cloud Functions)
+# CLAUDE.md — apps/functions/ (Firebase Cloud Functions)
 
 ## Contexto
 Backend em produção com clientes ativos. Express monolith registrado como uma única Cloud Function V2
@@ -8,12 +8,12 @@ rodando no Cloud Run em `southamerica-east1`. Mudanças aqui afetam TODOS os ten
 - Node.js 22
 - Firebase Functions V2
 - Express (monolith)
-- TypeScript → compila para CommonJS em `functions/lib/`
+- TypeScript → compila para CommonJS em `apps/functions/lib/`
 - Firebase Admin SDK
 
 ## Estrutura
 ```
-functions/src/
+apps/functions/src/
 ├── index.ts              # Entry point — registra a Cloud Function principal
 ├── init.ts               # Inicialização do Firebase Admin
 ├── api/
@@ -41,8 +41,8 @@ functions/src/
 ## Comandos
 ```bash
 # Build
-cd functions && npm run build        # Compila TypeScript → functions/lib/
-cd functions && npm run build:watch  # Watch mode para dev
+cd apps/functions && npm run build        # Compila TypeScript → apps/functions/lib/
+cd apps/functions && npm run build:watch  # Watch mode para dev
 
 # Dev local
 npm run dev:backend  # (na raiz) build:watch + emuladores Firebase
@@ -52,7 +52,7 @@ npm run deploy:dev   # (na raiz) → erp-softcode
 npm run deploy:prod  # (na raiz) → erp-softcode-prod
 
 # Lint
-cd functions && npm run lint
+cd apps/functions && npm run lint
 ```
 
 ## Regras críticas
@@ -79,9 +79,9 @@ cd functions && npm run lint
 - Mudanças de schema: plano de migração antes de qualquer deploy
 
 ### Secrets
-- Ficam APENAS em `functions/.env.erp-softcode` e `functions/.env.erp-softcode-prod`
+- Ficam APENAS em `apps/functions/.env.erp-softcode` e `apps/functions/.env.erp-softcode-prod`
 - Nunca commitar — arquivos ignorados pelo `.gitignore`
-- Usar `functions/.env.example` como referência (sem valores reais)
+- Usar `apps/functions/.env.example` como referência (sem valores reais)
 
 ### Logging
 - **Em código novo**: usar `logger` de `../lib/logger` ou `../../lib/logger`
@@ -153,7 +153,7 @@ Quando a transação muda de carteira, o campo correspondente na proposta é atu
 
 ## Checklist antes de deploy para prod
 - [ ] Testado localmente com `npm run dev:backend`
-- [ ] `cd functions && npm run build` sem erros
+- [ ] `cd apps/functions && npm run build` sem erros
 - [ ] Se mudou billing/Stripe: revisão manual feita
 - [ ] Se mudou schema Firestore: migração planejada e testada
 - [ ] Se mudou Security Rules: testadas com Firebase Emulator
