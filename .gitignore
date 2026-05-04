@@ -102,6 +102,5 @@ report_html.html
 # Git worktrees
 .worktrees/
 
-# Claude Code tooling artifacts
-skills-lock.json
+# Claude Code tooling artifacts (cache gerado, não pertence ao repo)
 .agents/
