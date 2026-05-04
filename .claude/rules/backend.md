@@ -36,6 +36,19 @@
 - Cron jobs must be idempotent — use a unique identifier/key to prevent duplicate effects
 - Manual debug endpoint for crons requires `x-cron-secret` header
 
+## AI Module (`apps/functions/src/ai/`)
+- Providers: Google Gemini (`@google/genai`) and Groq
+- Rate limiting: `rate-limiter.ts` (per-user) and `field-gen-rate-limiter.ts` (for field generation)
+- Entry points: `chat.route.ts` (Lia chat), `field-gen.route.ts` (AI-assisted form filling)
+- Never skip rate limiting on AI endpoints — costs are per-token
+- AI module has its own route registration separate from main `api/routes/`
+
+## Payment Webhooks
+- **Stripe**: `/stripe/stripeWebhook` — signature verified, manages subscriptions and plan enforcement
+- **MercadoPago**: `/webhooks/mercadopago` — `mercadopago.controller.ts`, `mercadopago.service.ts`
+- **WhatsApp**: `/webhooks/whatsapp` — verify token from `WHATSAPP_VERIFY_TOKEN`
+- All webhooks: validate signature/token before processing, reject with 400 on failure
+
 ## Build & Deploy
 - Always run `npm run build` in `apps/functions/` before deploying — TypeScript compiles to CommonJS in `apps/functions/lib/`
 - Functions run on Node.js 22 in Cloud Run (`southamerica-east1`)

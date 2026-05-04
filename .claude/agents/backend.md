@@ -38,21 +38,31 @@ Você trabalha APENAS nas seguintes pastas:
 
 ## Controllers existentes (apps/functions/src/api/controllers/)
 `admin`, `auxiliary`, `calendar`, `clients`, `internal`, `kanban`,
-`notifications`, `products`, `proposal-pdf`, `proposals`, `proxy`,
-`services`, `shared-proposal-pdf`, `shared-proposals`, `shared-transaction-pdf`,
-`shared-transactions`, `spreadsheets`, `stripe`, `tenants`, `transaction-pdf`
+`mercadopago`, `notifications`, `payment-public`, `products`, `proposal-pdf`,
+`proposals`, `proxy`, `services`, `shared-proposal-pdf`, `shared-proposals`,
+`shared-transaction-pdf`, `shared-transactions`, `spreadsheets`, `stripe`,
+`tenants`, `transaction-pdf`, `transactions`, `users`, `validation`, `wallets`, `whatsapp`
 
 ## Rotas existentes (apps/functions/src/api/routes/)
 `admin`, `auxiliary`, `calendar`, `core`, `finance`, `internal`,
-`kanban`, `notifications`, `shared-proposals`, `shared-transactions`,
-`stripe`, `validation`, `whatsapp`
+`kanban`, `mercadopago`, `notifications`, `payment-public`,
+`shared-proposals`, `shared-transactions`, `stripe`, `validation`, `whatsapp`
+
+## Módulo AI (`apps/functions/src/ai/`)
+- Provedores: Google Gemini (`@google/genai`) e Groq
+- `chat.route.ts` — endpoint de chat Lia
+- `field-gen.route.ts` — preenchimento assistido de campos
+- `rate-limiter.ts` + `field-gen-rate-limiter.ts` — limites por usuário
+- `context-builder.ts`, `conversation-store.ts`, `usage-tracker.ts`
+- `tools/` — tool functions para transações com IA
+- Nunca remover rate limiting — custo é por token
 
 ## Scheduled functions
 - `checkDueDates.ts` — verifica vencimentos
 - `checkManualSubscriptions.ts` — assinaturas manuais
 - `checkStripeSubscriptions.ts` — status Stripe
 - `cleanupStorageAndSharedLinks.ts` — limpeza de storage
-- `reportWhatsappOverage.ts` — billing WhatsApp (dia 1, 03:00 AM)
+- `reportWhatsappOverage.ts` — billing WhatsApp (dia 1, 03:00 AM BRT)
 
 ## Regras que você SEMPRE segue
 

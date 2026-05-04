@@ -1,5 +1,13 @@
 # Deployment Rules
 
+## Commit & PR Workflow
+
+- **Commit after each task** — one logical commit per completed task, with a clear message.
+- **Never run `git push`** — the user pushes manually after reviewing.
+- **Never merge to `main`** — only the user performs merges to `main`.
+- **PRs target `develop` only** — never create a PR targeting `main`. Only the user creates PRs to `main`.
+- Commit messages: imperative, lowercase, no period. No `Co-Authored-By`.
+
 ## Pre-Deploy Checklist
 Before deploying to any environment:
 - [ ] `cd apps/functions && npm run build` succeeds (TypeScript compiles to CommonJS in `apps/functions/lib/`)
