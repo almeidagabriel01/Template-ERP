@@ -205,12 +205,6 @@ Os custom claims são gerenciados pelo backend e carregados no ID token:
 
 O backend usa os custom claims para autorização rápida sem precisar buscar o Firestore. Para casos onde os claims estão desatualizados (stale claims), o middleware do backend tem um fallback que busca o documento do usuário diretamente.
 
-Para sincronizar claims após mudanças de role ou permissão:
-```bash
-npm run security:claims:backfill   # reprocessa todos os usuários
-npm run security:claims:validate   # valida consistência
-```
-
 ---
 
 ## Componentes de `src/components/features/team/`
