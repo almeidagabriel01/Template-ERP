@@ -19,7 +19,7 @@ tools: Read, Write, Edit, Bash
 - Stripe: webhooks, subscriptions, overage billing
 - WhatsApp Business API: webhooks, billing cron
 - PDF Generation: Playwright/Chromium headless
-- TypeScript CommonJS (functions compilam para `functions/lib/`)
+- TypeScript CommonJS (functions compilam para `apps/functions/lib/`)
 
 ## Seu escopo neste projeto
 Você trabalha APENAS nas seguintes pastas:
@@ -27,22 +27,22 @@ Você trabalha APENAS nas seguintes pastas:
 - `src/lib/` — utilitários, Firebase client, helpers
 - `src/services/` — chamadas de API client-side (→ `/api/backend/*`)
 - `src/types/` — tipos TypeScript globais
-- `functions/src/` — Cloud Functions (Express backend)
+- `apps/functions/src/` — Cloud Functions (Express backend)
 - `firestore.rules`, `firestore.indexes.json`, `storage.rules`
 
 ## Arquitetura backend (crítica)
 - **Frontend** chama APENAS `/api/backend/*` — nunca URLs de Cloud Functions diretamente
 - **`src/app/api/backend/`** faz proxy para as Cloud Functions
 - **Cloud Functions** é o Express monolith real com toda a lógica sensível
-- **Secrets** ficam APENAS em `functions/.env.*` — nunca no frontend
+- **Secrets** ficam APENAS em `apps/functions/.env.*` — nunca no frontend
 
-## Controllers existentes (functions/src/api/controllers/)
+## Controllers existentes (apps/functions/src/api/controllers/)
 `admin`, `auxiliary`, `calendar`, `clients`, `internal`, `kanban`,
 `notifications`, `products`, `proposal-pdf`, `proposals`, `proxy`,
 `services`, `shared-proposal-pdf`, `shared-proposals`, `shared-transaction-pdf`,
 `shared-transactions`, `spreadsheets`, `stripe`, `tenants`, `transaction-pdf`
 
-## Rotas existentes (functions/src/api/routes/)
+## Rotas existentes (apps/functions/src/api/routes/)
 `admin`, `auxiliary`, `calendar`, `core`, `finance`, `internal`,
 `kanban`, `notifications`, `shared-proposals`, `shared-transactions`,
 `stripe`, `validation`, `whatsapp`
@@ -85,5 +85,5 @@ Você trabalha APENAS nas seguintes pastas:
 ```bash
 npm run deploy:dev   # → erp-softcode (dev)
 npm run deploy:prod  # → erp-softcode-prod (produção)
-# Sempre compilar antes: cd functions && npm run build
+# Sempre compilar antes: cd apps/functions && npm run build
 ```

@@ -23,9 +23,9 @@ npm run lint          # ESLint (via workspace script)
 
 ### Backend (Firebase Functions)
 ```bash
-npm run dev:backend           # Concurrently: functions watch + Firebase emulators
-cd functions && npm run build # Compile TypeScript to functions/lib/
-cd functions && npm run lint  # ESLint for functions
+npm run dev:backend                    # Concurrently: functions watch + Firebase emulators
+cd apps/functions && npm run build     # Compile TypeScript to apps/functions/lib/
+cd apps/functions && npm run lint      # ESLint for functions
 ```
 
 ### Deploy
@@ -52,9 +52,9 @@ npm run security:scan                    # Audit both frontend and functions
 |----------|---------|-----------|
 | **Push Checks** | `.github/workflows/push-checks.yml` | Todo `push` em qualquer branch exceto `main` |
 | **Test Suite** | `.github/workflows/test-suite.yml` | Todo `pull_request` para `main` ou `develop` |
-| **Deploy Staging** | `.github/workflows/deploy-functions.yml` | Push em `develop` com mudanças em `functions/`, `firestore.rules` ou `firebase.json` |
+| **Deploy Staging** | `.github/workflows/deploy-functions.yml` | Push em `develop` com mudanças em `apps/functions/`, `firestore.rules` ou `firebase.json` |
 | **Deploy Production** | `.github/workflows/deploy-production.yml` | Todo push em `main` (qualquer arquivo) |
-| **Dependency Review** | `.github/workflows/dependency-review.yml` | PR com mudanças em `package.json` ou `functions/package.json` |
+| **Dependency Review** | `.github/workflows/dependency-review.yml` | PR com mudanças em `package.json` ou `apps/functions/package.json` |
 | **Stale** | `.github/workflows/stale.yml` | Toda segunda às 9h UTC (limpeza automática) |
 
 ### Todo push roda a suite completa
@@ -75,7 +75,7 @@ Configure **apenas `all-checks-passed`** (test-suite.yml) como required status c
 
 ### Deploy automático de Firebase Functions
 
-`deploy-functions.yml` faz deploy automático quando há push com mudanças em `functions/`, `firestore.rules` ou `firebase.json`:
+`deploy-functions.yml` faz deploy automático quando há push com mudanças em `apps/functions/`, `firestore.rules` ou `firebase.json`:
 - Push para `develop` → deploy no projeto `dev` (environment: **staging**)
 - Push para `main` → deploy no projeto `prod` (environment: **production**)
 
@@ -86,7 +86,7 @@ O frontend (Next.js) é deployado automaticamente pelo Vercel — não precisa d
 Só faça deploy manual após `all-checks-passed` estar verde no PR. Fluxo:
 1. PR abre → `test-suite.yml` roda
 2. `all-checks-passed` fica verde → revisar e aprovar PR
-3. Merge → deploy automático via `deploy-functions.yml` (se `functions/` mudou)
+3. Merge → deploy automático via `deploy-functions.yml` (se `apps/functions/` mudou)
 4. Se precisar forçar deploy manual: `npm run deploy:dev` → validar → `npm run deploy:prod`
 
 ### GitHub Secrets necessários
@@ -117,7 +117,7 @@ Só faça deploy manual após `all-checks-passed` estar verde no PR. Fluxo:
 | Job | Falhou? | O que fazer |
 |-----|---------|-------------|
 | `type-check` | Erro de tipagem no frontend ou functions | Corrigir `tsc --noEmit` localmente |
-| `lint` | ESLint com warnings ou erros | `npm run lint` e `cd functions && npm run lint` |
+| `lint` | ESLint com warnings ou erros | `npm run lint` e `cd apps/functions && npm run lint` |
 | `security-audit` | Vulnerabilidade crítica em dependência | `npm audit fix` ou atualizar pacote |
 | `e2e-push` / `e2e` | Teste Playwright falhou | Baixar artefato `playwright-report-*` para ver o trace |
 | `firestore-rules-push` / `firestore-rules` | Regra de segurança quebrou | `npm run test:rules` localmente com emulador |
@@ -132,10 +132,10 @@ Só faça deploy manual após `all-checks-passed` estar verde no PR. Fluxo:
 npm run test:e2e && npm run test:performance && npm run test:rules
 
 # Verificações rápidas
-cd apps/web && npx tsc --noEmit         # Type check frontend
-cd functions && npx tsc --noEmit        # Type check functions
-npm run lint                            # ESLint frontend (via workspace)
-cd functions && npm run lint            # ESLint functions
+cd apps/web && npx tsc --noEmit              # Type check frontend
+cd apps/functions && npx tsc --noEmit        # Type check functions
+npm run lint                                 # ESLint frontend (via workspace)
+cd apps/functions && npm run lint            # ESLint functions
 npm audit --omit=dev --audit-level=critical  # Audit monorepo root
 ```
 
@@ -143,7 +143,7 @@ npm audit --omit=dev --audit-level=critical  # Audit monorepo root
 
 ### Split-Backend Pattern (Critical)
 - **Frontend** (`apps/web/src/`): Next.js App Router on Vercel. Only uses `NEXT_PUBLIC_*` env vars (public Firebase config). Communicates with backend exclusively through `/api/backend/*` proxy routes.
-- **Backend** (`functions/`): Firebase Cloud Functions V2 running Express on Cloud Run (`southamerica-east1`). Holds all sensitive secrets (`STRIPE_SECRET_KEY`, `WHATSAPP_APP_SECRET`, etc.) in `functions/.env`. Never expose these to the frontend.
+- **Backend** (`apps/functions/`): Firebase Cloud Functions V2 running Express on Cloud Run (`southamerica-east1`). Holds all sensitive secrets (`STRIPE_SECRET_KEY`, `WHATSAPP_APP_SECRET`, etc.) in `apps/functions/.env`. Never expose these to the frontend.
 
 ### Multi-Tenant Model
 - Every Firestore document has a `tenantId` field.
@@ -157,7 +157,7 @@ npm audit --omit=dev --audit-level=critical  # Audit monorepo root
 3. Backend Express middleware validates ID tokens + custom claims on every request
 4. Firestore rules provide a final enforcement layer
 
-### Backend API Structure (`functions/src/api/`)
+### Backend API Structure (`apps/functions/src/api/`)
 - **Single Express monolith** registered as one Cloud Function (`/api`)
 - `controllers/` — ~25 CRUD controllers
 - `routes/` — 13 route groups: `core`, `finance`, `stripe`, `admin`, `auxiliary`, `internal`, `notifications`, `whatsapp`, `kanban`, `calendar`, `validation`, `sharedProposals`, `sharedTransactions`
@@ -196,7 +196,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=
 NEXT_PUBLIC_USE_FIREBASE_EMULATORS=false
 ```
 
-**Backend** (`functions/.env.erp-softcode` ou `functions/.env.erp-softcode-prod`):
+**Backend** (`apps/functions/.env.erp-softcode` ou `apps/functions/.env.erp-softcode-prod`):
 ```
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
@@ -209,17 +209,17 @@ FIREBASE_CLIENT_EMAIL=
 SENTRY_DSN=          # Opcional — ativa error tracking no backend
 ```
 
-Use `.env.local.example` e `functions/.env.example` como referência completa de todas as variáveis.
+Use `.env.local.example` e `apps/functions/.env.example` como referência completa de todas as variáveis.
 
 Firebase projects: `erp-softcode` (dev), `erp-softcode-prod` (prod). Configured in `.firebaserc`.
 
 ## Important Constraints
 
-- Never commit real secrets. Use `.env.example` / `functions/.env.example` with placeholders only.
+- Never commit real secrets. Use `.env.example` / `apps/functions/.env.example` with placeholders only.
 - All financial and critical operations must be handled server-side in Cloud Functions, never in the Next.js frontend.
 - Frontend must only communicate with sensitive operations through the `/api/backend/*` proxy, never directly calling Cloud Functions URLs.
 - Firestore rules are DENY-by-default — all new collections need explicit rules.
-- Functions compile TypeScript to CommonJS in `functions/lib/`. Always run `npm run build` in `functions/` before deploying or running emulators.
+- Functions compile TypeScript to CommonJS in `apps/functions/lib/`. Always run `npm run build` in `apps/functions/` before deploying or running emulators.
 
 ## Stack Versions
 
@@ -261,15 +261,15 @@ Firebase projects: `erp-softcode` (dev), `erp-softcode-prod` (prod). Configured 
 │       ├── next.config.ts
 │       ├── tsconfig.json
 │       └── package.json          # proops-web workspace member
-├── functions/            # Firebase Cloud Functions V2 (Express monolith) — raiz por enquanto
-│   └── src/
-│       ├── api/
-│       │   ├── controllers/  # ~20 CRUD controllers
-│       │   ├── routes/       # 13 route groups
-│       │   ├── middleware/   # Auth verification, rate limiting
-│       │   └── services/     # PDF (Playwright), WhatsApp, notifications
-│       ├── lib/              # Admin helpers, auth context, billing helpers
-│       └── shared/           # Shared types between controllers
+│   └── functions/        # Firebase Cloud Functions V2 (Express monolith)
+│       └── src/
+│           ├── api/
+│           │   ├── controllers/  # ~20 CRUD controllers
+│           │   ├── routes/       # 13 route groups
+│           │   ├── middleware/   # Auth verification, rate limiting
+│           │   └── services/     # PDF (Playwright), WhatsApp, notifications
+│           ├── lib/              # Admin helpers, auth context, billing helpers
+│           └── shared/           # Shared types between controllers
 ├── e2e/                  # Playwright E2E tests (raiz por enquanto — PR 3)
 ├── tests/                # Firestore rules tests (raiz por enquanto — PR 3)
 ├── .claude/              # Claude Code configuration
@@ -285,7 +285,7 @@ Firebase projects: `erp-softcode` (dev), `erp-softcode-prod` (prod). Configured 
 ## Claude Code Agents
 
 - `@frontend` — Next.js components, UI, hooks, providers, routes (`apps/web/src/app/`, `apps/web/src/components/`, `apps/web/src/hooks/`, `apps/web/src/providers/`)
-- `@backend` — Cloud Functions, API routes, Firestore, Auth, Stripe, WhatsApp (`functions/src/`, `apps/web/src/app/api/`, `apps/web/src/services/`, `apps/web/src/lib/`, `apps/web/src/types/`)
+- `@backend` — Cloud Functions, API routes, Firestore, Auth, Stripe, WhatsApp (`apps/functions/src/`, `apps/web/src/app/api/`, `apps/web/src/services/`, `apps/web/src/lib/`, `apps/web/src/types/`)
 - `@full-stack` — Features that span both layers, cross-cutting refactors, bug investigation
 
 ## Claude Code Commands
@@ -313,9 +313,9 @@ Firebase projects: `erp-softcode` (dev), `erp-softcode-prod` (prod). Configured 
 - **`apps/web/src/app/global-error.tsx`** — error page de último recurso (substitui o root layout)
 
 ### Backend
-- **Sentry** (`@sentry/node`) — error tracking com contexto de tenant/user. Requer `SENTRY_DSN` em `functions/.env.*`. Global error handler em `functions/src/api/index.ts` reporta automaticamente.
-- **Structured Logger** (`functions/src/lib/logger.ts`) — emite JSON com campo `severity` reconhecido pelo GCP Cloud Logging. Use `logger.info/warn/error()` em vez de `console.log` em código novo.
-- **Security Observability** (`functions/src/lib/security-observability.ts`) — audit trail e métricas de segurança no Firestore (`security_audit_events`, `security_metrics`).
+- **Sentry** (`@sentry/node`) — error tracking com contexto de tenant/user. Requer `SENTRY_DSN` em `apps/functions/.env.*`. Global error handler em `apps/functions/src/api/index.ts` reporta automaticamente.
+- **Structured Logger** (`apps/functions/src/lib/logger.ts`) — emite JSON com campo `severity` reconhecido pelo GCP Cloud Logging. Use `logger.info/warn/error()` em vez de `console.log` em código novo.
+- **Security Observability** (`apps/functions/src/lib/security-observability.ts`) — audit trail e métricas de segurança no Firestore (`security_audit_events`, `security_metrics`).
 
 ---
 
@@ -324,4 +324,4 @@ Firebase projects: `erp-softcode` (dev), `erp-softcode-prod` (prod). Configured 
 Documentação detalhada está nos CLAUDE.md específicos de cada camada:
 
 - **Frontend** (hooks, componentes, migração ID vs NAME, guards de UI): `apps/web/src/app/transactions/CLAUDE.md`
-- **Backend** (transaction.service, wallets.controller, finance-helpers, lógica de saldo): `functions/CLAUDE.md` → seção "Módulo Financeiro"
+- **Backend** (transaction.service, wallets.controller, finance-helpers, lógica de saldo): `apps/functions/CLAUDE.md` → seção "Módulo Financeiro"

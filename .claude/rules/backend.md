@@ -1,7 +1,7 @@
 # Backend Rules
 
 ## Controller Structure
-- One controller file per domain/resource in `functions/src/api/controllers/`
+- One controller file per domain/resource in `apps/functions/src/api/controllers/`
 - Always validate input first, then call business logic — never skip validation
 - Map error keywords to consistent HTTP status codes:
   - `FORBIDDEN_*` / `AUTH_CLAIMS_MISSING_*` → 403
@@ -28,15 +28,15 @@
 - New code: use `logger` from `../lib/logger` (emits JSON with `severity` for GCP Cloud Logging)
 - Existing code using `console.log` is acceptable — don't migrate unless touching the code anyway
 - Never log: tokens, passwords, private keys, CPF, full emails, phone numbers
-- Errors are auto-reported to Sentry by the global error handler in `functions/src/api/index.ts`
+- Errors are auto-reported to Sentry by the global error handler in `apps/functions/src/api/index.ts`
 
 ## Scheduled Functions (Crons)
-- All cron exports live in `functions/src/index.ts`
+- All cron exports live in `apps/functions/src/index.ts`
 - Test cron logic locally with Firebase Emulator before deploying
 - Cron jobs must be idempotent — use a unique identifier/key to prevent duplicate effects
 - Manual debug endpoint for crons requires `x-cron-secret` header
 
 ## Build & Deploy
-- Always run `npm run build` in `functions/` before deploying — TypeScript compiles to CommonJS in `functions/lib/`
+- Always run `npm run build` in `apps/functions/` before deploying — TypeScript compiles to CommonJS in `apps/functions/lib/`
 - Functions run on Node.js 22 in Cloud Run (`southamerica-east1`)
-- Secrets stay in `functions/.env.erp-softcode` or `functions/.env.erp-softcode-prod` — never in source code
+- Secrets stay in `apps/functions/.env.erp-softcode` or `apps/functions/.env.erp-softcode-prod` — never in source code

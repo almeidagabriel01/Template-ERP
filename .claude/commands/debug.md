@@ -14,7 +14,7 @@ Vou determinar onde está o problema:
 - **Frontend**: componente, hook, state, routing
 - **Service/API call**: `src/services/`, chamada para `/api/backend/*`
 - **Next.js proxy**: `src/app/api/backend/`
-- **Cloud Function Express**: `functions/src/api/`
+- **Cloud Function Express**: `apps/functions/src/api/`
 - **Firestore**: query, regras de segurança, índice faltando
 - **Firebase Auth**: token expirado, custom claims desatualizados
 - **Stripe/WhatsApp**: webhook, billing
