@@ -11,7 +11,6 @@
 - Backend validates tokens in `validateFirebaseIdToken` middleware on every request
 - Next.js middleware reads `__session` cookie for SSR route protection
 - Stale-claims fallback reads `users/{uid}` doc — errors if tenantId mismatches between claims and doc
-- Run `npm run security:claims:validate` to audit completeness of custom claims
 
 ## Secrets Management
 - `STRIPE_SECRET_KEY`, `WHATSAPP_APP_SECRET`, Firebase private key → only in `functions/.env.*`

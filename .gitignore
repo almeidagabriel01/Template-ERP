@@ -80,6 +80,7 @@ pubsub-debug.log
 .last-run.json
 playwright-report/
 test-results/
+e2e/dist/
 
 # Test reports and results (generated locally, not committed)
 lighthouse-report/

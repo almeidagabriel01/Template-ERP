@@ -42,8 +42,6 @@ firebase emulators:start  # All emulators (Functions:5001, Firestore:8080, Auth:
 ### Security & Maintenance
 ```bash
 npm run security:scan                    # Audit both frontend and functions
-npm run security:claims:backfill         # Backfill Firebase custom claims
-npm run security:claims:validate         # Validate custom claims
 ```
 
 ## CI/CD
