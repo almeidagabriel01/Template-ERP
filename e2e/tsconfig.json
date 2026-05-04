@@ -1,24 +1,15 @@
 {
-  "extends": "../tsconfig.json",
+  "extends": "../apps/web/tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": ".",
     "noEmit": false,
     "jsx": "react-jsx",
     "paths": {
-      "@e2e/*": [
-        "./*"
-      ],
-      "@/*": [
-        "../src/*"
-      ]
+      "@e2e/*": ["./*"],
+      "@/*": ["../apps/web/src/*"]
     }
   },
-  "include": [
-    "**/*.ts"
-  ],
-  "exclude": [
-    "dist",
-    "../node_modules"
-  ]
+  "include": ["**/*.ts"],
+  "exclude": ["dist", "../node_modules"]
 }

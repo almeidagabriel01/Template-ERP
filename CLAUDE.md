@@ -14,11 +14,11 @@ ProOps is a multi-tenant SaaS business management platform (proposals, CRM, fina
 
 ## Commands
 
-### Frontend (root)
+### Frontend (apps/web/)
 ```bash
-npm run dev           # Next.js dev server
-npm run build         # Production build (standalone output)
-npm run lint          # ESLint
+npm run dev           # Next.js dev server (via workspace script)
+npm run build         # Production build (standalone output, via workspace script)
+npm run lint          # ESLint (via workspace script)
 ```
 
 ### Backend (Firebase Functions)
@@ -132,17 +132,17 @@ Só faça deploy manual após `all-checks-passed` estar verde no PR. Fluxo:
 npm run test:e2e && npm run test:performance && npm run test:rules
 
 # Verificações rápidas
-npx tsc --noEmit                        # Type check frontend
+cd apps/web && npx tsc --noEmit         # Type check frontend
 cd functions && npx tsc --noEmit        # Type check functions
-npm run lint                            # ESLint frontend
+npm run lint                            # ESLint frontend (via workspace)
 cd functions && npm run lint            # ESLint functions
-npm audit --omit=dev --audit-level=critical  # Audit frontend
+npm audit --omit=dev --audit-level=critical  # Audit monorepo root
 ```
 
 ## Architecture
 
 ### Split-Backend Pattern (Critical)
-- **Frontend** (`src/`): Next.js App Router on Vercel. Only uses `NEXT_PUBLIC_*` env vars (public Firebase config). Communicates with backend exclusively through `/api/backend/*` proxy routes.
+- **Frontend** (`apps/web/src/`): Next.js App Router on Vercel. Only uses `NEXT_PUBLIC_*` env vars (public Firebase config). Communicates with backend exclusively through `/api/backend/*` proxy routes.
 - **Backend** (`functions/`): Firebase Cloud Functions V2 running Express on Cloud Run (`southamerica-east1`). Holds all sensitive secrets (`STRIPE_SECRET_KEY`, `WHATSAPP_APP_SECRET`, etc.) in `functions/.env`. Never expose these to the frontend.
 
 ### Multi-Tenant Model
@@ -164,7 +164,7 @@ npm audit --omit=dev --audit-level=critical  # Audit frontend
 - `middleware/` — auth verification, PDF rate limiting
 - `services/` — PDF generation (Playwright/Chromium), WhatsApp, notifications
 
-### Frontend Structure (`src/`)
+### Frontend Structure (`apps/web/src/`)
 - `app/` — Next.js App Router pages (25+ route segments)
 - `components/` — UI components (Radix UI primitives + shadcn/ui patterns)
 - `providers/` — React context: Auth, Theme, Tenant, Permissions
@@ -181,11 +181,11 @@ npm audit --omit=dev --audit-level=critical  # Audit frontend
 - **Google Calendar**: Via `googleapis`.
 
 ### Multi-Niche Support
-The system supports multiple business niches (`automacao_residencial`, `cortinas`). Niche-specific logic lives in `src/lib/niches/` and affects product configurations, PDF templates, and conditional UI rendering (`tenantNiche` field on tenant documents).
+The system supports multiple business niches (`automacao_residencial`, `cortinas`). Niche-specific logic lives in `apps/web/src/lib/niches/` and affects product configurations, PDF templates, and conditional UI rendering (`tenantNiche` field on tenant documents).
 
 ## Environment Setup
 
-**Frontend** (`.env.local`):
+**Frontend** (`apps/web/.env.local`):
 ```
 NEXT_PUBLIC_FIREBASE_API_KEY=
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
@@ -236,26 +236,32 @@ Firebase projects: `erp-softcode` (dev), `erp-softcode-prod` (prod). Configured 
 
 ```
 /
-├── src/
-│   ├── app/              # Next.js App Router — 25+ route segments
-│   │   ├── api/          # Next.js Route Handlers (proxy to Cloud Functions)
-│   │   │   └── backend/  # Proxy: forwards to Cloud Functions Express
-│   │   └── [routes]/     # proposals, contacts, products, transactions, etc.
-│   ├── components/       # React components
-│   │   ├── ui/           # Shadcn/ui (Radix primitives) — DO NOT edit manually
-│   │   ├── admin/        # Admin panel components
-│   │   ├── auth/         # Auth flow components
-│   │   ├── pdf/          # PDF display components
-│   │   ├── shared/       # Truly generic components
-│   │   └── [domain]/     # Domain-specific component groups
-│   ├── hooks/            # Custom React hooks (data fetching + UI)
-│   ├── lib/              # Firebase init, helpers, niche config, plan limits
-│   │   └── niches/       # Multi-niche logic (automacao_residencial | cortinas)
-│   ├── providers/        # React context: Auth, Theme, Tenant, Permissions
-│   ├── services/         # Client-side API calls → /api/backend/*
-│   ├── types/            # TypeScript interfaces (domain, API, Firebase)
-│   └── utils/            # Formatting utilities
-├── functions/            # Firebase Cloud Functions V2 (Express monolith)
+├── apps/
+│   └── web/              # Next.js frontend (monorepo member: proops-web)
+│       ├── src/
+│       │   ├── app/              # Next.js App Router — 25+ route segments
+│       │   │   ├── api/          # Next.js Route Handlers (proxy to Cloud Functions)
+│       │   │   │   └── backend/  # Proxy: forwards to Cloud Functions Express
+│       │   │   └── [routes]/     # proposals, contacts, products, transactions, etc.
+│       │   ├── components/       # React components
+│       │   │   ├── ui/           # Shadcn/ui (Radix primitives) — DO NOT edit manually
+│       │   │   ├── admin/        # Admin panel components
+│       │   │   ├── auth/         # Auth flow components
+│       │   │   ├── pdf/          # PDF display components
+│       │   │   ├── shared/       # Truly generic components
+│       │   │   └── [domain]/     # Domain-specific component groups
+│       │   ├── hooks/            # Custom React hooks (data fetching + UI)
+│       │   ├── lib/              # Firebase init, helpers, niche config, plan limits
+│       │   │   └── niches/       # Multi-niche logic (automacao_residencial | cortinas)
+│       │   ├── providers/        # React context: Auth, Theme, Tenant, Permissions
+│       │   ├── services/         # Client-side API calls → /api/backend/*
+│       │   ├── types/            # TypeScript interfaces (domain, API, Firebase)
+│       │   └── utils/            # Formatting utilities
+│       ├── public/               # Static assets
+│       ├── next.config.ts
+│       ├── tsconfig.json
+│       └── package.json          # proops-web workspace member
+├── functions/            # Firebase Cloud Functions V2 (Express monolith) — raiz por enquanto
 │   └── src/
 │       ├── api/
 │       │   ├── controllers/  # ~20 CRUD controllers
@@ -264,19 +270,22 @@ Firebase projects: `erp-softcode` (dev), `erp-softcode-prod` (prod). Configured 
 │       │   └── services/     # PDF (Playwright), WhatsApp, notifications
 │       ├── lib/              # Admin helpers, auth context, billing helpers
 │       └── shared/           # Shared types between controllers
+├── e2e/                  # Playwright E2E tests (raiz por enquanto — PR 3)
+├── tests/                # Firestore rules tests (raiz por enquanto — PR 3)
 ├── .claude/              # Claude Code configuration
 │   ├── agents/           # frontend.md, backend.md, full-stack.md
 │   ├── commands/         # /deploy-check, /new-feature, /debug, /document-api
 │   └── skills/           # new-component, new-api-route, new-firebase-query, review-security
 ├── firestore.rules       # Firestore security rules
 ├── firestore.indexes.json
-└── storage.rules
+├── storage.rules
+└── package.json          # Monorepo root coordinator (workspaces: [apps/web])
 ```
 
 ## Claude Code Agents
 
-- `@frontend` — Next.js components, UI, hooks, providers, routes (`src/app/`, `src/components/`, `src/hooks/`, `src/providers/`)
-- `@backend` — Cloud Functions, API routes, Firestore, Auth, Stripe, WhatsApp (`functions/src/`, `src/app/api/`, `src/services/`, `src/lib/`, `src/types/`)
+- `@frontend` — Next.js components, UI, hooks, providers, routes (`apps/web/src/app/`, `apps/web/src/components/`, `apps/web/src/hooks/`, `apps/web/src/providers/`)
+- `@backend` — Cloud Functions, API routes, Firestore, Auth, Stripe, WhatsApp (`functions/src/`, `apps/web/src/app/api/`, `apps/web/src/services/`, `apps/web/src/lib/`, `apps/web/src/types/`)
 - `@full-stack` — Features that span both layers, cross-cutting refactors, bug investigation
 
 ## Claude Code Commands
@@ -299,9 +308,9 @@ Firebase projects: `erp-softcode` (dev), `erp-softcode-prod` (prod). Configured 
 - **Vercel Analytics** — page views e sessões (ativo automaticamente na Vercel)
 - **Vercel Speed Insights** — Core Web Vitals em produção
 - **Sentry** (`@sentry/nextjs`) — error tracking client + server. Requer `NEXT_PUBLIC_SENTRY_DSN` em `.env.local` e nas env vars da Vercel. Sem a variável, não inicializa.
-- **Error Boundary** (`src/components/shared/error-boundary.tsx`) — captura erros React com UI de fallback amigável
-- **`src/app/error.tsx`** — error page do App Router para erros em route segments
-- **`src/app/global-error.tsx`** — error page de último recurso (substitui o root layout)
+- **Error Boundary** (`apps/web/src/components/shared/error-boundary.tsx`) — captura erros React com UI de fallback amigável
+- **`apps/web/src/app/error.tsx`** — error page do App Router para erros em route segments
+- **`apps/web/src/app/global-error.tsx`** — error page de último recurso (substitui o root layout)
 
 ### Backend
 - **Sentry** (`@sentry/node`) — error tracking com contexto de tenant/user. Requer `SENTRY_DSN` em `functions/.env.*`. Global error handler em `functions/src/api/index.ts` reporta automaticamente.
@@ -314,5 +323,5 @@ Firebase projects: `erp-softcode` (dev), `erp-softcode-prod` (prod). Configured 
 
 Documentação detalhada está nos CLAUDE.md específicos de cada camada:
 
-- **Frontend** (hooks, componentes, migração ID vs NAME, guards de UI): `src/app/transactions/CLAUDE.md`
+- **Frontend** (hooks, componentes, migração ID vs NAME, guards de UI): `apps/web/src/app/transactions/CLAUDE.md`
 - **Backend** (transaction.service, wallets.controller, finance-helpers, lógica de saldo): `functions/CLAUDE.md` → seção "Módulo Financeiro"
