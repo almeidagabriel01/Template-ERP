@@ -6,87 +6,25 @@ import {
   ExtraCost,
   Transaction,
   TransactionService,
-  TransactionType,
   TransactionStatus,
 } from "@/services/transaction-service";
 import { WalletService } from "@/services/wallet-service";
 import { useTenant } from "@/providers/tenant-provider";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { Wallet } from "@/types";
-import { normalize } from "@/utils/text";
 import { statusConfig } from "../_constants/config";
 import { ProposalService } from "@/services/proposal-service";
 import { getProposalTransactionDisplayName } from "../_lib/proposal-transaction";
-
-type DateLike =
-  | string
-  | Date
-  | { toDate: () => Date }
-  | { toMillis: () => number }
-  | { seconds: number }
-  | null
-  | undefined;
-
-const isDownPaymentLike = (t: Transaction): boolean =>
-  !!t.isDownPayment || (t.installmentNumber || 0) === 0;
-
-const dateOnly = (value?: string): string => {
-  if (!value) return "";
-  return value.includes("T") ? value.split("T")[0] : value;
-};
-
-const sameClient = (a: Transaction, b: Transaction): boolean => {
-  const aClientId = a.clientId || "";
-  const bClientId = b.clientId || "";
-  if (aClientId && bClientId) return aClientId === bClientId;
-  return (a.clientName || "").trim() === (b.clientName || "").trim();
-};
-
-const baseDesc = (s: string): string =>
-  s.replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
-
-type AggregatedExtraCost = ExtraCost & {
-  parentTransactionId: string;
-};
-
-const getTransactionExtraCosts = (
-  transaction: Transaction,
-): AggregatedExtraCost[] =>
-  (transaction.extraCosts || []).map((ec) => ({
-    ...ec,
-    parentTransactionId: ec.parentTransactionId || transaction.id,
-  }));
-
-const aggregateExtraCosts = (
-  groupTransactions: Transaction[],
-): AggregatedExtraCost[] => {
-  const extraCostsById = new Map<string, AggregatedExtraCost>();
-
-  groupTransactions.forEach((groupTransaction) => {
-    getTransactionExtraCosts(groupTransaction).forEach((extraCost) => {
-      extraCostsById.set(extraCost.id, extraCost);
-    });
-  });
-
-  return Array.from(extraCostsById.values()).sort((a, b) => {
-    const aTime = Date.parse(a.createdAt || "");
-    const bTime = Date.parse(b.createdAt || "");
-    const safeATime = Number.isFinite(aTime) ? aTime : 0;
-    const safeBTime = Number.isFinite(bTime) ? bTime : 0;
-    return safeBTime - safeATime;
-  });
-};
-
-const getGroupedTransactionKey = (transaction: Transaction): string => {
-  if (transaction.proposalGroupId) {
-    return `proposal:${transaction.proposalGroupId}`;
-  }
-  const groupId = transaction.installmentGroupId || transaction.recurringGroupId;
-  if (groupId) {
-    return `group:${groupId}`;
-  }
-  return `transaction:${transaction.id}`;
-};
+import {
+  dateOnly,
+  isDownPaymentLike,
+  sameClient,
+  baseDesc,
+  getDateString,
+  DateLike,
+} from "../_lib/financial-utils";
+import { useOptimisticWallets } from "./useOptimisticWallets";
+import { useFinancialFilters } from "./useFinancialFilters";
 
 const syncExtraCostsStatus = (
   extraCosts: ExtraCost[] | undefined,
@@ -149,53 +87,10 @@ const matchesGroupByHeuristic = (
   return matchingGroups.length === 1;
 };
 
-// Helper to get YYYY-MM-DD string in Local Time matching user perception
-function getDateString(val: DateLike): string {
-  if (!val) return "";
-
-  // If it's a string, handle it carefully to avoid timezone issues
-  if (typeof val === "string") {
-    // If it's just a date (YYYY-MM-DD), return as-is
-    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
-      return val;
-    }
-    // If it has a time component (ISO format), extract just the date part
-    // This avoids timezone conversion issues
-    if (val.includes("T")) {
-      return val.split("T")[0];
-    }
-    // For other string formats, try to parse and convert
-    // Parse as local date to avoid timezone shift
-    const parts = val.match(/(\d{4})-(\d{2})-(\d{2})/);
-    if (parts) {
-      return `${parts[1]}-${parts[2]}-${parts[3]}`;
-    }
-    // Fallback: try parsing as date
-    const date = new Date(val + "T12:00:00"); // Add noon time to avoid day boundary issues
-    if (!isNaN(date.getTime())) {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    }
-    return "";
-  }
-
-  let date: Date;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const v = val as any;
-  if (typeof v?.toDate === "function") date = v.toDate();
-  else if (v?.seconds) date = new Date(v.seconds * 1000);
-  else date = new Date(v);
-
-  if (isNaN(date.getTime())) return "";
-
-  // Use local component methods to ensure it matches what user sees on screen
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
+// Keep DateLike in scope for getErrorMessage (used in summary useMemo)
+void (null as unknown as DateLike);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+void matchesGroupByHeuristic;
 
 const getErrorMessage = (error: unknown, fallback: string): string => {
   if (error instanceof Error && error.message.trim()) {
@@ -232,8 +127,8 @@ interface UseFinancialDataReturn {
   isPlanLoading: boolean;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
-  filterType: TransactionType | "all";
-  setFilterType: (type: TransactionType | "all") => void;
+  filterType: import("@/services/transaction-service").TransactionType | "all";
+  setFilterType: (type: import("@/services/transaction-service").TransactionType | "all") => void;
   filterStatus: TransactionStatus[];
   setFilterStatus: (status: TransactionStatus[]) => void;
   filterWallet: string;
@@ -286,23 +181,6 @@ export function useFinancialData(): UseFinancialDataReturn {
   const { hasFinancial, isLoading: isPlanLoading } = usePlanLimits();
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
-  const [searchTerm, setSearchTerm] = React.useState("");
-  const [filterType, setFilterType] = React.useState<TransactionType | "all">(
-    "all",
-  );
-  const [filterStatus, setFilterStatus] = React.useState<TransactionStatus[]>([
-    "pending",
-  ]);
-  const [filterWallet, setFilterWallet] = React.useState<string>("");
-  const [filterStartDate, setFilterStartDate] = React.useState<string>("");
-  const [filterEndDate, setFilterEndDate] = React.useState<string>("");
-  const [filterDateType, setFilterDateType] = React.useState<
-    "date" | "dueDate"
-  >("dueDate");
-  const [sortBy, setSortBy] = React.useState<"date" | "created">("created");
-  const [viewMode, setViewMode] = React.useState<"grouped" | "byDueDate">(
-    "byDueDate",
-  );
   const [wallets, setWallets] = React.useState<Wallet[]>([]);
   const updatingIdsRef = React.useRef(new Set<string>());
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -312,6 +190,35 @@ export function useFinancialData(): UseFinancialDataReturn {
     pendingIncome: 0,
     pendingExpense: 0,
   });
+
+  const {
+    searchTerm,
+    setSearchTerm,
+    filterType,
+    setFilterType,
+    filterStatus,
+    setFilterStatus,
+    filterWallet,
+    setFilterWallet,
+    filterStartDate,
+    setFilterStartDate,
+    filterEndDate,
+    setFilterEndDate,
+    filterDateType,
+    setFilterDateType,
+    sortBy,
+    setSortBy,
+    viewMode,
+    setViewMode,
+    filteredTransactions,
+    totalWalletBalance,
+  } = useFinancialFilters(transactions, wallets);
+
+  const {
+    calculateWalletImpacts,
+    applyOptimisticWalletUpdate,
+    applyOptimisticWalletUpdateBatch,
+  } = useOptimisticWallets(setWallets);
 
   const fetchData = React.useCallback(
     async (background = false) => {
@@ -362,409 +269,6 @@ export function useFinancialData(): UseFinancialDataReturn {
     });
   }, [fetchData]);
 
-  const filteredTransactions = React.useMemo(() => {
-    const effectiveTransactions: Transaction[] = [];
-
-    // In "byDueDate" mode, show all individual transactions (ungrouped)
-    // In "grouped" mode, show grouped as before
-    if (viewMode === "byDueDate") {
-      // Show all transactions individually, sorted by due date
-      transactions.forEach((t) => {
-        effectiveTransactions.push(t);
-        // Extract extra costs as independent transactions so filtering and visualization works in the "por vencimento" table
-        if (t.extraCosts && t.extraCosts.length > 0) {
-          t.extraCosts.forEach((ec) => {
-            effectiveTransactions.push({
-              ...ec,
-              id: ec.id,
-              rowKey: `extra:${t.id}:${ec.id}`,
-              tenantId: t.tenantId,
-              type: t.type,
-              description:
-                ec.description ||
-                (t.type === "income" ? "Acréscimo Extra" : "Custo Extra"),
-              date: ec.createdAt || t.date,
-              dueDate: t.dueDate,
-              wallet: ec.wallet || t.wallet,
-              status: ec.status || "pending",
-              createdAt: ec.createdAt || t.createdAt,
-              updatedAt: ec.createdAt || t.updatedAt,
-              amount: ec.amount,
-              isExtraCostSync: true,
-              parentTransactionId: t.id,
-            } as Transaction & {
-              isExtraCostSync: boolean;
-              parentTransactionId: string;
-            });
-          });
-        }
-      });
-    } else {
-      // Original grouped logic
-      // 1. Group by proposalGroupId first, then by installmentGroupId
-      const processedProposalGroups = new Set<string>();
-      const processedInstallmentGroups = new Set<string>();
-
-      // Pre-sort transactions by date to ensure order (though we sort again later)
-      // We need to look at all transactions to find the representatives
-      const sortedRaw = [...transactions].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-      );
-
-      // === PASS 1: Process grouped transactions (proposal groups + installment groups) ===
-      // This ensures all group representatives exist in effectiveTransactions
-      // before we check orphan down payments in pass 2.
-      sortedRaw.forEach((t) => {
-        // CASE 1: Transaction is part of a proposal group (has both down payment and installments)
-        if (t.proposalGroupId) {
-          if (processedProposalGroups.has(t.proposalGroupId)) return;
-
-          // Find all transactions belonging to this proposal group
-          const proposalGroup = transactions.filter(
-            (g) => g.proposalGroupId === t.proposalGroupId,
-          );
-
-          // Find the down payment transaction as the base for the representative
-          let base = proposalGroup.find((g) => g.isDownPayment);
-          if (!base && proposalGroup.length > 0) base = proposalGroup[0];
-
-          if (base) {
-            // Calculate aggregate status
-            // Priority: Overdue > Pending > Paid
-            let aggregateStatus: Transaction["status"] = "paid";
-
-            const hasOverdue = proposalGroup.some(
-              (g) => g.status === "overdue",
-            );
-            const hasPending = proposalGroup.some(
-              (g) => g.status === "pending",
-            );
-
-            if (hasOverdue) {
-              aggregateStatus = "overdue";
-            } else if (hasPending) {
-              aggregateStatus = "pending";
-            }
-
-            // Create a synthetic representative with the aggregate status
-            // This ensures the main card reflects the group state
-            const representative = {
-              ...base,
-              status: aggregateStatus,
-              extraCosts: aggregateExtraCosts(proposalGroup),
-            };
-
-            effectiveTransactions.push(representative);
-            processedProposalGroups.add(t.proposalGroupId);
-
-            // Also mark the installmentGroupId as processed to avoid duplicates
-            const installmentGroupIds = proposalGroup
-              .filter((g) => g.installmentGroupId || g.recurringGroupId)
-              .map((g) => (g.installmentGroupId || g.recurringGroupId)!);
-            installmentGroupIds.forEach((id) =>
-              processedInstallmentGroups.add(id),
-            );
-          }
-          return;
-        }
-
-        // CASE 2: Transaction is part of an installment or recurring group (without proposal group)
-        // This includes both regular installments AND down payments (isDownPayment = true)
-        const groupId = t.installmentGroupId || t.recurringGroupId;
-        if (groupId) {
-          if (processedInstallmentGroups.has(groupId)) return;
-
-          // Find all belonging to this group (both installments and down payments)
-          const group = transactions.filter(
-            (g) => (g.installmentGroupId || g.recurringGroupId) === groupId,
-          );
-          const groupWithOrphans = [...group];
-          const orphanDownPayments = transactions.filter(
-            (candidate) =>
-              !candidate.installmentGroupId &&
-              !candidate.recurringGroupId &&
-              !candidate.proposalGroupId &&
-              isDownPaymentLike(candidate) &&
-              candidate.id !== t.id &&
-              candidate.type === t.type &&
-              baseDesc(candidate.description || "") ===
-                baseDesc(t.description || "") &&
-              sameClient(candidate, t) &&
-              dateOnly(candidate.date) === dateOnly(t.date),
-          );
-          if (orphanDownPayments.length === 1) {
-            groupWithOrphans.push(orphanDownPayments[0]);
-          }
-
-          // Sort group: down payment first (explicit flag or installmentNumber 0), then by installment number
-          groupWithOrphans.sort((a, b) => {
-            const aIsDown = isDownPaymentLike(a);
-            const bIsDown = isDownPaymentLike(b);
-            if (aIsDown && !bIsDown) return -1;
-            if (!aIsDown && bIsDown) return 1;
-            return (a.installmentNumber || 0) - (b.installmentNumber || 0);
-          });
-
-          // Find the first "pending" or "overdue" item (not paid)
-          let active = groupWithOrphans.find((g) => g.status !== "paid");
-
-          // If all are paid, show the last one
-          if (!active && groupWithOrphans.length > 0) {
-            active = groupWithOrphans[groupWithOrphans.length - 1];
-          }
-
-          // If for some reason we didn't find one (empty group?), skip
-          if (active) {
-            const hasTrueInstallments = groupWithOrphans.some(
-              (g) => g.isInstallment && !g.isDownPayment,
-            );
-            // For installment groups: anchor on the down payment (installmentNumber 0 is stable).
-            // For simple groups (down payment + main tx only): anchor on the main tx so the
-            // card shows the correct total amount and metadata instead of the entrada's data.
-            // Uses the explicit isDownPayment flag — not the heuristic — to find the main tx.
-            const stableAnchor = hasTrueInstallments
-              ? (groupWithOrphans.find((g) => isDownPaymentLike(g)) || groupWithOrphans[0])
-              : (groupWithOrphans.find((g) => !g.isDownPayment) || groupWithOrphans[0]);
-            const groupedSource = group[0] || active;
-            let aggregateStatus: Transaction["status"] = "paid";
-            if (groupWithOrphans.some((g) => g.status === "overdue")) {
-              aggregateStatus = "overdue";
-            } else if (groupWithOrphans.some((g) => g.status === "pending")) {
-              aggregateStatus = "pending";
-            }
-            const representative: Transaction = {
-              ...stableAnchor,
-              isInstallment:
-                groupedSource.isInstallment ?? stableAnchor.isInstallment,
-              isRecurring: groupedSource.isRecurring ?? stableAnchor.isRecurring,
-              installmentCount:
-                groupedSource.installmentCount ?? stableAnchor.installmentCount,
-              installmentInterval:
-                groupedSource.installmentInterval ??
-                stableAnchor.installmentInterval,
-              installmentGroupId:
-                groupedSource.installmentGroupId ??
-                stableAnchor.installmentGroupId,
-              recurringGroupId:
-                groupedSource.recurringGroupId ?? stableAnchor.recurringGroupId,
-              status: aggregateStatus,
-              extraCosts: aggregateExtraCosts(groupWithOrphans),
-              createdAt: stableAnchor?.createdAt || active.createdAt,
-            };
-
-            effectiveTransactions.push(representative);
-            processedInstallmentGroups.add(groupId);
-          }
-          return;
-        }
-      });
-
-      // === PASS 2: Process standalone transactions and orphan down payments ===
-      // Now effectiveTransactions contains ALL group representatives,
-      // so heuristic matching can correctly find them.
-      sortedRaw.forEach((t) => {
-        // Skip already-processed grouped transactions
-        if (t.proposalGroupId || t.installmentGroupId || t.recurringGroupId)
-          return;
-
-        // Orphan down payment — check if it matches a group representative
-        if (
-          isDownPaymentLike(t) &&
-          matchesGroupByHeuristic(t, effectiveTransactions)
-        ) {
-          return; // Will be attached to its group by page.tsx rendering
-        }
-        effectiveTransactions.push(t);
-      });
-    }
-
-    let filtered =
-      viewMode === "grouped"
-        ? (() => {
-            const uniqueTransactions = new Map<string, Transaction>();
-            effectiveTransactions.forEach((transaction) => {
-              const key = getGroupedTransactionKey(transaction);
-              if (!uniqueTransactions.has(key)) {
-                uniqueTransactions.set(key, transaction);
-              }
-            });
-            return Array.from(uniqueTransactions.values());
-          })()
-        : effectiveTransactions;
-
-    // Filter by type
-    if (filterType !== "all") {
-      filtered = filtered.filter((t) => t.type === filterType);
-    }
-
-    // Filter by status (multi-select; empty array = no filter)
-    if (filterStatus.length > 0) {
-      filtered = filtered.filter((t) => {
-        if (filterStatus.includes(t.status)) return true;
-        // In byDueDate mode, extra costs are already own rows — don't double-match via parent
-        if (
-          viewMode !== "byDueDate" &&
-          t.extraCosts &&
-          t.extraCosts.some((ec) =>
-            filterStatus.includes((ec.status || "pending") as TransactionStatus),
-          )
-        )
-          return true;
-        return false;
-      });
-    }
-
-    // Filter by wallet (supports both wallet ID and legacy wallet NAME)
-    if (filterWallet) {
-      const filterWalletObj = wallets.find((w) => w.id === filterWallet || w.name === filterWallet);
-      const matchesWallet = (walletField: string | undefined | null): boolean => {
-        if (!walletField) return false;
-        if (walletField === filterWallet) return true;
-        if (filterWalletObj && (walletField === filterWalletObj.id || walletField === filterWalletObj.name)) return true;
-        return false;
-      };
-      filtered = filtered.filter((t) => {
-        if (matchesWallet(t.wallet)) return true;
-        // In byDueDate mode, extra costs are already own rows — don't double-match via parent
-        if (
-          viewMode !== "byDueDate" &&
-          t.extraCosts &&
-          t.extraCosts.some((ec) => matchesWallet(ec.wallet || t.wallet))
-        )
-          return true;
-        return false;
-      });
-    }
-
-    // Filter by date range
-    if (filterStartDate || filterEndDate) {
-      filtered = filtered.filter((t) => {
-        // For installment/recurring transactions in GROUPED mode, check if ANY in the group matches the date range
-        if (
-          viewMode === "grouped" &&
-          filterDateType === "dueDate" &&
-          (t.installmentGroupId || t.recurringGroupId)
-        ) {
-          const groupId = t.installmentGroupId || t.recurringGroupId;
-          // Get all elements in this group
-          const group = transactions.filter(
-            (g) => (g.installmentGroupId || g.recurringGroupId) === groupId,
-          );
-
-          // Check if ANY installment has dueDate in the range
-          const hasMatchingInstallment = group.some((installment) => {
-            if (!installment.dueDate) return false;
-            const dueDateStr = getDateString(installment.dueDate);
-            if (!dueDateStr) return false;
-
-            if (
-              filterStartDate &&
-              dueDateStr.localeCompare(filterStartDate) < 0
-            ) {
-              return false;
-            }
-            if (filterEndDate && dueDateStr.localeCompare(filterEndDate) > 0) {
-              return false;
-            }
-            return true;
-          });
-
-          return hasMatchingInstallment;
-        }
-
-        // For non-installment transactions or byDueDate mode, use the transaction's own date
-        let dateVal: string | undefined = t.date;
-
-        if (filterDateType === "dueDate") {
-          // When filtering by due date, only consider transactions that have a due date
-          // Don't fallback to main date - if no due date, exclude from filter
-          if (!t.dueDate) return false;
-          dateVal = t.dueDate;
-        }
-
-        const dateStr = getDateString(dateVal);
-        if (!dateStr) return false;
-
-        // Compare dates using localeCompare for reliable string comparison
-        if (filterStartDate) {
-          // dateStr must be >= filterStartDate
-          if (dateStr.localeCompare(filterStartDate) < 0) return false;
-        }
-        if (filterEndDate) {
-          // dateStr must be <= filterEndDate
-          if (dateStr.localeCompare(filterEndDate) > 0) return false;
-        }
-        return true;
-      });
-    }
-
-    // Filter by search term
-    if (searchTerm.trim()) {
-      const term = normalize(searchTerm);
-      filtered = filtered.filter((t) => {
-        const displayName = getProposalTransactionDisplayName(
-          t as Pick<Transaction, "description" | "proposalId">,
-        );
-        return (
-          normalize(displayName).includes(term) ||
-          normalize(t.clientName || "").includes(term) ||
-          normalize(t.category || "").includes(term) ||
-          normalize(t.wallet || "").includes(term) ||
-          (t.extraCosts &&
-            t.extraCosts.some(
-              (ec) =>
-                normalize(ec.description).includes(term) ||
-                normalize(ec.wallet || "").includes(term),
-            ))
-        );
-      });
-    }
-
-    // Sort
-    if (viewMode === "byDueDate") {
-      // In byDueDate mode, always sort by due date (closest first)
-      return filtered.sort((a, b) => {
-        const getDueDateMs = (t: Transaction) => {
-          if (!t.dueDate) return Infinity; // Items without due date go to the end
-          const dateStr = getDateString(t.dueDate);
-          if (!dateStr) return Infinity;
-          return new Date(dateStr + "T12:00:00").getTime();
-        };
-        return getDueDateMs(a) - getDueDateMs(b);
-      });
-    } else {
-      // Original sorting logic for grouped mode
-      return filtered.sort((a, b) => {
-        if (sortBy === "date") {
-          return new Date(b.date).getTime() - new Date(a.date).getTime();
-        } else {
-          // Handle Firestore Timestamp or string for createdAt
-          const getMillis = (val: DateLike) => {
-            if (!val) return 0;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const v = val as any;
-            if (typeof v?.toMillis === "function") return v.toMillis(); // Firestore SDK
-            if (v?.seconds) return v.seconds * 1000; // Serialized
-            return new Date(v).getTime(); // String/Date
-          };
-          return getMillis(b.createdAt) - getMillis(a.createdAt);
-        }
-      });
-    }
-  }, [
-    transactions,
-    wallets,
-    searchTerm,
-    filterType,
-    filterStatus,
-    filterWallet,
-    filterStartDate,
-    filterEndDate,
-    filterDateType,
-    sortBy,
-    viewMode,
-  ]);
-
   // Calculate filtered summary
   const summary = React.useMemo(() => {
     const result = {
@@ -774,6 +278,7 @@ export function useFinancialData(): UseFinancialDataReturn {
       pendingExpense: 0,
     };
 
+    const { normalize } = require("@/utils/text") as typeof import("@/utils/text");
     const term = searchTerm.toLowerCase().trim();
 
     transactions.forEach((t) => {
@@ -877,95 +382,6 @@ export function useFinancialData(): UseFinancialDataReturn {
     filterStartDate,
     filterEndDate,
   ]);
-
-  const totalWalletBalance = React.useMemo(() => {
-    return wallets
-      .filter((w) => {
-        const isActive = w.status === "active";
-        const matchesFilter = filterWallet ? (w.id === filterWallet || w.name === filterWallet) : true;
-        return isActive && matchesFilter;
-      })
-      .reduce((sum, w) => sum + w.balance, 0);
-  }, [wallets, filterWallet]);
-
-  // --- Optimistic Wallet Updaters ---
-  const calculateWalletImpacts = React.useCallback(
-    (tx: Partial<Transaction>) => {
-      const impacts = new Map<string, number>();
-      const addImpact = (
-        wallet: string | null | undefined,
-        amount: number,
-        isIncome: boolean,
-      ) => {
-        if (!wallet) return;
-        const delta = (isIncome ? 1 : -1) * (amount || 0);
-        impacts.set(wallet, (impacts.get(wallet) || 0) + delta);
-      };
-
-      if (tx?.status === "paid" && tx?.wallet) {
-        addImpact(tx.wallet, tx.amount || 0, tx.type === "income");
-      }
-
-      if (tx?.extraCosts && Array.isArray(tx.extraCosts)) {
-        for (const ec of tx.extraCosts) {
-          if (ec.status === "paid" && (ec.wallet || tx.wallet)) {
-            // Extra costs add to the value of the parent transaction (so if parent is income, extra cost is income)
-            addImpact(
-              ec.wallet || tx.wallet,
-              ec.amount || 0,
-              tx.type === "income",
-            );
-          }
-        }
-      }
-      return impacts;
-    },
-    [],
-  );
-
-  const applyOptimisticWalletUpdate = React.useCallback(
-    (oldTx: Transaction | undefined, newTx: Transaction | undefined) => {
-      setWallets((prev) => {
-        const oldImpacts = oldTx ? calculateWalletImpacts(oldTx) : new Map();
-        const newImpacts = newTx ? calculateWalletImpacts(newTx) : new Map();
-        return prev.map((w) => {
-          const oldVal = oldImpacts.get(w.name) || oldImpacts.get(w.id) || 0;
-          const newVal = newImpacts.get(w.name) || newImpacts.get(w.id) || 0;
-          const diff = newVal - oldVal;
-          if (diff === 0) return w;
-          return { ...w, balance: w.balance + diff };
-        });
-      });
-    },
-    [calculateWalletImpacts],
-  );
-
-  const applyOptimisticWalletUpdateBatch = React.useCallback(
-    (updates: { oldTx: Transaction; newTx: Transaction }[]) => {
-      setWallets((prev) => {
-        const netDeltas = new Map<string, number>();
-        updates.forEach(({ oldTx, newTx }) => {
-          const oldImpacts = calculateWalletImpacts(oldTx);
-          const newImpacts = calculateWalletImpacts(newTx);
-          for (const [wId, val] of oldImpacts.entries()) {
-            netDeltas.set(wId, (netDeltas.get(wId) || 0) - val);
-          }
-          for (const [wId, val] of newImpacts.entries()) {
-            netDeltas.set(wId, (netDeltas.get(wId) || 0) + val);
-          }
-        });
-        return prev.map((w) => {
-          // Use OR (not sum) to avoid double-counting when the same wallet is keyed
-          // by both its ID (new data) and its name (legacy data) in the deltas map.
-          const diff = netDeltas.get(w.id) ?? netDeltas.get(w.name) ?? 0;
-          if (diff === 0) return w;
-          return { ...w, balance: w.balance + diff };
-        });
-      });
-    },
-    [calculateWalletImpacts],
-  );
-  // ----------------------------------
 
   // Delete a single transaction (individual installment)
   const deleteTransaction = React.useCallback(
