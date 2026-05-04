@@ -16,7 +16,7 @@ import {
   createTransactionForAi,
   deleteTransactionForAi,
   payInstallmentForAi,
-} from "../../api/services/transaction.service";
+} from "../../api/services/transaction-ai.service";
 import * as walletsService from "../../api/services/wallets.service";
 
 // ─── Phone normalization ─────────────────────────────────────────────────────
