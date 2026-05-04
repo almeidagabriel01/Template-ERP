@@ -129,8 +129,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await fetch("/api/auth/session", {
         method: "DELETE",
         credentials: "include",
+        signal: AbortSignal.timeout(5000),
       });
     } catch (error) {
+      // AbortError (5s timeout) or network error — acceptable; the __session cookie
+      // will be invalidated by middleware once Firebase auth state clears.
       console.error("Failed to clear server session:", error);
     }
     setIsSessionSynced(false);

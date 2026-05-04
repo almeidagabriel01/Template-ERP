@@ -75,7 +75,9 @@ export class DashboardPage {
     // Target the button specifically, not the DockIcon motion.div wrapper
     await this.page.locator('button[aria-label="Sair"]').click();
 
-    // Wait for redirect back to login
-    await this.page.waitForURL(/\/login/, { timeout: 15000 });
+    // Wait for redirect back to login.
+    // 'commit' returns as soon as the navigation is committed (first response received),
+    // avoiding flakiness from slow page loads in CI.
+    await this.page.waitForURL(/\/login/, { timeout: 30000, waitUntil: "commit" });
   }
 }

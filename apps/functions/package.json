@@ -56,7 +56,7 @@
   },
   "overrides": {
     "@google-cloud/storage": "7.19.0",
-    "fast-xml-parser": "5.3.6",
+    "fast-xml-parser": "5.7.2",
     "qs": "6.15.0"
   },
   "private": true

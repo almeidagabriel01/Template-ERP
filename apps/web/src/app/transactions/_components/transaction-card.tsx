@@ -12,9 +12,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Trash2, Edit, Eye, Check, ChevronDown, Banknote, CreditCard, FileText, Edit2, Split, DollarSign, Share2, RefreshCw } from "lucide-react";
+import { Trash2, Edit, Eye, Check, ChevronDown, Banknote, CreditCard, FileText, Edit2, DollarSign, Share2, RefreshCw } from "lucide-react";
 import { Transaction, TransactionStatus } from "@/services/transaction-service";
-import { typeConfig, statusConfig } from "../_constants/config";
 import { formatCurrency } from "@/utils/format";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import {
@@ -108,7 +107,6 @@ export function TransactionCard({
     showEditBlockDialog,
     setShowEditBlockDialog,
     isEditingAmount,
-    setIsEditingAmount,
     editAmountValue,
     setEditAmountValue,
     isSavingAmount,
@@ -163,7 +161,6 @@ export function TransactionCard({
     onUpdate,
     onUpdateBatch,
     onStatusChange,
-    onDelete,
     onRegisterPartialPayment,
     onUpdateExtraCostStatus,
     onReload,

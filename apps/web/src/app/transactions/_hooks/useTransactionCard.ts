@@ -36,7 +36,6 @@ export interface UseTransactionCardArgs {
   onUpdate?: (transaction: Transaction, data: Partial<Transaction>) => Promise<boolean>;
   onUpdateBatch?: (updates: { id: string; data: Partial<Transaction> }[]) => Promise<boolean>;
   onStatusChange?: (transaction: Transaction, newStatus: TransactionStatus, updateAll?: boolean) => Promise<boolean>;
-  onDelete?: (transaction: Transaction) => void;
   onRegisterPartialPayment?: (originalTransaction: Transaction, amount: number, date: string) => Promise<void>;
   onUpdateExtraCostStatus?: (parentTxId: string, ecId: string, newStatus: TransactionStatus) => Promise<boolean>;
   onReload?: () => Promise<void>;
@@ -120,7 +119,6 @@ export function useTransactionCard({
   onUpdate,
   onUpdateBatch,
   onStatusChange,
-  onDelete: _onDelete,
   onRegisterPartialPayment,
   onUpdateExtraCostStatus,
   onReload,

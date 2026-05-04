@@ -23,6 +23,7 @@ import {
   getDateString,
   DateLike,
 } from "../_lib/financial-utils";
+import { normalize } from "@/utils/text";
 import { useOptimisticWallets } from "./useOptimisticWallets";
 import { useFinancialFilters } from "./useFinancialFilters";
 
@@ -89,7 +90,6 @@ const matchesGroupByHeuristic = (
 
 // Keep DateLike in scope for getErrorMessage (used in summary useMemo)
 void (null as unknown as DateLike);
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 void matchesGroupByHeuristic;
 
 const getErrorMessage = (error: unknown, fallback: string): string => {
@@ -215,7 +215,6 @@ export function useFinancialData(): UseFinancialDataReturn {
   } = useFinancialFilters(transactions, wallets);
 
   const {
-    calculateWalletImpacts,
     applyOptimisticWalletUpdate,
     applyOptimisticWalletUpdateBatch,
   } = useOptimisticWallets(setWallets);
@@ -278,7 +277,6 @@ export function useFinancialData(): UseFinancialDataReturn {
       pendingExpense: 0,
     };
 
-    const { normalize } = require("@/utils/text") as typeof import("@/utils/text");
     const term = searchTerm.toLowerCase().trim();
 
     transactions.forEach((t) => {
