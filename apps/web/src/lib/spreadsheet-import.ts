@@ -11,56 +11,43 @@ import type {
   Workbook as ExcelWorkbook,
   Worksheet as ExcelWorksheet,
 } from "exceljs";
-import type {
-  CellObject,
-  ColInfo,
-  Range as SheetRange,
-  RowInfo,
-  WorkBook,
-  WorkSheet,
-} from "xlsx";
 import { DEFAULT_SPREADSHEET_LOCALE } from "@/lib/univer-pt-br";
+
+type SheetRange = { s: { r: number; c: number }; e: { r: number; c: number } };
+type CellObject = { t?: string; v?: string | number | boolean | Date; f?: string; w?: string };
+type RowInfo = { hpx?: number; hpt?: number; hidden?: boolean };
+type ColInfo = { wpx?: number; wch?: number; hidden?: boolean };
+type WorkSheet = {
+  "!ref"?: string;
+  "!merges"?: SheetRange[];
+  "!rows"?: RowInfo[];
+  "!cols"?: ColInfo[];
+  [cellAddress: string]: unknown;
+};
+type WorkBook = { SheetNames: string[]; Sheets: Record<string, WorkSheet> };
 
 const UNIVER_APP_VERSION = "0.11.0";
 const UNIVER_LOCALE = DEFAULT_SPREADSHEET_LOCALE;
 
 export const SUPPORTED_SPREADSHEET_EXTENSIONS = [
   "xlsx",
-  "xls",
   "xlsm",
-  "xlsb",
   "xltx",
   "xltm",
   "csv",
   "txt",
   "tsv",
-  "xml",
-  "dif",
-  "slk",
-  "prn",
-  "ods",
-  "fods",
 ] as const;
 
 export const SUPPORTED_SPREADSHEET_ACCEPT = [
   ".xlsx",
-  ".xls",
   ".xlsm",
-  ".xlsb",
   ".xltx",
   ".xltm",
   ".csv",
   ".txt",
   ".tsv",
-  ".xml",
-  ".dif",
-  ".slk",
-  ".prn",
-  ".ods",
-  ".fods",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.ms-excel",
-  "application/vnd.ms-excel.sheet.binary.macroEnabled.12",
   "application/vnd.ms-excel.sheet.macroEnabled.12",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.template",
   "application/vnd.ms-excel.template.macroEnabled.12",
@@ -69,14 +56,7 @@ export const SUPPORTED_SPREADSHEET_ACCEPT = [
 ].join(",");
 
 const STYLED_EXCEL_EXTENSIONS = new Set(["xlsx", "xlsm", "xltx", "xltm"]);
-const TEXT_BASED_EXTENSIONS = new Set([
-  "csv",
-  "txt",
-  "tsv",
-  "dif",
-  "slk",
-  "prn",
-]);
+const TEXT_BASED_EXTENSIONS = new Set(["csv", "txt", "tsv"]);
 const SUPPORTED_SPREADSHEET_EXTENSION_SET = new Set<string>(
   SUPPORTED_SPREADSHEET_EXTENSIONS,
 );
@@ -344,6 +324,104 @@ const decodeRangeReference = (reference: string): SheetRange => {
     s: { c: start.column, r: start.row },
     e: { c: end.column, r: end.row },
   };
+};
+
+const toColumnReference = (index: number): string => {
+  let result = "";
+  let n = index + 1;
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    result = String.fromCharCode(65 + rem) + result;
+    n = Math.floor((n - 1) / 26);
+  }
+  return result;
+};
+
+const localDecodeCell = (address: string): { r: number; c: number } => {
+  const { row, column } = decodeCellReference(address);
+  return { r: row, c: column };
+};
+
+const localDecodeRange = (range: string): SheetRange => decodeRangeReference(range);
+
+const parseCsvToRows = (text: string, delimiter: string): string[][] => {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const next = text[i + 1];
+
+    if (inQuotes) {
+      if (char === '"' && next === '"') {
+        field += '"';
+        i++;
+      } else if (char === '"') {
+        inQuotes = false;
+      } else {
+        field += char;
+      }
+    } else if (char === '"') {
+      inQuotes = true;
+    } else if (char === delimiter) {
+      row.push(field);
+      field = "";
+    } else if (char === "\r" && next === "\n") {
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+      i++;
+    } else if (char === "\n" || char === "\r") {
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+    } else {
+      field += char;
+    }
+  }
+
+  row.push(field);
+  if (row.some((f) => f !== "")) {
+    rows.push(row);
+  }
+
+  return rows;
+};
+
+const parseCsvField = (raw: string): CellObject => {
+  if (raw === "") return { t: "s", v: "", w: "" };
+  const num = Number(raw);
+  if (raw.trim() !== "" && !isNaN(num) && isFinite(num)) {
+    return { t: "n", v: num, w: raw };
+  }
+  return { t: "s", v: raw, w: raw };
+};
+
+const csvRowsToWorkBook = (rows: string[][], sheetName: string): WorkBook => {
+  const sheet: WorkSheet = {};
+  let maxRow = 0;
+  let maxCol = 0;
+
+  rows.forEach((row, r) => {
+    row.forEach((raw, c) => {
+      const cell = parseCsvField(raw);
+      if (cell.t === "s" && cell.v === "") return;
+      const address = `${toColumnReference(c)}${r + 1}`;
+      sheet[address] = cell;
+      maxRow = Math.max(maxRow, r);
+      maxCol = Math.max(maxCol, c);
+    });
+  });
+
+  if (Object.keys(sheet).length > 0) {
+    sheet["!ref"] = `A1:${toColumnReference(maxCol)}${maxRow + 1}`;
+  }
+
+  return { SheetNames: [sheetName], Sheets: { [sheetName]: sheet } };
 };
 
 const getCellDisplayValue = (cell: CellObject): string => {
@@ -1133,32 +1211,31 @@ const importGenericSpreadsheet = async (
   file: File,
   fileExtension: string | undefined,
 ): Promise<{ name: string; data: SpreadsheetData }> => {
-  const xlsx = await import("xlsx");
-  const fileBuffer = await file.arrayBuffer();
-  let workbook: WorkBook;
-
-  try {
-    workbook = xlsx.read(fileBuffer, {
-      type: "array",
-      raw: fileExtension ? TEXT_BASED_EXTENSIONS.has(fileExtension) : false,
-      cellDates: true,
-      cellFormula: true,
-      cellNF: false,
-      cellStyles: false,
-    });
-  } catch (error) {
-    console.error("Error reading generic spreadsheet import file:", error);
+  if (!fileExtension || !TEXT_BASED_EXTENSIONS.has(fileExtension)) {
     throw new Error(
-      "Não foi possível ler o arquivo. Envie uma planilha compatível, como XLSX, XLS, XLSM, XLSB, CSV ou ODS.",
+      `Formato não suportado. Use: ${SUPPORTED_SPREADSHEET_EXTENSIONS.join(", ")}.`,
     );
   }
 
-  return convertGenericWorkbook(
-    workbook,
-    file.name,
-    xlsx.utils.decode_cell,
-    xlsx.utils.decode_range,
-  );
+  let text: string;
+  try {
+    text = await file.text();
+  } catch (error) {
+    console.error("Error reading text-based spreadsheet:", error);
+    throw new Error("Não foi possível ler o arquivo. Verifique se é um arquivo de texto válido.");
+  }
+
+  const delimiter = fileExtension === "tsv" || fileExtension === "txt" ? "\t" : ",";
+  const rows = parseCsvToRows(text, delimiter);
+
+  if (rows.length === 0) {
+    throw new Error("O arquivo está vazio ou não contém dados.");
+  }
+
+  const sheetName = normalizeWorkbookName(file.name);
+  const workbook = csvRowsToWorkBook(rows, sheetName);
+
+  return convertGenericWorkbook(workbook, file.name, localDecodeCell, localDecodeRange);
 };
 
 const importStyledExcelSpreadsheet = async (
@@ -1194,14 +1271,7 @@ export const importExcelFileToSpreadsheetData = async (
   }
 
   if (fileExtension && STYLED_EXCEL_EXTENSIONS.has(fileExtension)) {
-    try {
-      return await importStyledExcelSpreadsheet(file);
-    } catch (error) {
-      console.warn(
-        "Falling back to generic spreadsheet import after styled import failure:",
-        error,
-      );
-    }
+    return importStyledExcelSpreadsheet(file);
   }
 
   return importGenericSpreadsheet(file, fileExtension);
