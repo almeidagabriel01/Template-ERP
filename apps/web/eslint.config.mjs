@@ -12,10 +12,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    "functions/**",
-    // Claude Code internal files — not part of the project source
-    ".claude/**",
-    ".agents/**",
+    // Não precisa mais ignorar functions/** ou .claude/** — está em apps/web/
   ]),
 ]);
 
