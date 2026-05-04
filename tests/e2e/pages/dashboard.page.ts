@@ -52,11 +52,28 @@ export class DashboardPage {
    * logout() from useAuth() as the header dropdown item.
    */
   async logout(): Promise<void> {
-    // The bottom dock renders a button with aria-label="Sair" that directly calls logout().
-    // This avoids the complexity of opening the header Radix DropdownMenu in headless Playwright.
-    const sairButton = this.page.locator('[aria-label="Sair"]').first();
-    await sairButton.waitFor({ state: "visible", timeout: 15000 });
-    await sairButton.click();
+    const viewport = this.page.viewportSize() ?? { width: 1280, height: 720 };
+
+    // The dock auto-hides via CSS transform (translate-y) after idle time.
+    // Move the mouse to the bottom hotzone to reveal it.
+    await this.page.mouse.move(viewport.width / 2, viewport.height - 2);
+
+    // Wait for the dock's 300ms slide-up transition to complete before clicking.
+    // The button is technically "visible" to Playwright even when off-screen via
+    // CSS transform, so we check the actual bounding box position instead.
+    await this.page.waitForFunction(
+      () => {
+        const btn = document.querySelector('button[aria-label="Sair"]');
+        if (!btn) return false;
+        const rect = btn.getBoundingClientRect();
+        return rect.top >= 0 && rect.bottom <= window.innerHeight && rect.height > 0;
+      },
+      undefined,
+      { timeout: 5000 },
+    );
+
+    // Target the button specifically, not the DockIcon motion.div wrapper
+    await this.page.locator('button[aria-label="Sair"]').click();
 
     // Wait for redirect back to login
     await this.page.waitForURL(/\/login/, { timeout: 15000 });
