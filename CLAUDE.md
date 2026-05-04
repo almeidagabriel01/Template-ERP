@@ -270,8 +270,9 @@ Firebase projects: `erp-softcode` (dev), `erp-softcode-prod` (prod). Configured 
 │           │   └── services/     # PDF (Playwright), WhatsApp, notifications
 │           ├── lib/              # Admin helpers, auth context, billing helpers
 │           └── shared/           # Shared types between controllers
-├── e2e/                  # Playwright E2E tests (raiz por enquanto — PR 3)
-├── tests/                # Firestore rules tests (raiz por enquanto — PR 3)
+├── tests/
+│   ├── e2e/              # Playwright E2E tests
+│   └── firestore-rules/  # Firestore security rules tests (Jest)
 ├── .claude/              # Claude Code configuration
 │   ├── agents/           # frontend.md, backend.md, full-stack.md
 │   ├── commands/         # /deploy-check, /new-feature, /debug, /document-api

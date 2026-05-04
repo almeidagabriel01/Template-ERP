@@ -5,5 +5,5 @@
     "moduleResolution": "node",
     "jsx": "react"
   },
-  "include": ["tests/**/*.ts"]
+  "include": ["tests/firestore-rules/**/*.ts"]
 }

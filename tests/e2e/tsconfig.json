@@ -1,5 +1,5 @@
 {
-  "extends": "../apps/web/tsconfig.json",
+  "extends": "../../apps/web/tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": ".",
@@ -7,7 +7,7 @@
     "jsx": "react-jsx",
     "paths": {
       "@e2e/*": ["./*"],
-      "@/*": ["../apps/web/src/*"]
+      "@/*": ["../../apps/web/src/*"]
     }
   },
   "include": ["**/*.ts"],

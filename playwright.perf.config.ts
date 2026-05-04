@@ -5,10 +5,10 @@ process.env.FIREBASE_AUTH_EMULATOR_HOST = "127.0.0.1:9099";
 process.env.FIREBASE_STORAGE_EMULATOR_HOST = "127.0.0.1:9199";
 
 export default defineConfig({
-  testDir: "./e2e/performance",
+  testDir: "./tests/e2e/performance",
   testMatch: "**/*.spec.ts",
-  globalSetup: "./e2e/global-setup.ts",
-  globalTeardown: "./e2e/global-teardown.ts",
+  globalSetup: "./tests/e2e/global-setup.ts",
+  globalTeardown: "./tests/e2e/global-teardown.ts",
   timeout: 60000,
   expect: {
     timeout: 15000,
