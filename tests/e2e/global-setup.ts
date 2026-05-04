@@ -75,7 +75,7 @@ async function waitForEmulators(): Promise<void> {
 
 async function globalSetup(): Promise<void> {
   console.log("[global-setup] Building Cloud Functions...");
-  const functionsDir = path.join(process.cwd(), "functions");
+  const functionsDir = path.join(process.cwd(), "apps/functions");
   const buildResult = spawnSync("npm", ["run", "build"], {
     cwd: functionsDir,
     stdio: "inherit",

@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "npm -w proops-web run dev",
+    "dev:test": "npm -w proops-web run dev:test",
     "build": "npm -w proops-web run build",
     "start": "npm -w proops-web run start",
     "lint": "npm -w proops-web run lint",

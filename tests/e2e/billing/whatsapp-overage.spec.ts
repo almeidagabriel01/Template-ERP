@@ -44,9 +44,9 @@ const FUNCTIONS_BASE =
 function resolveCronSecret(): string {
   // Replicate emulator env loading order (last file wins)
   const envFiles = [
-    "functions/.env",
-    "functions/.env.demo-proops-test",
-    "functions/.env.local",
+    "apps/functions/.env",
+    "apps/functions/.env.demo-proops-test",
+    "apps/functions/.env.local",
   ];
 
   let resolved = "test-cron-secret";
