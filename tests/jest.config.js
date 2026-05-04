@@ -2,9 +2,9 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  testMatch: ['<rootDir>/tests/firestore-rules/**/*.test.ts'],
+  testMatch: ['<rootDir>/firestore-rules/**/*.test.ts'],
   transform: {
-    '^.+\\.ts$': ['ts-jest', { tsconfig: 'tsconfig.rules.json' }],
+    '^.+\\.ts$': ['ts-jest', { tsconfig: 'tests/tsconfig.rules.json' }],
   },
   testTimeout: 30000,
 };
