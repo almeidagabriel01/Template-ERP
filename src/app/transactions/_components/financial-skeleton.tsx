@@ -33,39 +33,32 @@ export function FinancialSkeleton() {
         </div>
       </div>
 
-      {/* Filters row 1: Search + Type tabs */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center">
-        <div className="h-10 w-full max-w-sm rounded-xl bg-muted" />
-        <div className="flex gap-2">
-          <div className="h-9 w-20 rounded-lg bg-muted" />
-          <div className="h-9 w-24 rounded-lg bg-muted" />
-          <div className="h-9 w-24 rounded-lg bg-muted" />
-        </div>
-      </div>
-
-      {/* Filters row 2: Status badges + Wallet */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <div className="h-9 w-20 rounded-lg bg-muted" />
-        <div className="h-9 w-20 rounded-lg bg-muted" />
-        <div className="h-9 w-24 rounded-lg bg-muted" />
-        <div className="h-9 w-24 rounded-lg bg-muted" />
-        <div className="h-9 w-36 rounded-lg bg-muted" />
-      </div>
-
-      {/* Filters row 3: Date range + Sort + View toggle */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="h-9 w-32 rounded-lg bg-muted" />
-          <div className="h-9 w-36 rounded-lg bg-muted" />
-          <div className="h-4 w-8 rounded bg-muted" />
-          <div className="h-9 w-36 rounded-lg bg-muted" />
-        </div>
+      {/* Skeleton: filtros — 3 linhas */}
+      <div className="rounded-xl border bg-card shadow-sm p-3 md:p-4 flex flex-col gap-3.5">
+        {/* Linha 1: search h-12 + (limpar + viewmode) à direita */}
         <div className="flex items-center gap-3">
-          <div className="h-9 w-40 rounded-lg bg-muted" />
-          <div className="flex gap-1">
-            <div className="h-9 w-36 rounded-lg bg-muted" />
-            <div className="h-9 w-28 rounded-lg bg-muted" />
+          <div className="h-12 flex-1 rounded-xl bg-muted" />
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="h-9 w-24 rounded-lg bg-muted" />
+            <div className="h-9 w-52 rounded-xl bg-muted" />
           </div>
+        </div>
+        {/* Linha 2: type segmented + status pills */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="h-9 w-52 rounded-xl bg-muted" />
+          <div className="flex items-center gap-1.5">
+            <div className="h-9 w-20 rounded-full bg-muted" />
+            <div className="h-9 w-24 rounded-full bg-muted" />
+            <div className="h-9 w-24 rounded-full bg-muted" />
+          </div>
+        </div>
+        {/* Linha 3: wallet + período + sort à direita */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="h-9 w-44 rounded-lg bg-muted" />
+          <div className="h-9 w-40 rounded-lg bg-muted" />
+          <div className="h-9 w-36 rounded-lg bg-muted" />
+          <div className="h-9 w-36 rounded-lg bg-muted" />
+          <div className="h-9 w-44 rounded-lg bg-muted ml-auto" />
         </div>
       </div>
 

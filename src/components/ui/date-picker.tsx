@@ -131,28 +131,40 @@ const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
     const [yearRangeStart, setYearRangeStart] = React.useState(
       () => Math.floor(displayMonth.year / 12) * 12,
     );
-    const [coords, setCoords] = React.useState({ top: 0, left: 0 });
+    const [coords, setCoords] = React.useState({ top: 0, left: 0, maxHeight: 380 });
 
     const containerRef = React.useRef<HTMLDivElement>(null);
     const hiddenInputRef = React.useRef<HTMLInputElement>(null);
     const popoverRef = React.useRef<HTMLDivElement>(null);
 
     const updatePosition = React.useCallback(() => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        const spaceBelow = window.innerHeight - rect.bottom;
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const MARGIN = 8;
+      const CALENDAR_WIDTH = 310;
+      const CALENDAR_HEIGHT = popoverRef.current?.offsetHeight ?? 380;
 
-        // Only flip to top if there is strictly not enough space below AND much more space above
-        // Calendar height approx 380px.
-        const placeAbove = spaceBelow < 300 && rect.top > 450;
+      const spaceBelow = window.innerHeight - rect.bottom - MARGIN;
+      const spaceAbove = rect.top - MARGIN;
 
-        setCoords({
-          top: placeAbove
-            ? rect.top - (popoverRef.current?.offsetHeight ?? 380) - 8
-            : rect.bottom + 8,
-          left: rect.left,
-        });
-      }
+      // Flip above when there is not enough space below and more space above
+      const placeAbove = spaceBelow < CALENDAR_HEIGHT && spaceAbove > spaceBelow;
+
+      // Constrain to available space, minimum 180px so the calendar is still usable
+      const maxHeight = Math.max(180, Math.min(CALENDAR_HEIGHT, placeAbove ? spaceAbove : spaceBelow));
+
+      // Clamp left so the calendar does not overflow the right viewport edge
+      const rawLeft = rect.left;
+      const clampedLeft =
+        rawLeft + CALENDAR_WIDTH > window.innerWidth - MARGIN
+          ? Math.max(MARGIN, window.innerWidth - CALENDAR_WIDTH - MARGIN)
+          : rawLeft;
+
+      setCoords({
+        top: placeAbove ? rect.top - maxHeight - MARGIN : rect.bottom + MARGIN,
+        left: clampedLeft,
+        maxHeight,
+      });
     }, []);
 
     React.useEffect(() => {
@@ -368,13 +380,22 @@ const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
       if (!isOpen) {
         if (containerRef.current) {
           const rect = containerRef.current.getBoundingClientRect();
-          const estimatedHeight = 380;
-          const spaceBelow = window.innerHeight - rect.bottom;
-          const placeAbove = spaceBelow < 300 && rect.top > 450;
-
+          const MARGIN = 8;
+          const CALENDAR_WIDTH = 310;
+          const ESTIMATED_HEIGHT = 380;
+          const spaceBelow = window.innerHeight - rect.bottom - MARGIN;
+          const spaceAbove = rect.top - MARGIN;
+          const placeAbove = spaceBelow < ESTIMATED_HEIGHT && spaceAbove > spaceBelow;
+          const maxHeight = Math.max(180, Math.min(ESTIMATED_HEIGHT, placeAbove ? spaceAbove : spaceBelow));
+          const rawLeft = rect.left;
+          const clampedLeft =
+            rawLeft + CALENDAR_WIDTH > window.innerWidth - MARGIN
+              ? Math.max(MARGIN, window.innerWidth - CALENDAR_WIDTH - MARGIN)
+              : rawLeft;
           setCoords({
-            top: placeAbove ? rect.top - estimatedHeight - 8 : rect.bottom + 8,
-            left: rect.left,
+            top: placeAbove ? rect.top - maxHeight - MARGIN : rect.bottom + MARGIN,
+            left: clampedLeft,
+            maxHeight,
           });
         }
         setView("days");
@@ -456,12 +477,12 @@ const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
               className={cn(
                 "fixed z-9999 w-[310px] rounded-2xl border-2 border-border/60 bg-card shadow-2xl",
                 "animate-in fade-in-0 duration-150",
-                "overflow-hidden",
-                // "pointer-events-auto", // Ensure interaction even if body has pointer-events: none
               )}
               style={{
                 top: coords.top,
                 left: coords.left,
+                maxHeight: coords.maxHeight,
+                overflowY: "auto",
                 pointerEvents: "auto",
               }}
               onPointerDown={(e) => {

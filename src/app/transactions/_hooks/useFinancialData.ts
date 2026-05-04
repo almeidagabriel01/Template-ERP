@@ -234,8 +234,8 @@ interface UseFinancialDataReturn {
   setSearchTerm: (term: string) => void;
   filterType: TransactionType | "all";
   setFilterType: (type: TransactionType | "all") => void;
-  filterStatus: TransactionStatus | "all";
-  setFilterStatus: (status: TransactionStatus | "all") => void;
+  filterStatus: TransactionStatus[];
+  setFilterStatus: (status: TransactionStatus[]) => void;
   filterWallet: string;
   setFilterWallet: (wallet: string) => void;
   filterStartDate: string;
@@ -290,9 +290,9 @@ export function useFinancialData(): UseFinancialDataReturn {
   const [filterType, setFilterType] = React.useState<TransactionType | "all">(
     "all",
   );
-  const [filterStatus, setFilterStatus] = React.useState<
-    TransactionStatus | "all"
-  >("pending");
+  const [filterStatus, setFilterStatus] = React.useState<TransactionStatus[]>([
+    "pending",
+  ]);
   const [filterWallet, setFilterWallet] = React.useState<string>("");
   const [filterStartDate, setFilterStartDate] = React.useState<string>("");
   const [filterEndDate, setFilterEndDate] = React.useState<string>("");
@@ -597,15 +597,17 @@ export function useFinancialData(): UseFinancialDataReturn {
       filtered = filtered.filter((t) => t.type === filterType);
     }
 
-    // Filter by status
-    if (filterStatus !== "all") {
+    // Filter by status (multi-select; empty array = no filter)
+    if (filterStatus.length > 0) {
       filtered = filtered.filter((t) => {
-        if (t.status === filterStatus) return true;
+        if (filterStatus.includes(t.status)) return true;
         // In byDueDate mode, extra costs are already own rows — don't double-match via parent
         if (
           viewMode !== "byDueDate" &&
           t.extraCosts &&
-          t.extraCosts.some((ec) => (ec.status || "pending") === filterStatus)
+          t.extraCosts.some((ec) =>
+            filterStatus.includes((ec.status || "pending") as TransactionStatus),
+          )
         )
           return true;
         return false;
@@ -798,7 +800,7 @@ export function useFinancialData(): UseFinancialDataReturn {
         return !!fwObj && (t.wallet === fwObj.id || t.wallet === fwObj.name);
       })();
       const mainTxMatchesStatus =
-        filterStatus === "all" || t.status === filterStatus;
+        filterStatus.length === 0 || filterStatus.includes(t.status);
 
       let mainTxMatchesSearch = true;
       if (term) {
@@ -840,7 +842,7 @@ export function useFinancialData(): UseFinancialDataReturn {
             const ecMatches = ecWallet === filterWallet || (!!fwObj && (ecWallet === fwObj.id || ecWallet === fwObj.name));
             if (!ecMatches) return;
           }
-          if (filterStatus !== "all" && ecStatus !== filterStatus) return;
+          if (filterStatus.length > 0 && !filterStatus.includes(ecStatus as TransactionStatus)) return;
 
           let ecMatchesSearch = true;
           if (term) {

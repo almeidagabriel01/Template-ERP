@@ -389,7 +389,7 @@ export default function FinancialPage() {
 
   // Handle selection when view mode or filters change
   React.useEffect(() => {
-    const currentFilterKey = `${filterType}-${filterStatus}-${filterWallet}-${filterStartDate}-${filterEndDate}-${searchTerm}`;
+    const currentFilterKey = `${filterType}-${filterStatus.join(",")}-${filterWallet}-${filterStartDate}-${filterEndDate}-${searchTerm}`;
     const modeChanged = viewMode !== prevViewMode.current;
     const filtersChanged = currentFilterKey !== prevFilterKey.current;
 
@@ -523,9 +523,9 @@ export default function FinancialPage() {
     setViewMode(mode);
     if (mode === "byDueDate") {
       setFilterDateType("dueDate");
-      setFilterStatus("pending");
+      setFilterStatus(["pending"]);
     } else {
-      setFilterStatus("all");
+      setFilterStatus([]);
     }
   };
 

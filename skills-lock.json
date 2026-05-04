@@ -21,6 +21,12 @@
       "sourceType": "github",
       "computedHash": "f483c304fcde060211ffae00f49bb728536e7e7613c99db45b5b924d9fc17243"
     },
+    "design-motion-principles": {
+      "source": "kylezantos/design-motion-principles",
+      "sourceType": "github",
+      "skillPath": "skills/design-motion-principles/SKILL.md",
+      "computedHash": "7e854ddaab73161e402567e9650936db9fd8292114d4c621e8c20b239a046b76"
+    },
     "landing-page-design": {
       "source": "inferen-sh/skills",
       "sourceType": "github",
