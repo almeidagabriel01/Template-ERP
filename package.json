@@ -4,7 +4,7 @@
   "private": true,
   "workspaces": ["apps/web"],
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "scripts": {
     "dev": "npm -w proops-web run dev",
