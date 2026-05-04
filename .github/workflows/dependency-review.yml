@@ -7,7 +7,7 @@ on:
   pull_request:
     paths:
       - package.json
-      - functions/package.json
+      - apps/functions/package.json
 
 permissions:
   contents: read
