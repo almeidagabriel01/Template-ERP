@@ -1,9 +1,9 @@
 {
-  "extends": "./apps/web/tsconfig.json",
+  "extends": "../apps/web/tsconfig.json",
   "compilerOptions": {
     "module": "commonjs",
     "moduleResolution": "node",
     "jsx": "react"
   },
-  "include": ["tests/firestore-rules/**/*.ts"]
+  "include": ["firestore-rules/**/*.ts"]
 }
