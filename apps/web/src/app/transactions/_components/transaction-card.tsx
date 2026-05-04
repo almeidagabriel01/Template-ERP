@@ -27,7 +27,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { TransactionInstallmentsList } from "./transaction-installments-list";
 import { useTransactionCard } from "../_hooks/useTransactionCard";
 import { EditBlockDialog } from "./edit-block-dialog";
 import { PartialPaymentDialog } from "./partial-payment-dialog";
@@ -35,6 +34,8 @@ import { ExtraCostDialog } from "./extra-cost-dialog";
 import { ShareLinkModal } from "./share-link-modal";
 import { Wallet } from "@/types";
 import { Loader } from "@/components/ui/loader";
+import { TransactionProposalGroupExpanded } from "./transaction-proposal-group-expanded";
+import { TransactionStandaloneExpanded } from "./transaction-standalone-expanded";
 
 interface TransactionCardProps {
   transaction: Transaction;
@@ -76,10 +77,6 @@ interface TransactionCardProps {
   onToggleExpand?: (collapsed: boolean) => void;
   wallets?: Wallet[];
 }
-
-type DisplayExtraCost = NonNullable<Transaction["extraCosts"]>[number] & {
-  parentTransactionId: string;
-};
 
 export function TransactionCard({
   transaction,
@@ -190,7 +187,6 @@ export function TransactionCard({
           <div
             className="flex items-center gap-4 py-4 px-4 cursor-pointer"
             onClick={(e) => {
-              // Ignore click if it came from a button or interactable element
               const target = e.target as HTMLElement;
               if (
                 target.closest("button") ||
@@ -278,7 +274,7 @@ export function TransactionCard({
                     </div>
                   </>
                 )}
-                {/* Show installment info for standalone installments - UPDATED per user request */}
+                {/* Show installment info for standalone installments */}
                 {!isProposalGroup && transaction.isInstallment && (
                   <>
                     <span>•</span>
@@ -345,15 +341,12 @@ export function TransactionCard({
                     <>
                       <span>•</span>
                       <div className="flex items-center gap-2">
-                        {/* Show Down Payment Badge if present */}
                         {relatedInstallments.some((t) => t.isDownPayment) && (
                           <span className="text-blue-500 font-medium flex items-center gap-1">
                             <Banknote className="w-3 h-3" />
                             Entrada
                           </span>
                         )}
-
-                        {/* Show Installment Count Badge only when there are real installments */}
                         {installmentStatusCounts && (
                           <span className="text-primary font-medium flex items-center gap-1">
                             <CreditCard className="w-3 h-3" />
@@ -372,15 +365,12 @@ export function TransactionCard({
                     <>
                       <span>•</span>
                       <div className="flex items-center gap-2">
-                        {/* Show Down Payment Badge if present */}
                         {relatedInstallments.some((t) => t.isDownPayment) && (
                           <span className="text-blue-500 font-medium flex items-center gap-1">
                             <Banknote className="w-3 h-3" />
                             Entrada
                           </span>
                         )}
-
-                        {/* Show Recurring Badge */}
                         <span className="text-primary font-medium flex items-center gap-1">
                           <RefreshCw className="w-3 h-3" />
                           Recorrente (
@@ -436,7 +426,6 @@ export function TransactionCard({
                           setEditAmountValue(Number(e.target.value))
                         }
                         onKeyDown={handleAmountKeyDown}
-                        // Focus on mount logic would need a ref, but primitive autoFocus often works
                         autoFocus
                         disabled={isSavingAmount}
                         className="h-8 py-1 pr-2 pl-8 w-32 text-right font-bold text-sm bg-background border-primary"
@@ -631,817 +620,64 @@ export function TransactionCard({
               )}
             </div>
           </div>
+
           {/* Expanded section for proposal groups */}
           {isExpanded && isProposalGroup && (
-            <div className="border-t px-4 py-3 bg-muted/30 space-y-3">
-              {/* Down Payment Section */}
-              {downPayment && (
-                <div
-                  data-testid="down-payment-row"
-                  className={`flex items-center justify-between py-2 px-3 bg-blue-500/10 rounded-lg border border-blue-500/20 ${selectedIds?.has(downPayment.id) ? "ring-2 ring-primary" : ""}`}
-                >
-                  <div className="flex items-center gap-3">
-                    {onToggleSelection && (
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selectedIds?.has(downPayment.id) || false}
-                          onCheckedChange={() =>
-                            onToggleSelection(downPayment.id)
-                          }
-                          className="cursor-pointer"
-                        />
-                      </div>
-                    )}
-                    <div className="p-1.5 rounded-full bg-blue-500/20">
-                      <Banknote className="w-4 h-4 text-blue-500" />
-                    </div>
-                    <div>
-                      <div className="font-medium text-sm">Entrada</div>
-                      <div className="text-xs text-muted-foreground">
-                        Venc:{" "}
-                        {formatDate(downPayment.dueDate || downPayment.date)}
-                        {downPayment.wallet && ` • ${wallets.find(w => w.id === downPayment.wallet || w.name === downPayment.wallet)?.name ?? downPayment.wallet}`}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="font-bold text-blue-500">
-                      {formatCurrency(downPayment.amount)}
-                    </div>
-                    {onStatusChange && canEdit ? (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 gap-1.5 rounded-md text-xs font-medium border"
-                            onClick={(e) => e.stopPropagation()}
-                            disabled={updatingIds.has(downPayment.id)}
-                          >
-                            {updatingIds.has(downPayment.id) ? (
-                              <>
-                                <Loader size="sm" />
-                                <span>Atualizando...</span>
-                              </>
-                            ) : (
-                              <>
-                                {(() => {
-                                  const option = statusOptions.find(
-                                    (o) => o.value === downPayment.status,
-                                  );
-                                  const Icon = option?.icon || Check;
-                                  return <Icon className="h-3 w-3" />;
-                                })()}
-                                <span>
-                                  {statusConfig[downPayment.status].label}
-                                </span>
-                                <ChevronDown className="h-2.5 w-2.5 opacity-50" />
-                              </>
-                            )}
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-[130px]">
-                          {statusOptions.map((option) => (
-                            <DropdownMenuItem
-                              key={option.id}
-                              onClick={() =>
-                                handleIndividualStatusChange(
-                                  downPayment,
-                                  option.id,
-                                )
-                              }
-                              className="gap-2 cursor-pointer text-xs"
-                            >
-                              <option.icon className="h-3.5 w-3.5" />
-                              <span>{option.label}</span>
-                              {downPayment.status === option.id && (
-                                <Check className="h-3 w-3 ml-auto opacity-50" />
-                              )}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    ) : (
-                      <Badge
-                        variant={statusConfig[downPayment.status].variant}
-                        className="text-xs"
-                      >
-                        {statusConfig[downPayment.status].label}
-                      </Badge>
-                    )}
-                    {/* Down Payment Edit Button */}
-                    {canEdit &&
-                      (downPayment.proposalId ? (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-primary ml-1"
-                          title="Editar (Gerenciado pela Proposta)"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowEditBlockDialog(true);
-                          }}
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                        </Button>
-                      ) : (
-                        <Link href={`/transactions/${downPayment.id}`}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 ml-1"
-                            title="Editar"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </Button>
-                        </Link>
-                      ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Installments Section */}
-              {installments.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 px-1">
-                    <CreditCard className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-medium text-muted-foreground">
-                      Parcelas ({installments.length}x de{" "}
-                      {formatCurrency(installments[0]?.amount || 0)})
-                    </span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {installments.map((inst) => (
-                      <div
-                        key={inst.id}
-                        className={`flex items-center justify-between py-2 px-3 bg-muted/50 rounded-lg border ${selectedIds?.has(inst.id) ? "ring-2 ring-primary" : ""}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          {onToggleSelection && (
-                            <div onClick={(e) => e.stopPropagation()}>
-                              <Checkbox
-                                checked={selectedIds?.has(inst.id) || false}
-                                onCheckedChange={() =>
-                                  onToggleSelection(inst.id)
-                                }
-                                className="cursor-pointer"
-                              />
-                            </div>
-                          )}
-                          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-                            <span className="text-xs font-bold text-primary">
-                              {inst.installmentNumber}
-                            </span>
-                          </div>
-                          <div>
-                            <div className="font-medium text-sm">
-                              Parcela {inst.installmentNumber}/
-                              {inst.installmentCount}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              Venc: {formatDate(inst.dueDate || inst.date)}
-                              {inst.wallet && ` • ${wallets.find(w => w.id === inst.wallet || w.name === inst.wallet)?.name ?? inst.wallet}`}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="font-bold text-primary">
-                            {formatCurrency(inst.amount)}
-                          </div>
-                          {onStatusChange && canEdit ? (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 gap-1.5 rounded-md text-xs font-medium border"
-                                  onClick={(e) => e.stopPropagation()}
-                                  disabled={updatingIds.has(inst.id)}
-                                >
-                                  {updatingIds.has(inst.id) ? (
-                                    <>
-                                      <Loader size="sm" />
-                                      <span>Atualizando...</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      {(() => {
-                                        const option = statusOptions.find(
-                                          (o) => o.value === inst.status,
-                                        );
-                                        const Icon = option?.icon || Check;
-                                        return <Icon className="h-3 w-3" />;
-                                      })()}
-                                      <span>
-                                        {statusConfig[inst.status].label}
-                                      </span>
-                                      <ChevronDown className="h-2.5 w-2.5 opacity-50" />
-                                    </>
-                                  )}
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent
-                                align="end"
-                                className="w-[130px]"
-                              >
-                                {statusOptions.map((option) => (
-                                  <DropdownMenuItem
-                                    key={option.id}
-                                    onClick={() =>
-                                      handleIndividualStatusChange(
-                                        inst,
-                                        option.id,
-                                      )
-                                    }
-                                    className="gap-2 cursor-pointer text-xs"
-                                  >
-                                    <option.icon className="h-3.5 w-3.5" />
-                                    <span>{option.label}</span>
-                                    {inst.status === option.id && (
-                                      <Check className="h-3 w-3 ml-auto opacity-50" />
-                                    )}
-                                  </DropdownMenuItem>
-                                ))}
-                                {inst.status === "pending" && (
-                                  <DropdownMenuItem
-                                    onClick={() => handlePartialPayment(inst)}
-                                    className="gap-2 cursor-pointer text-xs border-t mt-1 pt-2"
-                                  >
-                                    <Split className="h-3.5 w-3.5" />
-                                    <span>Parcial</span>
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          ) : (
-                            <Badge
-                              variant={statusConfig[inst.status].variant}
-                              className="text-xs"
-                            >
-                              {statusConfig[inst.status].label}
-                            </Badge>
-                          )}
-                          {/* Individual Installment Edit Button */}
-                          {canEdit &&
-                            (inst.proposalId ? (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-muted-foreground hover:text-primary ml-1"
-                                title="Editar (Gerenciado pela Proposta)"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setShowEditBlockDialog(true);
-                                }}
-                              >
-                                <Edit className="w-3.5 h-3.5" />
-                              </Button>
-                            ) : (
-                              <Link href={`/transactions/${inst.id}`}>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 ml-1"
-                                  title="Editar"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <Edit className="w-3.5 h-3.5" />
-                                </Button>
-                              </Link>
-                            ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Saldo Restante Section */}
-              {saldoTx && !installments.length && (
-                <div
-                  data-testid="saldo-row"
-                  className={`flex items-center justify-between py-2 px-3 bg-muted/50 rounded-lg border ${selectedIds?.has(saldoTx.id) ? "ring-2 ring-primary" : ""}`}
-                >
-                  <div className="flex items-center gap-3">
-                    {onToggleSelection && (
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selectedIds?.has(saldoTx.id) || false}
-                          onCheckedChange={() =>
-                            onToggleSelection(saldoTx.id)
-                          }
-                          className="cursor-pointer"
-                        />
-                      </div>
-                    )}
-                    <div className="p-1.5 rounded-full bg-primary/10">
-                      <CreditCard className="w-4 h-4 text-primary" />
-                    </div>
-                    <div>
-                      <div className="font-medium text-sm">Saldo restante</div>
-                      <div className="text-xs text-muted-foreground">
-                        Venc:{" "}
-                        {formatDate(saldoTx.dueDate || saldoTx.date)}
-                        {saldoTx.wallet && ` • ${wallets.find(w => w.id === saldoTx.wallet || w.name === saldoTx.wallet)?.name ?? saldoTx.wallet}`}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="font-bold text-primary">
-                      {formatCurrency(saldoTx.amount)}
-                    </div>
-                    {onStatusChange && canEdit ? (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 gap-1.5 rounded-md text-xs font-medium border"
-                            onClick={(e) => e.stopPropagation()}
-                            disabled={updatingIds.has(saldoTx.id)}
-                          >
-                            {updatingIds.has(saldoTx.id) ? (
-                              <>
-                                <Loader size="sm" />
-                                <span>Atualizando...</span>
-                              </>
-                            ) : (
-                              <>
-                                {(() => {
-                                  const option = statusOptions.find(
-                                    (o) => o.value === saldoTx.status,
-                                  );
-                                  const Icon = option?.icon || Check;
-                                  return <Icon className="h-3 w-3" />;
-                                })()}
-                                <span>
-                                  {statusConfig[saldoTx.status].label}
-                                </span>
-                                <ChevronDown className="h-2.5 w-2.5 opacity-50" />
-                              </>
-                            )}
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-[130px]">
-                          {statusOptions.map((option) => (
-                            <DropdownMenuItem
-                              key={option.id}
-                              onClick={() =>
-                                handleIndividualStatusChange(
-                                  saldoTx,
-                                  option.id,
-                                )
-                              }
-                              className="gap-2 cursor-pointer text-xs"
-                            >
-                              <option.icon className="h-3.5 w-3.5" />
-                              <span>{option.label}</span>
-                              {saldoTx.status === option.id && (
-                                <Check className="h-3 w-3 ml-auto opacity-50" />
-                              )}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    ) : (
-                      <Badge
-                        variant={statusConfig[saldoTx.status].variant}
-                        className="text-xs"
-                      >
-                        {statusConfig[saldoTx.status].label}
-                      </Badge>
-                    )}
-                    {canEdit &&
-                      (saldoTx.proposalId ? (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-primary ml-1"
-                          title="Editar (Gerenciado pela Proposta)"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowEditBlockDialog(true);
-                          }}
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                        </Button>
-                      ) : (
-                        <Link href={`/transactions/${saldoTx.id}`}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 ml-1"
-                            title="Editar"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </Button>
-                        </Link>
-                      ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Extra Costs Section */}
-              {visibleExtraCosts.length > 0 && (
-                <div className="space-y-2 mt-4">
-                  <div className="flex items-center gap-2 px-1">
-                    <DollarSign className="w-4 h-4 text-amber-500" />
-                    <span className="text-sm font-medium text-amber-500/80">
-                      {transaction.type === "income"
-                        ? "Acréscimos Extras"
-                        : "Custos Extras"}{" "}
-                      ({visibleExtraCosts.length})
-                    </span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {visibleExtraCosts.map((ec) => (
-                      <div
-                        key={`${ec.parentTransactionId}-${ec.id}`}
-                        className={`flex items-center justify-between py-2 px-3 bg-amber-500/5 rounded-lg border border-amber-500/20`}
-                      >
-                        <div className="flex items-center gap-3">
-                          {onToggleSelection && (
-                            <div
-                              onClick={(e) => e.stopPropagation()}
-                              className="mr-1"
-                            >
-                              <Checkbox
-                                checked={selectedIds?.has(ec.id) || false}
-                                onCheckedChange={() => onToggleSelection(ec.id)}
-                                className="cursor-pointer"
-                              />
-                            </div>
-                          )}
-                          <div className="p-1.5 rounded-full bg-amber-500/20">
-                            <DollarSign className="w-4 h-4 text-amber-500" />
-                          </div>
-                          <div>
-                            <div className="font-medium text-sm text-amber-600 dark:text-amber-500">
-                              {ec.description}
-                            </div>
-                            <div className="text-xs text-muted-foreground flex items-center gap-1">
-                              <span>
-                                Adicionado em: {formatDate(ec.createdAt)}
-                              </span>
-                              {ec.wallet && (
-                                <>
-                                  <span className="opacity-50">•</span>
-                                  <span>
-                                    {wallets.find((w) => w.id === ec.wallet || w.name === ec.wallet)
-                                      ?.name || ec.wallet}
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="font-bold text-amber-600 dark:text-amber-500">
-                            {formatCurrency(ec.amount)}
-                          </div>
-
-                          {/* Status Dropdown */}
-                          {canEdit ? (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 gap-1.5 rounded-md text-xs font-medium border border-amber-500/30 text-amber-600 dark:text-amber-500 hover:bg-amber-500/10"
-                                  onClick={(e) => e.stopPropagation()}
-                                  disabled={
-                                    isUpdating || updatingIds.has(ec.id)
-                                  }
-                                >
-                                  {updatingIds.has(ec.id) ? (
-                                    <>
-                                      <Loader size="sm" />
-                                      <span>Atualizando...</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      {(() => {
-                                        const option = statusOptions.find(
-                                          (o) =>
-                                            o.value ===
-                                            (ec.status || "pending"),
-                                        );
-                                        const Icon = option?.icon || Check;
-                                        return <Icon className="h-3 w-3" />;
-                                      })()}
-                                      <span>
-                                        {
-                                          statusConfig[ec.status || "pending"]
-                                            .label
-                                        }
-                                      </span>
-                                      <ChevronDown className="h-2.5 w-2.5 opacity-50" />
-                                    </>
-                                  )}
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent
-                                align="end"
-                                className="w-[130px]"
-                              >
-                                {statusOptions.map((option) => (
-                                  <DropdownMenuItem
-                                    key={option.id}
-                                    onClick={() =>
-                                      handleExtraCostStatusChange(
-                                        ec.id,
-                                        ec.parentTransactionId,
-                                        option.id,
-                                      )
-                                    }
-                                    className="gap-2 cursor-pointer text-xs"
-                                  >
-                                    <option.icon className="h-3.5 w-3.5" />
-                                    <span>{option.label}</span>
-                                    {(ec.status || "pending") === option.id && (
-                                      <Check className="h-3 w-3 ml-auto opacity-50" />
-                                    )}
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          ) : (
-                            <Badge
-                              variant="outline"
-                              className="text-xs border-amber-500/30 text-amber-600 dark:text-amber-500"
-                            >
-                              {statusConfig[ec.status || "pending"].label}
-                            </Badge>
-                          )}
-
-                          {canEdit && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-amber-600 hover:bg-amber-500/10 ml-1"
-                                onClick={() => {
-                                  setEditingExtraCost({
-                                    id: ec.id,
-                                    amount: ec.amount,
-                                    description: ec.description,
-                                    wallet: ec.wallet,
-                                    parentTransactionId:
-                                      ec.parentTransactionId,
-                                  });
-                                  setShowExtraCostDialog(true);
-                                }}
-                                disabled={isUpdating || updatingIds.has(ec.id)}
-                              >
-                                <Edit className="w-3.5 h-3.5" />
-                              </Button>
-                              {canDelete && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-destructive hover:bg-destructive/10"
-                                  onClick={() =>
-                                    setExtraCostToDelete(
-                                      `${ec.parentTransactionId}::${ec.id}`,
-                                    )
-                                  }
-                                  disabled={
-                                    isUpdating || updatingIds.has(ec.id)
-                                  }
-                                >
-                                  {updatingIds.has(ec.id) ? (
-                                    <Loader size="sm" />
-                                  ) : (
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  )}
-                                </Button>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            <TransactionProposalGroupExpanded
+              downPayment={downPayment}
+              installments={installments}
+              saldoTx={saldoTx}
+              visibleExtraCosts={visibleExtraCosts}
+              transactionType={transaction.type}
+              canEdit={canEdit}
+              canDelete={canDelete}
+              isUpdating={isUpdating}
+              updatingIds={updatingIds}
+              statusOptions={statusOptions}
+              wallets={wallets}
+              selectedIds={selectedIds}
+              onToggleSelection={onToggleSelection}
+              formatDate={formatDate}
+              onStatusChange={onStatusChange}
+              handleIndividualStatusChange={handleIndividualStatusChange}
+              setShowEditBlockDialog={setShowEditBlockDialog}
+              handleExtraCostStatusChange={handleExtraCostStatusChange}
+              setEditingExtraCost={setEditingExtraCost}
+              setShowExtraCostDialog={setShowExtraCostDialog}
+              setExtraCostToDelete={setExtraCostToDelete}
+            />
           )}
 
           {/* Expanded section for standalone installment groups and standalone extra costs */}
           {isExpanded &&
             !isProposalGroup &&
-            (relatedInstallments.length > 0 ||
-              visibleExtraCosts.length > 0) && (
-              <div className="px-4 pb-4 pt-0">
-                {relatedInstallments.length > 0 && (
-                  <TransactionInstallmentsList
-                    installments={relatedInstallments}
-                    onStatusChange={onStatusChange!}
-                    onUpdate={onUpdate}
-                    canEdit={canEdit}
-                    selectedIds={selectedIds}
-                    onToggleSelection={onToggleSelection}
-                    onPartialPayment={handlePartialPayment}
-                    onUndoPartial={handleUndoPartial}
-                    wallets={wallets}
-                  />
-                )}
-
-                {/* Extra Costs Section (Standalone Groups) */}
-                {visibleExtraCosts.length > 0 && (
-                    <div className="space-y-2 mt-4">
-                      <div className="flex items-center gap-2 px-1">
-                        <DollarSign className="w-4 h-4 text-amber-500" />
-                        <span className="text-sm font-medium text-amber-500/80">
-                          {transaction.type === "income"
-                            ? "Acréscimos Extras"
-                            : "Custos Extras"}{" "}
-                          ({visibleExtraCosts.length})
-                        </span>
-                      </div>
-                      <div className="space-y-1.5">
-                        {visibleExtraCosts.map((ec) => (
-                          <div
-                            key={`${ec.parentTransactionId}-${ec.id}`}
-                            className={`flex items-center justify-between py-2 px-3 bg-amber-500/5 rounded-lg border border-amber-500/20`}
-                          >
-                            <div className="flex items-center gap-3">
-                              {onToggleSelection && (
-                                <div
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="mr-1"
-                                >
-                                  <Checkbox
-                                    checked={selectedIds?.has(ec.id) || false}
-                                    onCheckedChange={() =>
-                                      onToggleSelection(ec.id)
-                                    }
-                                    className="cursor-pointer"
-                                  />
-                                </div>
-                              )}
-                              <div className="p-1.5 rounded-full bg-amber-500/20">
-                                <DollarSign className="w-4 h-4 text-amber-500" />
-                              </div>
-                              <div>
-                                <div className="font-medium text-sm text-amber-600 dark:text-amber-500">
-                                  {ec.description}
-                                </div>
-                                <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <span>
-                                    Adicionado em: {formatDate(ec.createdAt)}
-                                  </span>
-                                  {ec.wallet && (
-                                    <>
-                                      <span className="opacity-50">•</span>
-                                      <span>
-                                        {wallets.find((w) => w.id === ec.wallet || w.name === ec.wallet)
-                                          ?.name || ec.wallet}
-                                      </span>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <div className="font-bold text-amber-600 dark:text-amber-500">
-                                {formatCurrency(ec.amount)}
-                              </div>
-
-                              {/* Status Dropdown */}
-                              {canEdit ? (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-7 gap-1.5 rounded-md text-xs font-medium border border-amber-500/30 text-amber-600 dark:text-amber-500 hover:bg-amber-500/10"
-                                      onClick={(e) => e.stopPropagation()}
-                                      disabled={
-                                        isUpdating || updatingIds.has(ec.id)
-                                      }
-                                    >
-                                      {updatingIds.has(ec.id) ? (
-                                        <>
-                                          <Loader size="sm" />
-                                          <span>Atualizando...</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          {(() => {
-                                            const option = statusOptions.find(
-                                              (o) =>
-                                                o.value ===
-                                                (ec.status || "pending"),
-                                            );
-                                            const Icon = option?.icon || Check;
-                                            return <Icon className="h-3 w-3" />;
-                                          })()}
-                                          <span>
-                                            {
-                                              statusConfig[
-                                                ec.status || "pending"
-                                              ].label
-                                            }
-                                          </span>
-                                          <ChevronDown className="h-2.5 w-2.5 opacity-50" />
-                                        </>
-                                      )}
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent
-                                    align="end"
-                                    className="w-[130px]"
-                                  >
-                                    {statusOptions.map((option) => (
-                                      <DropdownMenuItem
-                                        key={option.id}
-                                        onClick={() =>
-                                          handleExtraCostStatusChange(
-                                            ec.id,
-                                            ec.parentTransactionId,
-                                            option.id,
-                                          )
-                                        }
-                                        className="gap-2 cursor-pointer text-xs"
-                                      >
-                                        <option.icon className="h-3.5 w-3.5" />
-                                        <span>{option.label}</span>
-                                        {(ec.status || "pending") ===
-                                          option.id && (
-                                          <Check className="h-3 w-3 ml-auto opacity-50" />
-                                        )}
-                                      </DropdownMenuItem>
-                                    ))}
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              ) : (
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs border-amber-500/30 text-amber-600 dark:text-amber-500"
-                                >
-                                  {statusConfig[ec.status || "pending"].label}
-                                </Badge>
-                              )}
-
-                              {canEdit && (
-                                <>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 text-amber-600 hover:bg-amber-500/10 ml-1"
-                                    onClick={() => {
-                                      setEditingExtraCost({
-                                        id: ec.id,
-                                        amount: ec.amount,
-                                        description: ec.description,
-                                        wallet: ec.wallet,
-                                        parentTransactionId:
-                                          ec.parentTransactionId,
-                                      });
-                                      setShowExtraCostDialog(true);
-                                    }}
-                                    disabled={
-                                      isUpdating || updatingIds.has(ec.id)
-                                    }
-                                  >
-                                    <Edit className="w-3.5 h-3.5" />
-                                  </Button>
-                                  {canDelete && (
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-7 w-7 text-destructive hover:bg-destructive/10"
-                                      onClick={() =>
-                                        setExtraCostToDelete(
-                                          `${ec.parentTransactionId}::${ec.id}`,
-                                        )
-                                      }
-                                      disabled={
-                                        isUpdating || updatingIds.has(ec.id)
-                                      }
-                                    >
-                                      {updatingIds.has(ec.id) ? (
-                                        <Loader size="sm" />
-                                      ) : (
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      )}
-                                    </Button>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-              </div>
+            (relatedInstallments.length > 0 || visibleExtraCosts.length > 0) && (
+              <TransactionStandaloneExpanded
+                relatedInstallments={relatedInstallments}
+                visibleExtraCosts={visibleExtraCosts}
+                transactionType={transaction.type}
+                canEdit={canEdit}
+                canDelete={canDelete}
+                isUpdating={isUpdating}
+                updatingIds={updatingIds}
+                statusOptions={statusOptions}
+                wallets={wallets}
+                selectedIds={selectedIds}
+                onToggleSelection={onToggleSelection}
+                formatDate={formatDate}
+                onStatusChange={onStatusChange!}
+                onUpdate={onUpdate}
+                handlePartialPayment={handlePartialPayment}
+                handleUndoPartial={handleUndoPartial}
+                handleExtraCostStatusChange={handleExtraCostStatusChange}
+                setEditingExtraCost={setEditingExtraCost}
+                setShowExtraCostDialog={setShowExtraCostDialog}
+                setExtraCostToDelete={setExtraCostToDelete}
+              />
             )}
         </CardContent>
       </Card>
+
       <EditBlockDialog
         open={showEditBlockDialog}
         onOpenChange={setShowEditBlockDialog}
